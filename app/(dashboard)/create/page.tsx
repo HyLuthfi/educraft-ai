@@ -12,13 +12,27 @@ import {
   AlertCircle,
   CheckCircle,
   Camera,
-  Trash2,
   Plus,
+  Download,
+  X,
+  Bot,
+  ChevronDown,
 } from "lucide-react";
 
 export default function CreateQuestionWizard() {
   const [step, setStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [aiModel, setAiModel] = useState("auto");
+  const [isAiDropdownOpen, setIsAiDropdownOpen] = useState(false);
+
+  const aiModels = [
+    { id: "auto", name: "AI: Otomatis" },
+    { id: "gpt-4o", name: "GPT-4o (OpenAI)" },
+    { id: "gemini-1.5-pro", name: "Gemini 1.5 Pro" },
+    { id: "claude-3.5-sonnet", name: "Claude 3.5 Sonnet" },
+    { id: "llama-3", name: "Llama 3 (Groq)" },
+  ];
 
   const [inputTypes, setInputTypes] = useState<string[]>(["text"]);
   const [inputText, setInputText] = useState("");
@@ -104,40 +118,42 @@ export default function CreateQuestionWizard() {
         <h1 className="text-3xl font-editorial font-bold text-black mb-6">
           Racik Soal Baru
         </h1>
-        <div className="flex items-center gap-4">
-          {[1, 2, 3].map((s) => (
-            <div key={s} className="flex items-center gap-4 flex-1">
-              <div className="relative">
-                <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500 z-10 relative
-                  ${step >= s ? "bg-black text-white" : "bg-white border-2 border-black/10 text-gray-400"}
-                  ${step === s ? "shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-[2px]" : ""}
-                `}
-                >
-                  {step > s ? <CheckCircle size={18} /> : s}
-                </div>
+        <div className="relative flex justify-between items-start sm:items-center">
+          <div className="absolute top-5 left-10 right-10 h-1 bg-gray-200 z-0 hidden sm:block">
+            <motion.div
+              className="h-full bg-black"
+              initial={{ width: "0%" }}
+              animate={{
+                width: step === 1 ? "0%" : step === 2 ? "50%" : "100%",
+              }}
+              transition={{ duration: 0.5 }}
+            />
+          </div>
+
+          {[
+            { id: 1, label: "1. Input Materi" },
+            { id: 2, label: "2. Atur Parameter" },
+            { id: 3, label: "3. Review Hasil" },
+          ].map((s) => (
+            <div
+              key={s.id}
+              className="relative z-10 flex flex-col items-center gap-3 bg-[#f5f5f7] px-2 sm:px-4"
+            >
+              <div
+                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500
+                ${step >= s.id ? "bg-black text-white" : "bg-white border-2 border-black/10 text-gray-400"}
+                ${step === s.id ? "shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-[2px]" : ""}
+              `}
+              >
+                {step > s.id ? <CheckCircle size={18} /> : s.id}
               </div>
-              <div className="flex-1 h-1 bg-gray-200 relative overflow-hidden hidden sm:block">
-                <motion.div
-                  className="absolute top-0 left-0 h-full bg-black"
-                  initial={{ width: "0%" }}
-                  animate={{ width: step > s ? "100%" : "0%" }}
-                  transition={{ duration: 0.5 }}
-                />
-              </div>
+              <span
+                className={`hidden sm:block text-xs font-semibold uppercase tracking-wider ${step >= s.id ? "text-black" : "text-gray-500"}`}
+              >
+                {s.label}
+              </span>
             </div>
           ))}
-        </div>
-        <div className="flex justify-between text-xs font-semibold text-gray-500 mt-3 uppercase tracking-wider hidden sm:flex">
-          <span className={step >= 1 ? "text-black" : ""}>1. Input Materi</span>
-          <span
-            className={step >= 2 ? "text-black text-center" : "text-center"}
-          >
-            2. Atur Parameter
-          </span>
-          <span className={step >= 3 ? "text-black text-right" : "text-right"}>
-            3. Review Hasil
-          </span>
         </div>
       </div>
 
@@ -465,13 +481,54 @@ export default function CreateQuestionWizard() {
                 >
                   <ChevronLeft size={18} /> Kembali
                 </button>
-                <button
-                  onClick={handleGenerate}
-                  className="btn-primary px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] transition-all bg-[#0a0a0a]"
-                >
-                  <Sparkles size={18} className="text-yellow-300" /> Generate{" "}
-                  {totalQuestions} Soal
-                </button>
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                  <div className="relative hidden md:block">
+                    <button
+                      onClick={() => setIsAiDropdownOpen(!isAiDropdownOpen)}
+                      className="px-5 py-3 bg-white border-2 border-black/20 font-bold text-sm flex items-center gap-3 hover:border-black transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] active:shadow-none active:translate-y-[4px] active:translate-x-[4px]"
+                    >
+                      <Bot size={18} className="text-blue-600" />
+                      {aiModels.find((m) => m.id === aiModel)?.name ||
+                        "AI: Otomatis"}
+                      <ChevronDown
+                        size={16}
+                        className={`text-gray-400 ml-2 transition-transform ${isAiDropdownOpen ? "rotate-180" : ""}`}
+                      />
+                    </button>
+
+                    <AnimatePresence>
+                      {isAiDropdownOpen && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: 10 }}
+                          className="absolute bottom-full mb-4 left-0 w-56 bg-white border-2 border-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] overflow-hidden z-50 flex flex-col"
+                        >
+                          {aiModels.map((model, idx) => (
+                            <button
+                              key={model.id}
+                              onClick={() => {
+                                setAiModel(model.id);
+                                setIsAiDropdownOpen(false);
+                              }}
+                              className={`w-full text-left px-5 py-4 text-sm font-bold transition-colors flex items-center gap-3 ${idx !== 0 ? "border-t border-black/10" : ""} ${aiModel === model.id ? "bg-gray-100 text-black" : "text-gray-500 hover:bg-gray-50 hover:text-black"}`}
+                            >
+                              {model.name}
+                            </button>
+                          ))}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <button
+                    onClick={handleGenerate}
+                    className="btn-primary px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] transition-all bg-[#0a0a0a] w-full sm:w-auto justify-center"
+                  >
+                    <Sparkles size={18} className="text-yellow-300" /> Generate{" "}
+                    {totalQuestions} Soal
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
@@ -555,55 +612,100 @@ export default function CreateQuestionWizard() {
                   <button className="px-4 py-2 border border-black/20 font-medium hover:border-black transition-colors bg-white">
                     Simpan ke Bank Soal
                   </button>
-                  <button className="px-4 py-2 bg-black text-white font-medium hover:bg-gray-800 transition-colors flex items-center gap-2">
-                    <FileText size={16} /> Ekspor PDF
+                  <button
+                    onClick={() => setIsDownloadModalOpen(true)}
+                    className="px-4 py-2 bg-black text-white font-medium hover:bg-gray-800 transition-colors flex items-center gap-2"
+                  >
+                    <Download size={16} /> Unduh
                   </button>
                 </div>
               </div>
 
               <div className="space-y-4 mt-8">
-                {[1, 2, 3].map((q) => (
+                {[
+                  {
+                    id: 1,
+                    type: "Pilihan Ganda",
+                    level: "HOTS (C4)",
+                    question:
+                      "Berdasarkan teks di atas, analisis apa dampak paling signifikan dari proses fotosintesis terhadap ekosistem global jika terjadi penurunan intensitas cahaya matahari secara drastis?",
+                    options: [
+                      "A. Penurunan populasi herbivora secara lambat.",
+                      "B. Ketidakstabilan rantai makanan yang dimulai dari produsen.",
+                      "C. Peningkatan kadar oksigen di atmosfer bumi.",
+                      "D. Mutasi genetik pada tumbuhan tingkat rendah.",
+                    ],
+                    answer: 1,
+                  },
+                  {
+                    id: 2,
+                    type: "Essay",
+                    level: "HOTS (C5)",
+                    question:
+                      "Evaluasilah efektivitas kebijakan pemerintah dalam menangani perubahan iklim berdasarkan data emisi karbon lima tahun terakhir. Berikan argumen yang mendukung posisi Anda.",
+                    answerText:
+                      "Panduan Jawaban: Kebijakan pemerintah dapat dievaluasi efektif jika terjadi tren penurunan emisi gas rumah kaca yang terukur. Argumen harus mencakup analisis kebijakan spesifik (misal: pajak karbon, subsidi energi terbarukan) yang berkorelasi dengan penurunan emisi.",
+                  },
+                  {
+                    id: 3,
+                    type: "Isian Singkat",
+                    level: "LOTS (C1)",
+                    question:
+                      "Proses penguapan air dari permukaan tumbuhan, terutama melalui stomata pada daun, disebut dengan istilah...",
+                    answerText: "Kunci Jawaban: Transpirasi",
+                  },
+                  {
+                    id: 4,
+                    type: "Benar/Salah",
+                    level: "LOTS (C2)",
+                    question:
+                      "Pernyataan: Reaksi terang pada fotosintesis terjadi di dalam stroma kloroplas.",
+                    options: ["Benar", "Salah"],
+                    answer: 1,
+                  },
+                ].map((q) => (
                   <div
-                    key={q}
+                    key={q.id}
                     className="border border-black/10 p-6 bg-gray-50"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <span className="bg-black text-white text-xs font-bold px-2 py-1 uppercase">
-                        Soal {q} • Pilihan Ganda
+                        Soal {q.id} • {q.type}
                       </span>
                       <span className="text-xs font-semibold text-gray-500 uppercase border border-gray-300 px-2 py-1">
-                        HOTS (C4)
+                        {q.level}
                       </span>
                     </div>
-                    <p className="font-medium text-lg mb-4">
-                      Berdasarkan teks di atas, analisis apa dampak paling
-                      signifikan dari proses fotosintesis terhadap ekosistem
-                      global jika terjadi penurunan intensitas cahaya matahari
-                      secara drastis?
-                    </p>
-                    <div className="space-y-2">
-                      {[
-                        "A. Penurunan populasi herbivora secara lambat.",
-                        "B. Ketidakstabilan rantai makanan yang dimulai dari produsen.",
-                        "C. Peningkatan kadar oksigen di atmosfer bumi.",
-                        "D. Mutasi genetik pada tumbuhan tingkat rendah.",
-                      ].map((opt, i) => (
-                        <div
-                          key={i}
-                          className={`p-3 border ${i === 1 ? "border-green-500 bg-green-50" : "border-black/10 bg-white"}`}
-                        >
-                          <span
-                            className={
-                              i === 1
-                                ? "text-green-700 font-medium"
-                                : "text-gray-600"
-                            }
+                    <p className="font-medium text-lg mb-4">{q.question}</p>
+
+                    {q.options && (
+                      <div className="space-y-2">
+                        {q.options.map((opt, i) => (
+                          <div
+                            key={i}
+                            className={`p-3 border ${i === q.answer ? "border-green-500 bg-green-50" : "border-black/10 bg-white"}`}
                           >
-                            {opt} {i === 1 && "(Kunci Jawaban)"}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
+                            <span
+                              className={
+                                i === q.answer
+                                  ? "text-green-700 font-medium"
+                                  : "text-gray-600"
+                              }
+                            >
+                              {opt} {i === q.answer && "(Kunci Jawaban)"}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {q.answerText && (
+                      <div className="p-4 bg-yellow-50 border border-yellow-200 mt-4">
+                        <span className="text-sm text-yellow-800 font-medium whitespace-pre-wrap">
+                          {q.answerText}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
@@ -620,6 +722,211 @@ export default function CreateQuestionWizard() {
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {isDownloadModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDownloadModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-4xl bg-white border border-black/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              <div className="flex items-center justify-between p-6 border-b border-black/10 bg-gray-50">
+                <div>
+                  <h3 className="text-2xl font-bold flex items-center gap-2 text-black">
+                    <Download className="text-gray-400" /> Download Hub
+                  </h3>
+                  <p className="text-gray-500 text-sm mt-1">
+                    Pilih format ekspor yang paling sesuai dengan kebutuhan
+                    kelas Anda.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsDownloadModalOpen(false)}
+                  className="p-2 text-gray-400 hover:text-black hover:bg-gray-200 transition-colors rounded-full"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-8 overflow-y-auto">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold font-editorial">
+                        01
+                      </div>
+                      <h4 className="font-bold text-lg uppercase tracking-wider text-black">
+                        Dokumen Cetak
+                      </h4>
+                    </div>
+
+                    <div className="space-y-3">
+                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-red-50 text-red-600 flex items-center justify-center">
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900">
+                              PDF Lembar Soal
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Hanya pertanyaan, siap dibagikan ke siswa
+                            </div>
+                          </div>
+                        </div>
+                        <Download
+                          size={18}
+                          className="text-gray-300 group-hover:text-black"
+                        />
+                      </button>
+
+                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-yellow-50 text-yellow-600 flex items-center justify-center">
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900">
+                              PDF Kunci Jawaban
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Pegangan guru, lengkap dengan rubrik
+                            </div>
+                          </div>
+                        </div>
+                        <Download
+                          size={18}
+                          className="text-gray-300 group-hover:text-black"
+                        />
+                      </button>
+
+                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-green-50 text-green-600 flex items-center justify-center">
+                            <FileText size={20} />
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900">
+                              PDF Lengkap (Soal + Jawaban)
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Bahan evaluasi komprehensif
+                            </div>
+                          </div>
+                        </div>
+                        <Download
+                          size={18}
+                          className="text-gray-300 group-hover:text-black"
+                        />
+                      </button>
+
+                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-blue-500 hover:shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)] transition-all group text-left">
+                        <div className="flex items-center gap-4">
+                          <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+                            W
+                          </div>
+                          <div>
+                            <div className="font-bold text-gray-900">
+                              Microsoft Word (.docx)
+                            </div>
+                            <div className="text-xs text-gray-500">
+                              Format mentah, bisa diedit ulang di MS Word
+                            </div>
+                          </div>
+                        </div>
+                        <Download
+                          size={18}
+                          className="text-gray-300 group-hover:text-blue-500"
+                        />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold font-editorial">
+                        02
+                      </div>
+                      <h4 className="font-bold text-lg uppercase tracking-wider text-black">
+                        Platform Digital
+                      </h4>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <button className="p-6 border border-black/10 bg-white hover:border-[#864CFF] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
+                        <div className="w-12 h-12 rounded-full bg-[#864CFF]/10 text-[#864CFF] flex items-center justify-center font-bold text-xl mb-1">
+                          Q
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 group-hover:text-[#864CFF]">
+                            Quizizz
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
+                            Format Excel
+                          </div>
+                        </div>
+                      </button>
+
+                      <button className="p-6 border border-black/10 bg-white hover:border-[#673AB7] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
+                        <div className="w-12 h-12 rounded-full bg-[#673AB7]/10 text-[#673AB7] flex items-center justify-center font-bold text-xl mb-1">
+                          G
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 group-hover:text-[#673AB7]">
+                            Google Forms
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
+                            Auto-Import
+                          </div>
+                        </div>
+                      </button>
+
+                      <button className="p-6 border border-black/10 bg-white hover:border-[#46178f] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
+                        <div className="w-12 h-12 rounded-full bg-[#46178f]/10 text-[#46178f] flex items-center justify-center font-bold text-xl mb-1">
+                          K!
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-900 group-hover:text-[#46178f]">
+                            Kahoot!
+                          </div>
+                          <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
+                            Format Excel
+                          </div>
+                        </div>
+                      </button>
+
+                      <button className="p-6 border border-black/10 bg-white hover:border-black transition-all flex flex-col items-center justify-center gap-3 text-center border-dashed group">
+                        <div className="w-12 h-12 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center font-bold text-xl mb-1 group-hover:bg-black group-hover:text-white transition-colors">
+                          <Plus size={20} />
+                        </div>
+                        <div>
+                          <div className="font-bold text-gray-500 group-hover:text-black">
+                            Lainnya
+                          </div>
+                          <div className="text-[10px] text-gray-400 mt-1 uppercase tracking-wider">
+                            Moodle, Canvas
+                          </div>
+                        </div>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
