@@ -56,12 +56,12 @@ export default function DashboardLayout({
 
             return (
               <Link
-                key={item.name}
+                key={item.href}
                 href={item.href}
                 className={`flex items-center gap-3 px-4 py-3 rounded-none font-medium transition-all ${
                   isActive
                     ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-[2px] -translate-x-[2px]"
-                    : "text-gray-600 hover:bg-gray-100 hover:text-black"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-black hover:translate-x-1"
                 }`}
               >
                 <Icon size={18} />
