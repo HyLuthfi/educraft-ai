@@ -33,9 +33,14 @@ export default function DashboardLayout({
               alt="EduCraft Logo"
               className="h-8 w-auto object-contain"
             />
-            <span className="font-bold font-editorial text-lg tracking-tight">
-              EduCraft AI
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="font-bold font-editorial text-lg tracking-tight">
+                EduCraft AI
+              </span>
+              <span className="bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider">
+                Pro
+              </span>
+            </div>
           </Link>
         </div>
 
