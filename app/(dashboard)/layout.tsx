@@ -1,204 +1,106 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion, AnimatePresence } from "framer-motion"
-import Link from "next/link"
-import { usePathname } from "next/navigation"
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import {
   Sparkles,
-  LayoutDashboard,
-  FilePlus,
-  BookOpen,
-  Database,
-  User,
+  FileText,
+  Settings,
   LogOut,
-  Menu,
-  X,
-  ChevronLeft,
-} from "lucide-react"
-import { EASE_SPRING } from "@/lib/animasi"
-
-const easeSpring = EASE_SPRING as unknown as [number, number, number, number]
-
-const MENU_ITEMS = [
-  { href: "/dashboard", label: "Dashboard", ikon: LayoutDashboard },
-  { href: "/buat-soal", label: "Buat Soal", ikon: FilePlus },
-  { href: "/bank-materi", label: "Bank Materi", ikon: BookOpen },
-  { href: "/bank-soal", label: "Bank Soal", ikon: Database },
-  { href: "/profil", label: "Profil", ikon: User },
-]
-
-function Sidebar({
-  terbuka,
-  onToggle,
-}: {
-  terbuka: boolean
-  onToggle: () => void
-}) {
-  const pathname = usePathname()
-
-  return (
-    <>
-      <AnimatePresence>
-        {terbuka && (
-          <motion.div
-            className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            onClick={onToggle}
-          />
-        )}
-      </AnimatePresence>
-
-      <motion.aside
-        className="fixed left-0 top-0 h-full z-50 flex flex-col border-r"
-        style={{
-          width: terbuka ? 260 : 72,
-          background: "var(--color-bg-secondary)",
-          borderColor: "var(--color-border)",
-          transition: "width 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
-        }}
-      >
-        <div className="flex items-center justify-between p-4 h-16">
-          <Link href="/dashboard" className="flex items-center gap-3 overflow-hidden">
-            <div
-              className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0"
-              style={{
-                background:
-                  "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-              }}
-            >
-              <Sparkles size={18} className="text-white" />
-            </div>
-            {terbuka && (
-              <motion.span
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                className="font-bold text-lg whitespace-nowrap"
-                style={{ fontFamily: "var(--font-heading)" }}
-              >
-                EduCraft AI
-              </motion.span>
-            )}
-          </Link>
-          <button
-            onClick={onToggle}
-            className="hidden lg:flex items-center justify-center w-8 h-8 rounded-lg cursor-pointer transition-colors"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            {terbuka ? <ChevronLeft size={18} /> : <Menu size={18} />}
-          </button>
-        </div>
-
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          {MENU_ITEMS.map((item) => {
-            const aktif = pathname === item.href || pathname.startsWith(item.href + "/")
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-3 py-3 rounded-xl transition-all duration-200"
-                style={{
-                  background: aktif
-                    ? "rgba(99, 102, 241, 0.15)"
-                    : "transparent",
-                  color: aktif
-                    ? "var(--color-primary-hover)"
-                    : "var(--color-text-secondary)",
-                  fontWeight: aktif ? 600 : 400,
-                }}
-                title={item.label}
-              >
-                <item.ikon size={20} className="shrink-0" />
-                {terbuka && (
-                  <span className="text-sm whitespace-nowrap">{item.label}</span>
-                )}
-                {aktif && terbuka && (
-                  <div
-                    className="ml-auto w-1.5 h-1.5 rounded-full"
-                    style={{ background: "var(--color-primary)" }}
-                  />
-                )}
-              </Link>
-            )
-          })}
-        </nav>
-
-        <div className="px-3 py-4 border-t" style={{ borderColor: "var(--color-border)" }}>
-          <button
-            className="flex items-center gap-3 px-3 py-3 rounded-xl w-full transition-all duration-200 cursor-pointer"
-            style={{ color: "var(--color-text-muted)" }}
-          >
-            <LogOut size={20} className="shrink-0" />
-            {terbuka && <span className="text-sm">Keluar</span>}
-          </button>
-        </div>
-      </motion.aside>
-    </>
-  )
-}
+  LayoutDashboard,
+} from "lucide-react";
 
 export default function DashboardLayout({
   children,
 }: {
-  children: React.ReactNode
+  children: React.ReactNode;
 }) {
-  const [sidebarTerbuka, setSidebarTerbuka] = useState(true)
-  const pathname = usePathname()
+  const pathname = usePathname();
+
+  const navItems = [
+    { name: "Buat Soal", href: "/create", icon: Sparkles },
+    { name: "Bank Soal", href: "/library", icon: FileText },
+    { name: "Pengaturan", href: "/settings", icon: Settings },
+  ];
 
   return (
-    <div className="min-h-screen">
-      <Sidebar
-        terbuka={sidebarTerbuka}
-        onToggle={() => setSidebarTerbuka(!sidebarTerbuka)}
-      />
+    <div className="min-h-screen bg-[#f9f9f9] flex">
+      <aside className="w-64 bg-white border-r border-black/10 flex flex-col hidden md:flex sticky top-0 h-screen">
+        <div className="h-20 flex items-center px-8 border-b border-black/10">
+          <Link href="/" className="flex items-center gap-3">
+            <img
+              src="/logo.png"
+              alt="EduCraft Logo"
+              className="h-8 w-auto object-contain"
+            />
+            <span className="font-bold font-editorial text-lg tracking-tight">
+              EduCraft AI
+            </span>
+          </Link>
+        </div>
 
-      <div
-        style={{
-          marginLeft: sidebarTerbuka ? 260 : 72,
-          transition: "margin-left 0.3s cubic-bezier(0.22, 1, 0.36, 1)",
-        }}
-      >
-        <header
-          className="sticky top-0 z-30 h-16 flex items-center px-6 border-b backdrop-blur-xl"
-          style={{
-            background: "rgba(10, 10, 15, 0.8)",
-            borderColor: "var(--color-border)",
-          }}
-        >
-          <button
-            onClick={() => setSidebarTerbuka(!sidebarTerbuka)}
-            className="lg:hidden mr-4 cursor-pointer"
-            style={{ color: "var(--color-text-secondary)" }}
-          >
-            {sidebarTerbuka ? <X size={20} /> : <Menu size={20} />}
+        <nav className="flex-1 px-4 py-8 space-y-2">
+          <div className="text-xs font-semibold text-gray-400 mb-4 px-4 uppercase tracking-widest">
+            Menu Utama
+          </div>
+          {navItems.map((item) => {
+            const isActive =
+              pathname === item.href ||
+              (pathname?.startsWith("/create") && item.href === "/create");
+            const Icon = item.icon;
+
+            return (
+              <Link
+                key={item.name}
+                href={item.href}
+                className={`flex items-center gap-3 px-4 py-3 rounded-none font-medium transition-all ${
+                  isActive
+                    ? "bg-black text-white shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-[2px] -translate-x-[2px]"
+                    : "text-gray-600 hover:bg-gray-100 hover:text-black"
+                }`}
+              >
+                <Icon size={18} />
+                {item.name}
+              </Link>
+            );
+          })}
+        </nav>
+
+        <div className="p-4 border-t border-black/10">
+          <div className="flex items-center gap-3 p-2">
+            <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center font-bold text-gray-600">
+              G
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <p className="text-sm font-bold truncate">Guru Cerdas</p>
+              <p className="text-xs text-gray-500 truncate">Pro Plan</p>
+            </div>
+            <button className="text-gray-400 hover:text-red-500 transition-colors">
+              <LogOut size={18} />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      <main className="flex-1 flex flex-col min-h-screen relative overflow-x-hidden">
+        <header className="h-16 bg-white border-b border-black/10 flex items-center justify-between px-6 md:hidden">
+          <div className="flex items-center gap-2">
+            <img
+              src="/logo.png"
+              alt="EduCraft Logo"
+              className="h-6 w-auto object-contain"
+            />
+            <span className="font-bold font-editorial text-lg tracking-tight">
+              EduCraft AI
+            </span>
+          </div>
+          <button className="p-2 border border-black/10 rounded">
+            <LayoutDashboard size={20} />
           </button>
-          <h2
-            className="text-lg font-bold"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
-            {MENU_ITEMS.find(
-              (item) =>
-                pathname === item.href || pathname.startsWith(item.href + "/")
-            )?.label || "Dashboard"}
-          </h2>
         </header>
 
-        <main className="p-6">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -12 }}
-              transition={{ duration: 0.3, ease: easeSpring }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
-        </main>
-      </div>
+        <div className="flex-1 relative">{children}</div>
+      </main>
     </div>
-  )
+  );
 }
