@@ -5,16 +5,58 @@ import { motion } from "framer-motion";
 import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { ANIMASI_FADE_UP as ANIMASI_ITEM } from "@/lib/animasi";
+import { createBrowserClient } from "@supabase/ssr";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const [tampilPassword, setTampilPassword] = useState(false);
   const [sedangProses, setSedangProses] = useState(false);
   const [formData, setFormData] = useState({ email: "", password: "" });
+  const [errorMsg, setErrorMsg] = useState("");
+  
+  const router = useRouter();
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder_key"
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSedangProses(true);
-    setTimeout(() => setSedangProses(false), 2000);
+    setErrorMsg("");
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+      setErrorMsg("Kunci API Supabase belum dikonfigurasi di file .env.local Anda!");
+      setSedangProses(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: formData.email,
+      password: formData.password,
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setSedangProses(false);
+    } else {
+      router.push("/create");
+    }
+  }
+
+  async function handleGoogleLogin() {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+      setErrorMsg("Kunci API Supabase belum dikonfigurasi di file .env.local Anda!");
+      return;
+    }
+    
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   }
 
   return (
@@ -38,6 +80,11 @@ export default function LoginPage() {
         onSubmit={handleSubmit}
         className="space-y-5"
       >
+        {errorMsg && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-500 text-red-700 text-sm font-medium rounded-md">
+            {errorMsg}
+          </div>
+        )}
         <div>
           <label
             htmlFor="email-login"
@@ -155,7 +202,8 @@ export default function LoginPage() {
 
         <button
           type="button"
-          className="w-full py-3.5 bg-white border border-black/10 hover:bg-gray-50 flex items-center justify-center gap-3 text-sm font-medium text-black transition-colors rounded-none"
+          onClick={handleGoogleLogin}
+          className="w-full py-3.5 bg-white border border-black/10 hover:border-black/30 hover:bg-gray-50 text-black flex items-center justify-center gap-3 rounded-none transition-all"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path

@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Mail, Lock, User, ArrowRight, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { ANIMASI_FADE_UP as ANIMASI_ITEM } from "@/lib/animasi";
+import { createBrowserClient } from "@supabase/ssr";
 
 export default function RegisterPage() {
   const [tampilPassword, setTampilPassword] = useState(false);
@@ -14,11 +15,57 @@ export default function RegisterPage() {
     email: "",
     password: "",
   });
+  const [errorMsg, setErrorMsg] = useState("");
+  const [successMsg, setSuccessMsg] = useState("");
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "https://placeholder.supabase.co",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "placeholder_key"
+  );
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setSedangProses(true);
-    setTimeout(() => setSedangProses(false), 2000);
+    setErrorMsg("");
+    setSuccessMsg("");
+
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+      setErrorMsg("Kunci API Supabase belum dikonfigurasi di file .env.local Anda!");
+      setSedangProses(false);
+      return;
+    }
+
+    const { error } = await supabase.auth.signUp({
+      email: formData.email,
+      password: formData.password,
+      options: {
+        data: {
+          full_name: formData.nama,
+        }
+      }
+    });
+
+    if (error) {
+      setErrorMsg(error.message);
+      setSedangProses(false);
+    } else {
+      setSuccessMsg("Pendaftaran berhasil! Silakan cek email Anda untuk verifikasi.");
+      setSedangProses(false);
+    }
+  }
+
+  async function handleGoogleLogin() {
+    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+      setErrorMsg("Kunci API Supabase belum dikonfigurasi di file .env.local Anda!");
+      return;
+    }
+    
+    await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: `${window.location.origin}/auth/callback`,
+      },
+    });
   }
 
   return (
@@ -42,6 +89,16 @@ export default function RegisterPage() {
         onSubmit={handleSubmit}
         className="space-y-5"
       >
+        {errorMsg && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-500 text-red-700 text-sm font-medium rounded-md">
+            {errorMsg}
+          </div>
+        )}
+        {successMsg && (
+          <div className="mb-4 p-4 bg-green-50 border border-green-500 text-green-700 text-sm font-medium rounded-md">
+            {successMsg}
+          </div>
+        )}
         <div>
           <label
             htmlFor="nama-register"
@@ -178,7 +235,8 @@ export default function RegisterPage() {
 
         <button
           type="button"
-          className="w-full py-3.5 bg-white border border-black/10 hover:bg-gray-50 flex items-center justify-center gap-3 text-sm font-medium text-black transition-colors rounded-none"
+          onClick={handleGoogleLogin}
+          className="w-full py-3.5 bg-white border border-black/10 hover:border-black/30 hover:bg-gray-50 text-black flex items-center justify-center gap-3 rounded-none transition-all"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
