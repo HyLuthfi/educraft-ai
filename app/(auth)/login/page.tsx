@@ -1,20 +1,20 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { motion } from "framer-motion"
-import { Sparkles, Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react"
-import Link from "next/link"
-import { ANIMASI_FADE_UP as ANIMASI_ITEM } from "@/lib/animasi"
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from "lucide-react";
+import Link from "next/link";
+import { ANIMASI_FADE_UP as ANIMASI_ITEM } from "@/lib/animasi";
 
 export default function LoginPage() {
-  const [tampilPassword, setTampilPassword] = useState(false)
-  const [sedangProses, setSedangProses] = useState(false)
-  const [formData, setFormData] = useState({ email: "", password: "" })
+  const [tampilPassword, setTampilPassword] = useState(false);
+  const [sedangProses, setSedangProses] = useState(false);
+  const [formData, setFormData] = useState({ email: "", password: "" });
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    setSedangProses(true)
-    setTimeout(() => setSedangProses(false), 2000)
+    e.preventDefault();
+    setSedangProses(true);
+    setTimeout(() => setSedangProses(false), 2000);
   }
 
   return (
@@ -22,54 +22,33 @@ export default function LoginPage() {
       initial="hidden"
       animate="visible"
       transition={{ staggerChildren: 0.1 }}
+      className="w-full max-w-sm mx-auto"
     >
-      <motion.div variants={ANIMASI_ITEM} className="text-center mb-8">
-        <Link href="/" className="inline-flex items-center gap-2 mb-6">
-          <div
-            className="w-10 h-10 rounded-xl flex items-center justify-center"
-            style={{
-              background:
-                "linear-gradient(135deg, var(--color-primary), var(--color-accent))",
-            }}
-          >
-            <Sparkles size={20} className="text-white" />
-          </div>
-          <span
-            className="font-bold text-xl"
-            style={{ fontFamily: "var(--font-heading)" }}
-          >
-            EduCraft AI
-          </span>
-        </Link>
-        <h1
-          className="text-3xl font-black tracking-tight"
-          style={{ fontFamily: "var(--font-heading)" }}
-        >
-          Masuk ke Akun
+      <motion.div variants={ANIMASI_ITEM} className="mb-8">
+        <h1 className="text-4xl font-editorial font-medium tracking-tight text-black mb-2">
+          Selamat Datang Kembali
         </h1>
-        <p className="mt-2 text-sm" style={{ color: "var(--color-text-secondary)" }}>
-          Selamat datang kembali, Guru!
+        <p className="text-gray-500 font-light">
+          Silakan masuk untuk melanjutkan meracik soal.
         </p>
       </motion.div>
 
       <motion.form
         variants={ANIMASI_ITEM}
         onSubmit={handleSubmit}
-        className="glass-card p-8 space-y-5"
+        className="space-y-5"
       >
         <div>
           <label
             htmlFor="email-login"
-            className="block text-sm font-medium mb-2"
-            style={{ color: "var(--color-text-secondary)" }}
+            className="block text-sm font-medium text-black mb-2"
           >
             Email
           </label>
           <div className="relative">
             <Mail
               size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2"
-              style={{ color: "var(--color-text-muted)" }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
             />
             <input
               id="email-login"
@@ -80,12 +59,7 @@ export default function LoginPage() {
                 setFormData({ ...formData, email: e.target.value })
               }
               placeholder="guru@sekolah.sch.id"
-              className="w-full pl-12 pr-4 py-3 rounded-xl text-sm outline-none transition-all duration-300"
-              style={{
-                background: "var(--color-bg-secondary)",
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-primary)",
-              }}
+              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
             />
           </div>
         </div>
@@ -93,16 +67,14 @@ export default function LoginPage() {
         <div>
           <label
             htmlFor="password-login"
-            className="block text-sm font-medium mb-2"
-            style={{ color: "var(--color-text-secondary)" }}
+            className="block text-sm font-medium text-black mb-2"
           >
             Password
           </label>
           <div className="relative">
             <Lock
               size={18}
-              className="absolute left-4 top-1/2 -translate-y-1/2"
-              style={{ color: "var(--color-text-muted)" }}
+              className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
             />
             <input
               id="password-login"
@@ -113,47 +85,69 @@ export default function LoginPage() {
                 setFormData({ ...formData, password: e.target.value })
               }
               placeholder="Masukkan password"
-              className="w-full pl-12 pr-12 py-3 rounded-xl text-sm outline-none transition-all duration-300"
-              style={{
-                background: "var(--color-bg-secondary)",
-                border: "1px solid var(--color-border)",
-                color: "var(--color-text-primary)",
-              }}
+              className="w-full pl-12 pr-12 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
             />
             <button
               type="button"
               onClick={() => setTampilPassword(!tampilPassword)}
-              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer"
-              style={{ color: "var(--color-text-muted)" }}
+              className="absolute right-4 top-1/2 -translate-y-1/2 cursor-pointer text-gray-400 hover:text-black transition-colors"
             >
               {tampilPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
+          </div>
+          <div className="flex justify-end mt-2">
+            <Link
+              href="#"
+              className="text-xs text-gray-500 hover:text-black hover:underline transition-colors"
+            >
+              Lupa Password?
+            </Link>
           </div>
         </div>
 
         <button
           type="submit"
           disabled={sedangProses}
-          className="btn-primary w-full py-4 text-base disabled:opacity-50 disabled:cursor-not-allowed"
+          className="btn-primary w-full py-4 text-base disabled:opacity-70 flex items-center justify-center gap-3 rounded-none shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] active:shadow-[0px_0px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[4px] active:translate-x-[4px] transition-all"
         >
-          {sedangProses ? "Memproses..." : "Masuk"}
-          {!sedangProses && <ArrowRight size={18} />}
+          {sedangProses ? (
+            <>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-5 w-5 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
+              </svg>
+              Memproses...
+            </>
+          ) : (
+            <>
+              Masuk
+              <ArrowRight size={18} />
+            </>
+          )}
         </button>
 
-        <div className="relative my-6">
-          <div
-            className="absolute inset-0 flex items-center"
-          >
-            <div className="w-full border-t" style={{ borderColor: "var(--color-border)" }} />
+        <div className="relative my-8">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-black/10" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span
-              className="px-3"
-              style={{
-                background: "var(--color-surface)",
-                color: "var(--color-text-muted)",
-              }}
-            >
+            <span className="bg-white px-4 text-gray-400 font-medium tracking-widest">
               atau
             </span>
           </div>
@@ -161,7 +155,7 @@ export default function LoginPage() {
 
         <button
           type="button"
-          className="btn-secondary w-full py-4 text-sm"
+          className="w-full py-3.5 bg-white border border-black/10 hover:bg-gray-50 flex items-center justify-center gap-3 text-sm font-medium text-black transition-colors rounded-none"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -187,18 +181,16 @@ export default function LoginPage() {
 
       <motion.p
         variants={ANIMASI_ITEM}
-        className="text-center mt-6 text-sm"
-        style={{ color: "var(--color-text-muted)" }}
+        className="text-center mt-8 text-sm text-gray-500"
       >
         Belum punya akun?{" "}
         <Link
           href="/register"
-          className="font-semibold transition-colors hover:underline"
-          style={{ color: "var(--color-primary)" }}
+          className="font-semibold text-black hover:underline transition-colors"
         >
           Daftar sekarang
         </Link>
       </motion.p>
     </motion.div>
-  )
+  );
 }
