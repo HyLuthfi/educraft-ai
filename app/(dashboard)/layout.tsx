@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { createBrowserClient } from "@supabase/ssr";
 import {
   Sparkles,
   FileText,
@@ -16,6 +18,68 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [userProfile, setUserProfile] = useState<{
+    full_name: string;
+    plan: string;
+    initial: string;
+  }>({
+    full_name: "Memuat...",
+    plan: "...",
+    initial: "-"
+  });
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL || "",
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || ""
+  );
+
+  useEffect(() => {
+    async function fetchUser() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('full_name, plan')
+          .eq('id', user.id)
+          .single();
+          
+        let name = "Pengguna";
+        let plan = "Free Plan";
+        
+        if (profile?.full_name) {
+          name = profile.full_name;
+          plan = profile.plan || "Free Plan";
+        } else if (user.user_metadata?.full_name) {
+          name = user.user_metadata.full_name;
+        } else if (user.email) {
+          name = user.email.split('@')[0];
+        }
+
+        setUserProfile({
+          full_name: name,
+          plan: plan,
+          initial: name.charAt(0).toUpperCase()
+        });
+      }
+    }
+    fetchUser();
+  }, [supabase]);
+
+  const handleLogoutClick = () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
+  const cancelLogout = () => {
+    setShowLogoutModal(false);
+  };
 
   const navItems = [
     { name: "Buat Soal", href: "/create", icon: Sparkles },
@@ -74,13 +138,13 @@ export default function DashboardLayout({
         <div className="p-4 border-t border-black/10">
           <div className="flex items-center gap-3 p-2">
             <div className="w-10 h-10 rounded bg-gray-200 flex items-center justify-center font-bold text-gray-600">
-              G
+              {userProfile.initial}
             </div>
             <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate">Guru Cerdas</p>
-              <p className="text-xs text-gray-500 truncate">Pro Plan</p>
+              <p className="text-sm font-bold truncate">{userProfile.full_name}</p>
+              <p className="text-xs text-gray-500 truncate">{userProfile.plan}</p>
             </div>
-            <button className="text-gray-400 hover:text-red-500 transition-colors">
+            <button onClick={handleLogoutClick} className="text-gray-400 hover:text-red-500 transition-colors">
               <LogOut size={18} />
             </button>
           </div>
@@ -106,6 +170,29 @@ export default function DashboardLayout({
 
         <div className="flex-1 relative">{children}</div>
       </main>
+
+      {showLogoutModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="bg-white border-4 border-black p-8 max-w-sm w-full shadow-[8px_8px_0px_0px_rgba(0,0,0,1)]">
+            <h3 className="text-xl font-black uppercase tracking-wider mb-2">Konfirmasi Keluar</h3>
+            <p className="font-medium text-gray-600 mb-6">Apakah Anda yakin ingin keluar dari akun EduCraft AI?</p>
+            <div className="flex gap-4">
+              <button
+                onClick={cancelLogout}
+                className="flex-1 py-3 bg-white border-2 border-black font-bold uppercase tracking-wider hover:bg-gray-50 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none"
+              >
+                Batal
+              </button>
+              <button
+                onClick={confirmLogout}
+                className="flex-1 py-3 bg-red-500 border-2 border-black text-white font-bold uppercase tracking-wider hover:bg-red-600 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-1 active:translate-x-1 active:shadow-none"
+              >
+                Ya, Keluar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
