@@ -18,6 +18,7 @@ import {
   Bot,
   ChevronDown,
   RefreshCw,
+  Trash2,
 } from "lucide-react";
 
 export default function CreateQuestionWizard() {
@@ -29,6 +30,7 @@ export default function CreateQuestionWizard() {
   const [editingQuestionId, setEditingQuestionId] = useState<number | null>(
     null,
   );
+  const [generatedQuestions, setGeneratedQuestions] = useState<any[]>([]);
 
   const aiModels = [
     { id: "auto", name: "AI: Otomatis" },
@@ -80,13 +82,51 @@ export default function CreateQuestionWizard() {
   const handleNext = () => setStep((s) => Math.min(s + 1, 3));
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
 
-  const handleGenerate = () => {
+  const handleGenerate = async () => {
     setIsGenerating(true);
 
-    setTimeout(() => {
-      setIsGenerating(false);
+    try {
+      const jumlah_pg = configBlocks.filter((b) => b.type === "Pilihan Ganda").reduce((sum, b) => sum + b.count, 0);
+      const jumlah_isian = configBlocks.filter((b) => b.type === "Isian Singkat" || b.type === "Benar/Salah").reduce((sum, b) => sum + b.count, 0);
+      const jumlah_essay = configBlocks.filter((b) => b.type === "Essay").reduce((sum, b) => sum + b.count, 0);
+      const tingkat_kesulitan = configBlocks[0].level;
+      
+      const instruksiKhususEl = document.getElementById("instruksi-khusus") as HTMLTextAreaElement;
+      const instruksi_khusus = instruksiKhususEl ? instruksiKhususEl.value : "";
+
+      const res = await fetch("/api/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          konten_materi: inputText || "Materi Umum",
+          config: {
+            jumlah_pg,
+            jumlah_isian,
+            jumlah_essay,
+            tingkat_kesulitan,
+            level_bloom: "campuran",
+            mata_pelajaran: "Umum",
+            jenjang: "Umum",
+            bahasa: "id",
+            instruksi_khusus
+          }
+        })
+      });
+
+      if (!res.ok) {
+        const errData = await res.text();
+        throw new Error("Gagal generate: " + errData);
+      }
+      
+      const data = await res.json();
+      setGeneratedQuestions(data.soal || []);
       setStep(3);
-    }, 4000);
+    } catch(err: any) {
+      console.error(err);
+      alert("Terjadi kesalahan saat generate soal: " + err.message);
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   const toggleInputType = (type: string) => {
@@ -471,6 +511,7 @@ export default function CreateQuestionWizard() {
                     size={18}
                   />
                   <textarea
+                    id="instruksi-khusus"
                     rows={3}
                     className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all resize-none"
                     placeholder="Contoh: Fokuskan pertanyaan hanya pada definisi dan tokoh penemu, jangan masukkan tahun kejadian."
@@ -626,116 +667,82 @@ export default function CreateQuestionWizard() {
               </div>
 
               <div className="space-y-4 mt-8">
-                {[
-                  {
-                    id: 1,
-                    type: "Pilihan Ganda",
-                    level: "HOTS (C4)",
-                    question:
-                      "Berdasarkan teks di atas, analisis apa dampak paling signifikan dari proses fotosintesis terhadap ekosistem global jika terjadi penurunan intensitas cahaya matahari secara drastis?",
-                    options: [
-                      "A. Penurunan populasi herbivora secara lambat.",
-                      "B. Ketidakstabilan rantai makanan yang dimulai dari produsen.",
-                      "C. Peningkatan kadar oksigen di atmosfer bumi.",
-                      "D. Mutasi genetik pada tumbuhan tingkat rendah.",
-                    ],
-                    answer: 1,
-                  },
-                  {
-                    id: 2,
-                    type: "Essay",
-                    level: "HOTS (C5)",
-                    question:
-                      "Evaluasilah efektivitas kebijakan pemerintah dalam menangani perubahan iklim berdasarkan data emisi karbon lima tahun terakhir. Berikan argumen yang mendukung posisi Anda.",
-                    answerText:
-                      "Panduan Jawaban: Kebijakan pemerintah dapat dievaluasi efektif jika terjadi tren penurunan emisi gas rumah kaca yang terukur. Argumen harus mencakup analisis kebijakan spesifik (misal: pajak karbon, subsidi energi terbarukan) yang berkorelasi dengan penurunan emisi.",
-                  },
-                  {
-                    id: 3,
-                    type: "Isian Singkat",
-                    level: "LOTS (C1)",
-                    question:
-                      "Proses penguapan air dari permukaan tumbuhan, terutama melalui stomata pada daun, disebut dengan istilah...",
-                    answerText: "Kunci Jawaban: Transpirasi",
-                  },
-                  {
-                    id: 4,
-                    type: "Benar/Salah",
-                    level: "LOTS (C2)",
-                    question:
-                      "Pernyataan: Reaksi terang pada fotosintesis terjadi di dalam stroma kloroplas.",
-                    options: ["Benar", "Salah"],
-                    answer: 1,
-                  },
-                ].map((q) => (
+                {generatedQuestions.map((q, idx) => (
                   <div
-                    key={q.id}
+                    key={idx}
                     className="border border-black/10 p-6 bg-gray-50"
                   >
                     <div className="flex justify-between items-start mb-4">
                       <div className="flex items-center gap-3">
                         <span className="bg-black text-white text-xs font-bold px-2 py-1 uppercase">
-                          Soal {q.id} • {q.type}
+                          Soal {idx + 1} • {q.tipe.toUpperCase()}
                         </span>
                         <span className="text-xs font-semibold text-gray-500 uppercase border border-gray-300 px-2 py-1">
-                          {q.level}
+                          {q.kesulitan} ({q.level_bloom})
                         </span>
                       </div>
                       <button
                         onClick={() =>
                           setEditingQuestionId(
-                            editingQuestionId === q.id ? null : q.id,
+                            editingQuestionId === idx ? null : idx,
                           )
                         }
-                        className={`px-3 py-1.5 flex items-center gap-2 text-xs font-bold transition-all border ${editingQuestionId === q.id ? "bg-black text-white border-black" : "bg-white text-gray-600 border-black/10 hover:border-black hover:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] active:translate-x-[2px]"}`}
+                        className={`px-3 py-1.5 flex items-center gap-2 text-xs font-bold transition-all border ${editingQuestionId === idx ? "bg-black text-white border-black" : "bg-white text-gray-600 border-black/10 hover:border-black hover:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.05)] active:shadow-none active:translate-y-[2px] active:translate-x-[2px]"}`}
                       >
                         <Sparkles
                           size={14}
                           className={
-                            editingQuestionId === q.id
+                            editingQuestionId === idx
                               ? "text-yellow-400"
                               : "text-purple-500"
                           }
                         />
-                        {editingQuestionId === q.id
+                        {editingQuestionId === idx
                           ? "Batal"
                           : "Revisi dengan AI"}
                       </button>
                     </div>
-                    <p className="font-medium text-lg mb-4">{q.question}</p>
+                    <p className="font-medium text-lg mb-4">{q.teks}</p>
 
-                    {q.options && (
+                    {q.opsi && (
                       <div className="space-y-2">
-                        {q.options.map((opt, i) => (
+                        {q.opsi.map((opt: any, i: number) => (
                           <div
                             key={i}
-                            className={`p-3 border ${i === q.answer ? "border-green-500 bg-green-50" : "border-black/10 bg-white"}`}
+                            className={`p-3 border ${opt.benar ? "border-green-500 bg-green-50" : "border-black/10 bg-white"}`}
                           >
                             <span
                               className={
-                                i === q.answer
+                                opt.benar
                                   ? "text-green-700 font-medium"
                                   : "text-gray-600"
                               }
                             >
-                              {opt} {i === q.answer && "(Kunci Jawaban)"}
+                              {opt.label}. {opt.teks} {opt.benar && "(Kunci Jawaban)"}
                             </span>
                           </div>
                         ))}
                       </div>
                     )}
 
-                    {q.answerText && (
+                    {(q.kunci_jawaban || q.pembahasan) && q.tipe !== "pg" && (
                       <div className="p-4 bg-yellow-50 border border-yellow-200 mt-4">
                         <span className="text-sm text-yellow-800 font-medium whitespace-pre-wrap">
-                          {q.answerText}
+                          Kunci Jawaban: {q.kunci_jawaban}
                         </span>
                       </div>
                     )}
 
-                    {/* Inline Regenerate UI */}
+                    {q.pembahasan && (
+                      <div className="p-4 bg-blue-50 border border-blue-200 mt-4">
+                        <span className="text-sm text-blue-800 font-medium whitespace-pre-wrap">
+                          Pembahasan: {q.pembahasan}
+                        </span>
+                      </div>
+                    )}
+
                     <AnimatePresence>
-                      {editingQuestionId === q.id && (
+                      {editingQuestionId === idx && (
                         <motion.div
                           initial={{ height: 0, opacity: 0 }}
                           animate={{ height: "auto", opacity: 1 }}
