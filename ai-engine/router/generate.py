@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from service.groq_service import panggil_groq
+from service.gemini_service import panggil_gemini
 from template.prompt_generate import SYSTEM_PROMPT_GENERATE, buat_user_prompt
 
 router = APIRouter()
@@ -19,6 +19,7 @@ class ConfigSoal(BaseModel):
     mata_pelajaran: str = Field(default="")
     jenjang: str = Field(default="")
     bahasa: str = Field(default="id")
+    instruksi_khusus: str = Field(default="")
 
 
 class RequestGenerate(BaseModel):
@@ -44,12 +45,13 @@ async def generate_soal(req: RequestGenerate):
         mata_pelajaran=req.config.mata_pelajaran,
         jenjang=req.config.jenjang,
         bahasa=req.config.bahasa,
+        instruksi_khusus=req.config.instruksi_khusus,
     )
 
     maks_retry = 3
     for percobaan in range(maks_retry):
         try:
-            hasil_mentah = panggil_groq(SYSTEM_PROMPT_GENERATE, user_prompt)
+            hasil_mentah = panggil_gemini(SYSTEM_PROMPT_GENERATE, user_prompt)
             hasil = json.loads(hasil_mentah)
 
             if "soal" not in hasil:
@@ -85,7 +87,7 @@ Materi referensi:
 Buatkan 1 soal pengganti yang BERBEDA dari soal lama di atas, tapi tetap berdasarkan materi yang sama. Kembalikan dalam format JSON yang sama."""
 
     try:
-        hasil_mentah = panggil_groq(SYSTEM_PROMPT_GENERATE, prompt_regenerate)
+        hasil_mentah = panggil_gemini(SYSTEM_PROMPT_GENERATE, prompt_regenerate)
         return json.loads(hasil_mentah)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
 
-from service.groq_service import panggil_groq
+from service.gemini_service import panggil_gemini
 from template.prompt_generate import SYSTEM_PROMPT_SEARCH
 
 router = APIRouter()
@@ -27,7 +27,7 @@ Kedalaman: {req.kedalaman} (brief = ringkas 300 kata, medium = 500-800 kata, dee
 Buatkan materi pembelajaran yang terstruktur untuk topik di atas."""
 
     try:
-        hasil_mentah = panggil_groq(SYSTEM_PROMPT_SEARCH, user_prompt)
+        hasil_mentah = panggil_gemini(SYSTEM_PROMPT_SEARCH, user_prompt)
         hasil = json.loads(hasil_mentah)
         return {
             "materi_terstruktur": hasil.get("materi", ""),

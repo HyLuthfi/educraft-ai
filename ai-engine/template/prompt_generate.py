@@ -49,6 +49,7 @@ def buat_user_prompt(
     mata_pelajaran: str = "",
     jenjang: str = "",
     bahasa: str = "id",
+    instruksi_khusus: str = "",
 ) -> str:
     bagian_tipe = []
     if jumlah_pg > 0:
@@ -58,9 +59,9 @@ def buat_user_prompt(
     if jumlah_essay > 0:
         bagian_tipe.append(f"Essay = {jumlah_essay} soal")
 
-    return f"""Materi:
+    prompt_teks = f"""Materi:
 ---
-{konten_materi[:6000]}
+{konten_materi}
 ---
 
 Konfigurasi:
@@ -70,8 +71,12 @@ Konfigurasi:
 - Mata pelajaran: {mata_pelajaran}
 - Jenjang: {jenjang}
 - Bahasa: {"Indonesia" if bahasa == "id" else "English"}
+"""
+    if instruksi_khusus:
+        prompt_teks += f"- INSTRUKSI KHUSUS DARI GURU: {instruksi_khusus}\n"
 
-Buat soal sesuai konfigurasi di atas. Pastikan semua soal berdasarkan materi yang diberikan."""
+    prompt_teks += "\nBuat soal sesuai konfigurasi di atas. Pastikan semua soal berdasarkan materi yang diberikan."
+    return prompt_teks
 
 
 SYSTEM_PROMPT_SEARCH = """Kamu adalah asisten riset pendidikan. Tugasmu adalah membuat materi pembelajaran yang terstruktur berdasarkan topik yang diberikan.
