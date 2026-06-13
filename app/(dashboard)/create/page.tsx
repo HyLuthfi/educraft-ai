@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   UploadCloud,
@@ -42,6 +42,37 @@ export default function CreateQuestionWizard() {
 
   const [inputTypes, setInputTypes] = useState<string[]>(["text"]);
   const [inputText, setInputText] = useState("");
+  const [isParsing, setIsParsing] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsParsing(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/parse", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Gagal membaca file");
+      
+      const data = await res.json();
+      if (data.teks_hasil) {
+        setInputText((prev) => prev ? prev + "\n\n" + data.teks_hasil : data.teks_hasil);
+        setInputTypes((prev) => prev.includes("text") ? prev : [...prev, "text"]);
+      }
+    } catch (err) {
+      alert("Terjadi kesalahan saat mengekstrak file.");
+    } finally {
+      setIsParsing(false);
+      if (fileInputRef.current) fileInputRef.current.value = "";
+    }
+  };
 
   type ConfigBlock = {
     id: string;
@@ -289,17 +320,28 @@ export default function CreateQuestionWizard() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="border-2 border-dashed border-black/20 bg-gray-50 p-8 flex flex-col items-center justify-center text-center cursor-pointer hover:border-black/50 hover:bg-gray-100 transition-colors"
+                    className="border-2 border-dashed border-black/20 bg-gray-50 p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 transition-colors"
                   >
                     <UploadCloud size={40} className="text-gray-400 mb-4" />
                     <p className="font-semibold text-black mb-1">
-                      Drag & Drop file materi di sini
+                      Pilih file materi Anda
                     </p>
                     <p className="text-sm text-gray-500">
-                      Mendukung format .PDF, .DOCX, atau .TXT (Max 10MB)
+                      Mendukung format .PDF, .DOCX, atau .PPTX (Max 20MB)
                     </p>
-                    <button className="mt-6 px-6 py-2 bg-white border border-black/20 text-sm font-medium hover:border-black transition-colors">
-                      Pilih File
+                    <input 
+                      type="file" 
+                      ref={fileInputRef} 
+                      className="hidden" 
+                      accept=".pdf,.docx,.pptx" 
+                      onChange={handleFileUpload} 
+                    />
+                    <button 
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isParsing}
+                      className="mt-6 px-6 py-2 bg-white border border-black/20 text-sm font-medium hover:border-black transition-colors disabled:opacity-50"
+                    >
+                      {isParsing ? "Sedang menyedot teks..." : "Pilih File"}
                     </button>
                   </motion.div>
                 )}
