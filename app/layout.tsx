@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { Inter, Plus_Jakarta_Sans, Playfair_Display } from "next/font/google"
+import { Toaster } from "sonner"
 import "./globals.css"
 
 const inter = Inter({
@@ -51,6 +52,7 @@ export default function RootLayout({
       <body>
         <div className="noise-overlay" />
         {children}
+        <Toaster position="bottom-right" richColors />
       </body>
     </html>
   )

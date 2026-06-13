@@ -55,6 +55,31 @@ async def parse_file(file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=f"Gagal memproses file: {str(e)}")
 
 
+@router.post("/parse-image")
+async def parse_image(file: UploadFile = File(...)):
+    if file.content_type not in ["image/jpeg", "image/png", "image/webp"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Tipe file tidak didukung: {file.content_type}. Gunakan JPG, PNG, atau WEBP.",
+        )
+
+    konten = await file.read()
+    if len(konten) > MAKS_UKURAN:
+        raise HTTPException(status_code=400, detail="Ukuran file melebihi batas 20MB")
+
+    try:
+        from service.gemini_service import baca_gambar_gemini
+        teks_hasil = baca_gambar_gemini(konten, file.content_type)
+        return {
+            "teks_hasil": teks_hasil.strip(),
+            "tipe_file": file.content_type,
+            "ukuran_kb": len(konten) // 1024,
+        }
+    except Exception as e:
+        logger.error(f"Gagal parse gambar: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Gagal memproses gambar: {str(e)}")
+
+
 def ekstrak_pdf(konten: bytes) -> tuple[str, int]:
     import fitz
 

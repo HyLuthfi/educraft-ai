@@ -79,3 +79,32 @@ def panggil_gemini(system_prompt: str, user_prompt: str, model_name: str = "gemi
 
 def hitung_token(teks: str) -> int:
     return int(len(teks.split()) * 1.5)
+
+def baca_gambar_gemini(image_bytes: bytes, mime_type: str) -> str:
+    if not key_cycler or len(api_keys) == 0:
+        raise RuntimeError("GEMINI_API_KEYS belum di-set di environment variables (.env)")
+
+    max_retries = len(api_keys)
+    last_error = None
+
+    for attempt in range(max_retries):
+        current_key = next(key_cycler)
+        client = genai.Client(api_key=current_key)
+        
+        try:
+            prompt = "Ekstrak seluruh teks yang ada di gambar ini secara presisi. Perbaiki typo ringan jika ada. Pertahankan format jika itu adalah rumus atau tabel. Jangan tambahkan komentar apa pun selain teks yang ada di gambar."
+            response = client.models.generate_content(
+                model="gemini-3.5-flash",
+                contents=[
+                    types.Part.from_bytes(data=image_bytes, mime_type=mime_type),
+                    prompt
+                ]
+            )
+            return response.text
+            
+        except Exception as e:
+            logger.warning(f"API Key gagal (percobaan {attempt+1}/{max_retries}): {str(e)}")
+            last_error = e
+            continue
+            
+    raise RuntimeError(f"Semua {max_retries} API Key telah dicoba dan gagal. Error terakhir: {str(last_error)}")

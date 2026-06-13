@@ -2,6 +2,7 @@
 
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { toast } from "sonner";
 import {
   UploadCloud,
   FileText,
@@ -42,8 +43,41 @@ export default function CreateQuestionWizard() {
 
   const [inputTypes, setInputTypes] = useState<string[]>(["text"]);
   const [inputText, setInputText] = useState("");
+  const [topicText, setTopicText] = useState("");
   const [isParsing, setIsParsing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isOcrLoading, setIsOcrLoading] = useState(false);
+  const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsOcrLoading(true);
+    try {
+      const formData = new FormData();
+      formData.append("file", file);
+
+      const res = await fetch("/api/parse-image", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!res.ok) throw new Error("Gagal membaca gambar");
+      
+      const data = await res.json();
+      if (data.teks_hasil) {
+        setInputText((prev) => prev ? prev + "\n\n" + data.teks_hasil : data.teks_hasil);
+        setInputTypes((prev) => prev.includes("text") ? prev : [...prev, "text"]);
+        toast.success("Gambar berhasil dibaca oleh AI!");
+      }
+    } catch (err) {
+      toast.error("Terjadi kesalahan saat membaca gambar.");
+    } finally {
+      setIsOcrLoading(false);
+      if (imageInputRef.current) imageInputRef.current.value = "";
+    }
+  };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -67,7 +101,7 @@ export default function CreateQuestionWizard() {
         setInputTypes((prev) => prev.includes("text") ? prev : [...prev, "text"]);
       }
     } catch (err) {
-      alert("Terjadi kesalahan saat mengekstrak file.");
+      toast.error("Terjadi kesalahan saat mengekstrak file.");
     } finally {
       setIsParsing(false);
       if (fileInputRef.current) fileInputRef.current.value = "";
@@ -129,7 +163,7 @@ export default function CreateQuestionWizard() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          konten_materi: inputText || "Materi Umum",
+          konten_materi: inputText || topicText || "Materi Umum",
           config: {
             jumlah_pg,
             jumlah_isian,
@@ -303,9 +337,19 @@ export default function CreateQuestionWizard() {
                     animate={{ opacity: 1, height: "auto" }}
                     className="space-y-2"
                   >
-                    <label className="text-sm font-semibold text-gray-700">
-                      Paste Materi Anda di sini
-                    </label>
+                    <div className="flex justify-between items-center">
+                      <label className="text-sm font-semibold text-gray-700">
+                        Paste Materi Anda di sini
+                      </label>
+                      {inputText.length > 0 && (
+                        <button
+                          onClick={() => setInputText("")}
+                          className="text-xs font-semibold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1"
+                        >
+                          <Trash2 size={14} /> Bersihkan Teks
+                        </button>
+                      )}
+                    </div>
                     <textarea
                       rows={5}
                       className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none transition-all"
@@ -359,10 +403,21 @@ export default function CreateQuestionWizard() {
                       </label>
                     </div>
                     <div className="grid md:grid-cols-2 gap-4">
-                      <button className="flex-1 py-8 flex flex-col items-center justify-center gap-3 bg-white border border-black/20 hover:border-black hover:bg-gray-100 transition-all text-gray-600 hover:text-black">
+                      <input 
+                        type="file" 
+                        ref={imageInputRef} 
+                        className="hidden" 
+                        accept="image/jpeg,image/png,image/webp" 
+                        onChange={handleImageUpload} 
+                      />
+                      <button 
+                        onClick={() => imageInputRef.current?.click()}
+                        disabled={isOcrLoading}
+                        className="flex-1 py-8 flex flex-col items-center justify-center gap-3 bg-white border border-black/20 hover:border-black hover:bg-gray-100 transition-all text-gray-600 hover:text-black disabled:opacity-50"
+                      >
                         <UploadCloud size={24} />
                         <span className="font-medium text-sm">
-                          Upload Foto (JPG/PNG)
+                          {isOcrLoading ? "Sedang Membaca..." : "Upload Foto (JPG/PNG)"}
                         </span>
                       </button>
                       <button className="flex-1 py-8 flex flex-col items-center justify-center gap-3 bg-black text-white hover:bg-gray-800 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
@@ -395,6 +450,8 @@ export default function CreateQuestionWizard() {
                       />
                       <input
                         type="text"
+                        value={topicText}
+                        onChange={(e) => setTopicText(e.target.value)}
                         className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all"
                         placeholder="Contoh: Buatkan soal tentang Sejarah Kemerdekaan Indonesia 1945 dengan fokus pada Perjanjian Linggarjati"
                       />

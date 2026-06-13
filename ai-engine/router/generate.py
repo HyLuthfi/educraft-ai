@@ -23,7 +23,7 @@ class ConfigSoal(BaseModel):
 
 
 class RequestGenerate(BaseModel):
-    konten_materi: str = Field(min_length=50)
+    konten_materi: str = Field(min_length=5)
     config: ConfigSoal
 
 
