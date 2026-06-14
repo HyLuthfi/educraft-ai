@@ -497,7 +497,12 @@ export default function CreateQuestionWizard() {
               <div className="flex justify-end pt-6 border-t border-black/10">
                 <button
                   onClick={handleNext}
-                  className="btn-primary px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] transition-all"
+                  disabled={!inputText.trim() && !topicText.trim()}
+                  className={`px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all ${
+                    !inputText.trim() && !topicText.trim()
+                      ? "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300"
+                      : "btn-primary hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]"
+                  }`}
                 >
                   Lanjut: Atur Parameter <ChevronRight size={18} />
                 </button>
