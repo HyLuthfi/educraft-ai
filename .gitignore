@@ -28,6 +28,17 @@
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# Python
+ai-engine/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+*.pdf
+*.docx
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
