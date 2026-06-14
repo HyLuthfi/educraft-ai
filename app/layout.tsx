@@ -25,6 +25,7 @@ export const metadata: Metadata = {
   title: "EduCraft AI - Generator Soal Cerdas untuk Guru",
   description:
     "Ubah materi apapun menjadi soal berkualitas tinggi dalam hitungan menit. Didukung AI, siap cetak, siap pakai di platform apapun.",
+  authors: [{ name: "EduCraft Team" }],
   keywords: [
     "generator soal",
     "AI pendidikan",
