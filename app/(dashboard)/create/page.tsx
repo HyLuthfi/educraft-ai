@@ -20,7 +20,9 @@ import {
   ChevronDown,
   RefreshCw,
   Trash2,
+  History,
 } from "lucide-react";
+import { buatSupabaseClient } from "@/lib/supabase/client";
 
 export default function CreateQuestionWizard() {
   const [step, setStep] = useState(1);
@@ -48,6 +50,30 @@ export default function CreateQuestionWizard() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isOcrLoading, setIsOcrLoading] = useState(false);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [historyMaterials, setHistoryMaterials] = useState<any[]>([]);
+  const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+
+  const fetchHistory = async () => {
+    setIsHistoryLoading(true);
+    try {
+      const supabase = buatSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data, error } = await supabase
+          .from('bank_materi')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (data) setHistoryMaterials(data);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsHistoryLoading(false);
+    }
+  };
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -292,23 +318,31 @@ export default function CreateQuestionWizard() {
                 </p>
               </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
                 {[
                   { id: "text", label: "Teks Bebas", icon: Type },
                   { id: "file", label: "Upload PDF", icon: UploadCloud },
                   { id: "image", label: "Foto/Kamera", icon: Camera },
                   { id: "prompt", label: "Topik Singkat", icon: Sparkles },
+                  { id: "history", label: "Riwayat", icon: History },
                 ].map((type) => (
                   <button
                     key={type.id}
-                    onClick={() => toggleInputType(type.id)}
+                    onClick={() => {
+                      if (type.id === "history") {
+                        setIsHistoryOpen(true);
+                        fetchHistory();
+                      } else {
+                        toggleInputType(type.id);
+                      }
+                    }}
                     className={`p-4 flex flex-col items-center justify-center gap-3 border transition-all relative ${
-                      inputTypes.includes(type.id)
+                      (type.id === "history" ? false : inputTypes.includes(type.id))
                         ? "border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1"
                         : "border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500"
                     }`}
                   >
-                    {inputTypes.includes(type.id) && (
+                    {type.id !== "history" && inputTypes.includes(type.id) && (
                       <div className="absolute top-2 right-2 text-black">
                         <CheckCircle size={16} />
                       </div>
@@ -316,13 +350,13 @@ export default function CreateQuestionWizard() {
                     <type.icon
                       size={24}
                       className={
-                        inputTypes.includes(type.id)
+                        type.id === "history" ? "text-gray-400 group-hover:text-black" : (inputTypes.includes(type.id)
                           ? "text-black"
-                          : "text-gray-400"
+                          : "text-gray-400")
                       }
                     />
                     <span
-                      className={`font-semibold text-sm text-center ${inputTypes.includes(type.id) ? "text-black" : ""}`}
+                      className={`font-semibold text-sm text-center ${type.id === "history" ? "text-gray-500 group-hover:text-black" : (inputTypes.includes(type.id) ? "text-black" : "")}`}
                     >
                       {type.label}
                     </span>
@@ -468,6 +502,56 @@ export default function CreateQuestionWizard() {
                   Lanjut: Atur Parameter <ChevronRight size={18} />
                 </button>
               </div>
+
+              {isHistoryOpen && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm">
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] p-6 max-w-2xl w-full max-h-[80vh] flex flex-col"
+                  >
+                    <div className="flex justify-between items-center mb-6">
+                      <h3 className="text-2xl font-bold font-playfair flex items-center gap-2">
+                        <History /> Riwayat Materi
+                      </h3>
+                      <button
+                        onClick={() => setIsHistoryOpen(false)}
+                        className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+                      >
+                        <X size={24} />
+                      </button>
+                    </div>
+
+                    <div className="flex-1 overflow-y-auto pr-2 space-y-3">
+                      {isHistoryLoading ? (
+                        <div className="text-center py-10 text-gray-500">Memuat riwayat...</div>
+                      ) : historyMaterials.length === 0 ? (
+                        <div className="text-center py-10 text-gray-500">Belum ada riwayat materi.</div>
+                      ) : (
+                        historyMaterials.map((item) => (
+                          <button
+                            key={item.id}
+                            onClick={() => {
+                              setInputText(item.konten_mentah);
+                              if (!inputTypes.includes("text")) setInputTypes([...inputTypes, "text"]);
+                              setIsHistoryOpen(false);
+                              toast.success("Materi berhasil dimuat!");
+                            }}
+                            className="w-full text-left p-4 border border-black/10 hover:border-black hover:bg-gray-50 transition-all flex flex-col gap-1 group"
+                          >
+                            <h4 className="font-bold text-lg group-hover:text-blue-600 truncate">{item.judul}</h4>
+                            <p className="text-xs text-gray-500 line-clamp-2">{item.konten_mentah}</p>
+                            <div className="text-[10px] uppercase tracking-wider text-gray-400 mt-2 font-bold">
+                              {new Date(item.created_at).toLocaleDateString("id-ID", { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                </div>
+              )}
             </motion.div>
           )}
 
