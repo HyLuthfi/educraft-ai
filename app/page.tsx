@@ -34,7 +34,7 @@ export default function LandingPage() {
               className="object-contain group-hover:scale-105 transition-transform"
             />
             <div className="flex items-center gap-2">
-              <span className="font-editorial text-3xl font-semibold tracking-tight text-black">
+              <span className="font-editorial text-3xl font-semibold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-black to-gray-600">
                 EduCraft AI.
               </span>
               <span className="bg-black text-white text-[10px] font-bold px-1.5 py-0.5 rounded-sm uppercase tracking-wider hidden sm:block">
