@@ -173,6 +173,56 @@ export default function CreateQuestionWizard() {
   const handleNext = () => setStep((s) => Math.min(s + 1, 3));
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
 
+  const handleExport = async (format: "pdf" | "docx", sertakan_jawaban: boolean, sertakan_pembahasan: boolean) => {
+    if (generatedQuestions.length === 0) {
+      toast.error("Belum ada soal untuk di-export.");
+      return;
+    }
+
+    const toastId = toast.loading(`Sedang memproses dokumen ${format.toUpperCase()}...`);
+
+    try {
+      const payload = {
+        soal: generatedQuestions,
+        header: {
+          nama_sekolah: "Latihan Soal EduCraft",
+          mata_pelajaran: "Materi Umum",
+          kelas: "Semua Kelas",
+          tanggal: new Date().toLocaleDateString("id-ID"),
+          durasi: "60 Menit"
+        },
+        sertakan_jawaban,
+        sertakan_pembahasan
+      };
+
+      const res = await fetch(`/api/export/${format}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Gagal mengunduh dokumen");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `soal-educraft-${Date.now()}.${format}`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      
+      toast.success("Dokumen berhasil diunduh!", { id: toastId });
+      setIsDownloadModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal melakukan export", { id: toastId });
+    }
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
 
@@ -1024,7 +1074,10 @@ export default function CreateQuestionWizard() {
                     </div>
 
                     <div className="space-y-3">
-                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left">
+                      <button 
+                        onClick={() => handleExport("pdf", false, false)}
+                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-red-50 text-red-600 flex items-center justify-center">
                             <FileText size={20} />
@@ -1044,7 +1097,10 @@ export default function CreateQuestionWizard() {
                         />
                       </button>
 
-                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left">
+                      <button 
+                        onClick={() => handleExport("pdf", true, false)}
+                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-yellow-50 text-yellow-600 flex items-center justify-center">
                             <FileText size={20} />
@@ -1064,7 +1120,10 @@ export default function CreateQuestionWizard() {
                         />
                       </button>
 
-                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left">
+                      <button 
+                        onClick={() => handleExport("pdf", true, true)}
+                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-green-50 text-green-600 flex items-center justify-center">
                             <FileText size={20} />
@@ -1084,7 +1143,10 @@ export default function CreateQuestionWizard() {
                         />
                       </button>
 
-                      <button className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-blue-500 hover:shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)] transition-all group text-left">
+                      <button 
+                        onClick={() => handleExport("docx", false, false)}
+                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-blue-500 hover:shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)] transition-all group text-left"
+                      >
                         <div className="flex items-center gap-4">
                           <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
                             W

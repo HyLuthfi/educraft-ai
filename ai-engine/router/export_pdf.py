@@ -4,9 +4,13 @@ from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import io
 
+try:
+    from fpdf import FPDF
+except ImportError:
+    pass
+
 router = APIRouter()
 logger = logging.getLogger(__name__)
-
 
 class HeaderPdf(BaseModel):
     nama_sekolah: str = Field(default="")
@@ -15,115 +19,95 @@ class HeaderPdf(BaseModel):
     tanggal: str = Field(default="")
     durasi: str = Field(default="")
 
-
 class RequestExportPdf(BaseModel):
     soal: list = Field(min_length=1)
     header: HeaderPdf
     sertakan_jawaban: bool = Field(default=False)
     sertakan_pembahasan: bool = Field(default=False)
 
+class PDF(FPDF):
+    def __init__(self, header_data: HeaderPdf):
+        super().__init__()
+        self.header_data = header_data
+
+    def header(self):
+        self.set_font('helvetica', 'B', 16)
+        self.cell(0, 10, self.header_data.nama_sekolah or 'Soal Ujian', align='C', new_x="LMARGIN", new_y="NEXT")
+        self.set_font('helvetica', '', 10)
+        self.set_text_color(80, 80, 80)
+        self.cell(0, 6, f"{self.header_data.mata_pelajaran} | Kelas {self.header_data.kelas}", align='C', new_x="LMARGIN", new_y="NEXT")
+        self.cell(0, 6, f"Tanggal: {self.header_data.tanggal} | Waktu: {self.header_data.durasi}", align='C', new_x="LMARGIN", new_y="NEXT")
+        self.set_text_color(0, 0, 0)
+        self.ln(10)
 
 @router.post("/export/pdf")
 async def export_pdf(req: RequestExportPdf):
     try:
-        html = bangun_html_pdf(req.soal, req.header, req.sertakan_jawaban, req.sertakan_pembahasan)
+        from fpdf import FPDF
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="fpdf2 belum ter-install. Jalankan: pip install fpdf2",
+        )
 
-        from weasyprint import HTML
+    try:
+        pdf = PDF(req.header)
+        pdf.add_page()
+        pdf.set_font("helvetica", size=12)
 
-        pdf_bytes = HTML(string=html).write_pdf()
+        nomor = 1
+        for s in req.soal:
+            tipe = s.get("tipe", s.get("type", "pg"))
+            teks = s.get("teks", s.get("teks_soal", s.get("text", "")))
 
+            pdf.multi_cell(0, 8, f"{nomor}. {teks}")
+
+            if tipe == "pg":
+                opsi_list = s.get("opsi", s.get("options", []))
+                for opsi in opsi_list:
+                    label = opsi.get("label", opsi.get("label_opsi", ""))
+                    teks_opsi = opsi.get("teks", opsi.get("teks_opsi", opsi.get("text", "")))
+                    pdf.set_x(pdf.l_margin + 10)
+                    pdf.multi_cell(0, 6, f"{label}. {teks_opsi}")
+            
+            elif tipe == "essay":
+                pdf.ln(20) # empty space for essay
+
+            elif tipe == "isian":
+                pdf.set_x(pdf.l_margin + 10)
+                pdf.cell(0, 8, "Jawaban: ____________________", new_x="LMARGIN", new_y="NEXT")
+
+            pdf.ln(5)
+            nomor += 1
+
+        if req.sertakan_jawaban:
+            pdf.add_page()
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, "Kunci Jawaban", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", size=12)
+            for i, s in enumerate(req.soal, 1):
+                kunci = s.get("kunci_jawaban", s.get("answer_key", "-"))
+                pdf.multi_cell(0, 8, f"{i}. {kunci}")
+
+        if req.sertakan_pembahasan:
+            pdf.add_page()
+            pdf.set_font("helvetica", "B", 14)
+            pdf.cell(0, 10, "Pembahasan", new_x="LMARGIN", new_y="NEXT")
+            pdf.set_font("helvetica", size=12)
+            for i, s in enumerate(req.soal, 1):
+                pembahasan = s.get("pembahasan", s.get("explanation", "-"))
+                pdf.multi_cell(0, 8, f"{i}. {pembahasan}")
+                pdf.ln(2)
+
+        # Output PDF to bytes
+        pdf_bytes = pdf.output(dest='S')
+        
         return StreamingResponse(
             io.BytesIO(pdf_bytes),
             media_type="application/pdf",
             headers={"Content-Disposition": "attachment; filename=soal-educraft.pdf"},
         )
-    except ImportError:
-        raise HTTPException(
-            status_code=500,
-            detail="WeasyPrint belum ter-install. Jalankan: pip install weasyprint",
-        )
+
     except Exception as e:
         logger.error(f"Export PDF gagal: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
-
-
-def bangun_html_pdf(soal: list, header: HeaderPdf, sertakan_jawaban: bool, sertakan_pembahasan: bool) -> str:
-    baris_soal = []
-    nomor = 1
-
-    for s in soal:
-        tipe = s.get("tipe", s.get("type", "pg"))
-        teks = s.get("teks", s.get("teks_soal", s.get("text", "")))
-
-        baris_soal.append(f'<div class="soal"><p><strong>{nomor}.</strong> {teks}</p>')
-
-        if tipe == "pg":
-            opsi_list = s.get("opsi", s.get("options", []))
-            for opsi in opsi_list:
-                label = opsi.get("label", opsi.get("label_opsi", ""))
-                teks_opsi = opsi.get("teks", opsi.get("teks_opsi", opsi.get("text", "")))
-                baris_soal.append(f"<p class='opsi'>{label}. {teks_opsi}</p>")
-
-        if tipe == "essay":
-            baris_soal.append("<div class='area-jawab'></div>")
-
-        if tipe == "isian":
-            baris_soal.append("<p class='garis-jawab'>Jawaban: _______________</p>")
-
-        baris_soal.append("</div>")
-        nomor += 1
-
-    bagian_jawaban = ""
-    if sertakan_jawaban:
-        jawaban_items = []
-        for i, s in enumerate(soal, 1):
-            kunci = s.get("kunci_jawaban", s.get("answer_key", "-"))
-            jawaban_items.append(f"<p>{i}. {kunci}</p>")
-        bagian_jawaban = f"""
-        <div class="page-break"></div>
-        <h2>Kunci Jawaban</h2>
-        {"".join(jawaban_items)}
-        """
-
-    bagian_pembahasan = ""
-    if sertakan_pembahasan:
-        pembahasan_items = []
-        for i, s in enumerate(soal, 1):
-            penjelasan = s.get("pembahasan", s.get("explanation", "-"))
-            pembahasan_items.append(f"<div class='pembahasan'><p><strong>{i}.</strong> {penjelasan}</p></div>")
-        bagian_pembahasan = f"""
-        <div class="page-break"></div>
-        <h2>Pembahasan</h2>
-        {"".join(pembahasan_items)}
-        """
-
-    return f"""<!DOCTYPE html>
-<html lang="id">
-<head>
-<meta charset="utf-8">
-<style>
-    @page {{ size: A4; margin: 2cm; }}
-    body {{ font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.6; color: #1a1a1a; }}
-    .header {{ text-align: center; border-bottom: 2px solid #333; padding-bottom: 16px; margin-bottom: 24px; }}
-    .header h1 {{ font-size: 16pt; margin: 0 0 4px 0; }}
-    .header p {{ font-size: 10pt; margin: 2px 0; color: #555; }}
-    .soal {{ margin-bottom: 20px; }}
-    .opsi {{ margin: 4px 0 4px 24px; }}
-    .area-jawab {{ border: 1px dashed #ccc; height: 80px; margin: 8px 0; }}
-    .garis-jawab {{ margin: 8px 0 8px 24px; }}
-    .pembahasan {{ margin-bottom: 16px; padding: 8px; background: #f9f9f9; border-left: 3px solid #6366f1; }}
-    .page-break {{ page-break-before: always; }}
-    h2 {{ font-size: 14pt; margin: 24px 0 16px 0; border-bottom: 1px solid #ddd; padding-bottom: 8px; }}
-</style>
-</head>
-<body>
-    <div class="header">
-        <h1>{header.nama_sekolah or "Soal Ujian"}</h1>
-        <p>{header.mata_pelajaran} | Kelas {header.kelas}</p>
-        <p>Tanggal: {header.tanggal} | Waktu: {header.durasi}</p>
-    </div>
-    {"".join(baris_soal)}
-    {bagian_jawaban}
-    {bagian_pembahasan}
-</body>
-</html>"""
