@@ -49,6 +49,9 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" className={`${inter.variable} ${plusJakarta.variable} ${playfair.variable}`}>
+      <head>
+        <meta name="theme-color" content="#ffffff" />
+      </head>
       <body>
         <div className="noise-overlay" />
         {children}
