@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## [Unreleased]
+- Performance optimizations and UX polish
+- Additional document export formats
+
 ## [1.0.0] - 2026-06-14
 
 ### Added
