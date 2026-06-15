@@ -1,0 +1,7 @@
+.next
+node_modules
+ai-engine/env
+ai-engine/venv
+*.pdf
+*.docx
+public/
