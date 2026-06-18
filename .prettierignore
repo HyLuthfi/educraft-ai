@@ -5,3 +5,6 @@ ai-engine/venv
 *.pdf
 *.docx
 public/
+
+build/
+dist/
