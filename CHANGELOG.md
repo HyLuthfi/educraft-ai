@@ -17,3 +17,6 @@ All notable changes to this project will be documented in this file.
 
 ### Changed
 - Migrated from WeasyPrint to `fpdf2` for Windows compatibility.
+
+### Fixed
+- Minor spelling fixes in documentation.
