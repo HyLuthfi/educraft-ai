@@ -53,7 +53,7 @@ export default function LandingPage() {
               <div className="absolute top-full left-0 pt-2 w-64 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 transform translate-y-2 group-hover:translate-y-0">
                 <div className="p-2 bg-white rounded-2xl shadow-xl shadow-black/5 border border-black/5 flex flex-col gap-1">
                   <Link
-                    href="#pembuat-soal"
+                    href="/create"
                     className="px-4 py-3 hover:bg-[#f9f9f9] rounded-xl transition-colors flex items-center gap-4 group/item"
                   >
                     <div className="w-10 h-10 rounded-lg bg-[#f0f0f0] flex items-center justify-center group-hover/item:bg-black group-hover/item:text-white transition-colors">
