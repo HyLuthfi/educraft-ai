@@ -3,11 +3,10 @@ from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 import io
+import os
 
 try:
-    from docx import Document
-    from docx.shared import Pt
-    from docx.enum.text import WD_PARAGRAPH_ALIGNMENT
+    from docxtpl import DocxTemplate
 except ImportError:
     pass
 
@@ -30,69 +29,80 @@ class RequestExportDocx(BaseModel):
 @router.post("/export/docx")
 async def export_docx(req: RequestExportDocx):
     try:
-        from docx import Document
+        from docxtpl import DocxTemplate
     except ImportError:
         raise HTTPException(
             status_code=500,
-            detail="python-docx belum ter-install. Jalankan: pip install python-docx",
+            detail="docxtpl belum ter-install. Jalankan: pip install docxtpl",
         )
         
     try:
-        doc = Document()
+        template_path = os.path.join(os.path.dirname(__file__), "..", "template", "template_ujian.docx")
+        if not os.path.exists(template_path):
+            raise FileNotFoundError(f"Template tidak ditemukan di {template_path}")
+            
+        doc = DocxTemplate(template_path)
         
-        # Header
-        p = doc.add_paragraph()
-        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        run = p.add_run(req.header.nama_sekolah or "Soal Ujian\n")
-        run.bold = True
-        run.font.size = Pt(14)
+        # Pisahkan soal berdasarkan tipe
+        pg_list = []
+        isian_list = []
+        essay_list = []
         
-        p = doc.add_paragraph()
-        p.alignment = WD_PARAGRAPH_ALIGNMENT.CENTER
-        info = f"Mata Pelajaran: {req.header.mata_pelajaran} | Kelas: {req.header.kelas}\n"
-        info += f"Tanggal: {req.header.tanggal} | Durasi: {req.header.durasi}"
-        p.add_run(info)
+        nomor_pg = 1
+        nomor_isian = 1
+        nomor_essay = 1
         
-        doc.add_paragraph("-" * 80)
-        
-        # Soal
-        nomor = 1
         for s in req.soal:
             tipe = s.get("tipe", s.get("type", "pg"))
-            teks = s.get("teks", s.get("teks_soal", s.get("text", "")))
-            
-            doc.add_paragraph(f"{nomor}. {teks}")
-            
             if tipe == "pg":
-                opsi_list = s.get("opsi", s.get("options", []))
-                for opsi in opsi_list:
-                    label = opsi.get("label", opsi.get("label_opsi", ""))
-                    teks_opsi = opsi.get("teks", opsi.get("teks_opsi", opsi.get("text", "")))
-                    p_opsi = doc.add_paragraph(f"   {label}. {teks_opsi}")
-            elif tipe == "essay":
-                doc.add_paragraph("\n\n\n")
+                pg_list.append({
+                    "nomor": nomor_pg,
+                    "teks": s.get("teks", s.get("teks_soal", s.get("text", ""))),
+                    "opsi": s.get("opsi", s.get("options", [])),
+                    "jawaban": s.get("jawaban_benar", s.get("jawaban", "")),
+                    "pembahasan": s.get("pembahasan", s.get("explanation", ""))
+                })
+                nomor_pg += 1
             elif tipe == "isian":
-                doc.add_paragraph("   Jawaban: _________________________________")
-                
-            doc.add_paragraph("") # spacing
-            nomor += 1
-            
-        # Jawaban
-        if req.sertakan_jawaban:
-            doc.add_page_break()
-            doc.add_heading('Kunci Jawaban', level=1)
-            for i, s in enumerate(req.soal, 1):
-                kunci = s.get("kunci_jawaban", s.get("answer_key", "-"))
-                doc.add_paragraph(f"{i}. {kunci}")
-                
-        # Pembahasan
-        if req.sertakan_pembahasan:
-            doc.add_page_break()
-            doc.add_heading('Pembahasan', level=1)
-            for i, s in enumerate(req.soal, 1):
-                pembahasan = s.get("pembahasan", s.get("explanation", "-"))
-                doc.add_paragraph(f"{i}. {pembahasan}")
-                
+                isian_list.append({
+                    "nomor": nomor_isian,
+                    "teks": s.get("teks", s.get("teks_soal", s.get("text", ""))),
+                    "jawaban": s.get("jawaban_benar", s.get("jawaban", "")),
+                    "pembahasan": s.get("pembahasan", s.get("explanation", ""))
+                })
+                nomor_isian += 1
+            else:
+                essay_list.append({
+                    "nomor": nomor_essay,
+                    "teks": s.get("teks", s.get("teks_soal", s.get("text", ""))),
+                    "jawaban": s.get("jawaban_benar", s.get("jawaban", "")),
+                    "pembahasan": s.get("pembahasan", s.get("explanation", ""))
+                })
+                nomor_essay += 1
+
+        import datetime
+        current_year = datetime.datetime.now().year
+
+        # Siapkan context dictionary
+        context = {
+            "tittle": "UJIAN AKHIR SEMESTER",
+            "instansi": req.header.nama_sekolah or "NAMA SEKOLAH ANDA",
+            "tahun": str(current_year),
+            "tahun2": str(current_year + 1),
+            "nama_sekolah": req.header.nama_sekolah or "NAMA SEKOLAH ANDA",
+            "mata_pelajaran": req.header.mata_pelajaran or "-",
+            "kelas": req.header.kelas or "-",
+            "tanggal": req.header.tanggal or "-",
+            "durasi": req.header.durasi or "-",
+            "pg_list": pg_list,
+            "isian_list": isian_list,
+            "essay_list": essay_list,
+            "sertakan_jawaban": req.sertakan_jawaban,
+            "sertakan_pembahasan": req.sertakan_pembahasan
+        }
+        
+        doc.render(context)
+        
         # Save to memory
         f = io.BytesIO()
         doc.save(f)
