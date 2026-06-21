@@ -185,7 +185,7 @@ export default function CreateQuestionWizard() {
       const payload = {
         soal: generatedQuestions,
         header: {
-          nama_sekolah: "Latihan Soal EduCraft",
+          nama_sekolah: "EDUCRAFT AI",
           mata_pelajaran: "Materi Umum",
           kelas: "Semua Kelas",
           tanggal: new Date().toLocaleDateString("id-ID"),
