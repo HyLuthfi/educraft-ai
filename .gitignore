@@ -39,6 +39,7 @@ env/
 venv/
 *.pdf
 *.docx
+!ai-engine/template/template_ujian.docx
 .pnpm-debug.log*
 
 # env files (can opt-in for committing if needed)
