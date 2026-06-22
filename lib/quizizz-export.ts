@@ -23,7 +23,6 @@ export const downloadQuizizzExcel = (soalData: any[]) => {
       opt5 = options[4]?.teks || "";
 
       const jawabanBenarLabel = soal.kunci_jawaban || soal.jawaban_benar || soal.jawaban || "";
-      // Quizizz membutuhkan angka (1-5) untuk merepresentasikan jawaban yang benar
       const correctIndex = options.findIndex((o: any) => o.label === jawabanBenarLabel);
       if (correctIndex !== -1) {
         correctAns = (correctIndex + 1).toString();
