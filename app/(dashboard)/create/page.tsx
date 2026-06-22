@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import GoogleFormExportButton from "@/app/components/GoogleFormExportButton";
@@ -56,6 +56,9 @@ export default function CreateQuestionWizard() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [historyMaterials, setHistoryMaterials] = useState<any[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+  const [isSavingToBank, setIsSavingToBank] = useState(false);
+  const [instruksiKhusus, setInstruksiKhusus] = useState("");
+  const [isMounted, setIsMounted] = useState(false);
 
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
@@ -172,6 +175,37 @@ export default function CreateQuestionWizard() {
     0,
   );
 
+  useEffect(() => {
+    setIsMounted(true);
+    const savedData = localStorage.getItem("educraft_create_draft");
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        if (parsed.step) setStep(parsed.step);
+        if (parsed.inputTypes) setInputTypes(parsed.inputTypes);
+        if (parsed.inputText !== undefined) setInputText(parsed.inputText);
+        if (parsed.topicText !== undefined) setTopicText(parsed.topicText);
+        if (parsed.configBlocks) setConfigBlocks(parsed.configBlocks);
+        if (parsed.instruksiKhusus !== undefined) setInstruksiKhusus(parsed.instruksiKhusus);
+        if (parsed.generatedQuestions) setGeneratedQuestions(parsed.generatedQuestions);
+      } catch (e) {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    const draft = {
+      step,
+      inputTypes,
+      inputText,
+      topicText,
+      configBlocks,
+      instruksiKhusus,
+      generatedQuestions
+    };
+    localStorage.setItem("educraft_create_draft", JSON.stringify(draft));
+  }, [step, inputTypes, inputText, topicText, configBlocks, instruksiKhusus, generatedQuestions, isMounted]);
+
   const handleNext = () => setStep((s) => Math.min(s + 1, 3));
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
 
@@ -225,6 +259,47 @@ export default function CreateQuestionWizard() {
     }
   };
 
+  const handleSaveToBank = async () => {
+    if (generatedQuestions.length === 0) {
+      toast.error("Belum ada soal untuk disimpan.");
+      return;
+    }
+
+    setIsSavingToBank(true);
+    const toastId = toast.loading("Menyimpan ke Bank Soal...");
+
+    try {
+      const supabase = buatSupabaseClient();
+      const { data: { user } } = await supabase.auth.getUser();
+
+      if (!user) {
+        throw new Error("Anda harus login untuk menyimpan soal.");
+      }
+
+      // Beri judul otomatis berdasarkan topik atau materi pertama
+      let title = topicText || inputText.substring(0, 30) || "Kuis Tanpa Judul";
+      if (title.length > 50) title = title.substring(0, 50) + "...";
+
+      const { error } = await supabase
+        .from('bank_soal')
+        .insert({
+          user_id: user.id,
+          title: title,
+          folder: 'Umum',
+          content: { soal: generatedQuestions }
+        });
+
+      if (error) throw error;
+
+      toast.success("Berhasil disimpan ke Bank Soal!", { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Gagal menyimpan ke Bank Soal.", { id: toastId });
+    } finally {
+      setIsSavingToBank(false);
+    }
+  };
+
   const handleGenerate = async () => {
     setIsGenerating(true);
 
@@ -233,9 +308,6 @@ export default function CreateQuestionWizard() {
       const jumlah_isian = configBlocks.filter((b) => b.type === "Isian Singkat" || b.type === "Benar/Salah").reduce((sum, b) => sum + b.count, 0);
       const jumlah_essay = configBlocks.filter((b) => b.type === "Essay").reduce((sum, b) => sum + b.count, 0);
       const tingkat_kesulitan = configBlocks[0].level;
-      
-      const instruksiKhususEl = document.getElementById("instruksi-khusus") as HTMLTextAreaElement;
-      const instruksi_khusus = instruksiKhususEl ? instruksiKhususEl.value : "";
 
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -251,7 +323,7 @@ export default function CreateQuestionWizard() {
             mata_pelajaran: "Umum",
             jenjang: "Umum",
             bahasa: "id",
-            instruksi_khusus
+            instruksi_khusus: instruksiKhusus
           }
         })
       });
@@ -362,12 +434,30 @@ export default function CreateQuestionWizard() {
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
               className="space-y-8"
             >
-              <div>
-                <h2 className="text-2xl font-bold mb-2">Bahan Baku Materi</h2>
-                <p className="text-gray-500">
-                  Pilih satu atau beberapa kombinasi input sekaligus agar hasil
-                  AI lebih akurat.
-                </p>
+              <div className="flex justify-between items-start">
+                <div>
+                  <h2 className="text-2xl font-bold mb-2">Bahan Baku Materi</h2>
+                  <p className="text-gray-500">
+                    Pilih satu atau beberapa kombinasi input sekaligus agar hasil
+                    AI lebih akurat.
+                  </p>
+                </div>
+                <button
+                  onClick={() => {
+                    localStorage.removeItem("educraft_create_draft");
+                    setStep(1);
+                    setInputText("");
+                    setTopicText("");
+                    setInputTypes(["text"]);
+                    setConfigBlocks([{ id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10 }]);
+                    setInstruksiKhusus("");
+                    setGeneratedQuestions([]);
+                    toast.success("Formulir berhasil di-reset");
+                  }}
+                  className="px-4 py-2 border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-sm flex items-center gap-2"
+                >
+                  <Trash2 size={16} /> Reset
+                </button>
               </div>
 
               <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
@@ -753,6 +843,8 @@ export default function CreateQuestionWizard() {
                   <textarea
                     id="instruksi-khusus"
                     rows={3}
+                    value={instruksiKhusus}
+                    onChange={(e) => setInstruksiKhusus(e.target.value)}
                     className="w-full pl-12 pr-4 py-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all resize-none"
                     placeholder="Contoh: Fokuskan pertanyaan hanya pada definisi dan tokoh penemu, jangan masukkan tahun kejadian."
                   />
@@ -894,8 +986,12 @@ export default function CreateQuestionWizard() {
                   </p>
                 </div>
                 <div className="flex gap-3">
-                  <button className="px-4 py-2 border border-black/20 font-medium hover:border-black transition-colors bg-white">
-                    Simpan ke Bank Soal
+                  <button 
+                    onClick={handleSaveToBank}
+                    disabled={isSavingToBank}
+                    className="px-4 py-2 border border-black/20 font-medium hover:border-black transition-colors bg-white disabled:opacity-50"
+                  >
+                    {isSavingToBank ? "Menyimpan..." : "Simpan ke Bank Soal"}
                   </button>
                   <button
                     onClick={() => setIsDownloadModalOpen(true)}
@@ -1132,20 +1228,6 @@ export default function CreateQuestionWizard() {
                           soal: generatedQuestions?.soal || generatedQuestions
                         }}
                       />
-
-                      <button className="p-6 border border-black/10 bg-white hover:border-[#46178f] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
-                        <div className="w-12 h-12 rounded-full bg-[#46178f]/10 text-[#46178f] flex items-center justify-center font-bold text-xl mb-1">
-                          K!
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-900 group-hover:text-[#46178f]">
-                            Kahoot!
-                          </div>
-                          <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
-                            Format Excel
-                          </div>
-                        </div>
-                      </button>
 
                       <button className="p-6 border border-black/10 bg-white hover:border-black transition-all flex flex-col items-center justify-center gap-3 text-center border-dashed group">
                         <div className="w-12 h-12 rounded-full bg-gray-50 text-gray-400 flex items-center justify-center font-bold text-xl mb-1 group-hover:bg-black group-hover:text-white transition-colors">
