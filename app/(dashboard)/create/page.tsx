@@ -1074,77 +1074,10 @@ export default function CreateQuestionWizard() {
                     </div>
 
                     <div className="space-y-3">
-                      <button 
-                        onClick={() => handleExport("pdf", false, false)}
-                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-red-50 text-red-600 flex items-center justify-center">
-                            <FileText size={20} />
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-900">
-                              PDF Lembar Soal
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Hanya pertanyaan, siap dibagikan ke siswa
-                            </div>
-                          </div>
-                        </div>
-                        <Download
-                          size={18}
-                          className="text-gray-300 group-hover:text-black"
-                        />
-                      </button>
+
 
                       <button 
-                        onClick={() => handleExport("pdf", true, false)}
-                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-yellow-50 text-yellow-600 flex items-center justify-center">
-                            <FileText size={20} />
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-900">
-                              PDF Kunci Jawaban
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Pegangan guru, lengkap dengan rubrik
-                            </div>
-                          </div>
-                        </div>
-                        <Download
-                          size={18}
-                          className="text-gray-300 group-hover:text-black"
-                        />
-                      </button>
-
-                      <button 
-                        onClick={() => handleExport("pdf", true, true)}
-                        className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-black hover:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all group text-left"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-green-50 text-green-600 flex items-center justify-center">
-                            <FileText size={20} />
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-900">
-                              PDF Lengkap (Soal + Jawaban)
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              Bahan evaluasi komprehensif
-                            </div>
-                          </div>
-                        </div>
-                        <Download
-                          size={18}
-                          className="text-gray-300 group-hover:text-black"
-                        />
-                      </button>
-
-                      <button 
-                        onClick={() => handleExport("docx", false, false)}
+                        onClick={() => handleExport("docx", true, true)}
                         className="w-full flex items-center justify-between p-4 border border-black/10 bg-white hover:border-blue-500 hover:shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)] transition-all group text-left"
                       >
                         <div className="flex items-center gap-4">
@@ -1156,7 +1089,7 @@ export default function CreateQuestionWizard() {
                               Microsoft Word (.docx)
                             </div>
                             <div className="text-xs text-gray-500">
-                              Format mentah, bisa diedit ulang di MS Word
+                              Format MS Word sepaket (Soal, Kunci, Pembahasan)
                             </div>
                           </div>
                         </div>

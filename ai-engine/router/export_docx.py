@@ -55,11 +55,21 @@ async def export_docx(req: RequestExportDocx):
         for s in req.soal:
             tipe = s.get("tipe", s.get("type", "pg"))
             if tipe == "pg":
+                opsi_list = s.get("opsi", s.get("options", []))
+                jawaban_benar = s.get("kunci_jawaban", s.get("jawaban", ""))
+                
+                jawaban_teks = jawaban_benar
+                if jawaban_benar:
+                    for o in opsi_list:
+                        if o.get("label") == jawaban_benar:
+                            jawaban_teks = f"{jawaban_benar}. {o.get('teks', '')}"
+                            break
+
                 pg_list.append({
                     "nomor": nomor_pg,
                     "teks": s.get("teks", s.get("teks_soal", s.get("text", ""))),
-                    "opsi": s.get("opsi", s.get("options", [])),
-                    "jawaban": s.get("jawaban_benar", s.get("jawaban", "")),
+                    "opsi": opsi_list,
+                    "jawaban": jawaban_teks,
                     "pembahasan": s.get("pembahasan", s.get("explanation", ""))
                 })
                 nomor_pg += 1
@@ -67,7 +77,7 @@ async def export_docx(req: RequestExportDocx):
                 isian_list.append({
                     "nomor": nomor_isian,
                     "teks": s.get("teks", s.get("teks_soal", s.get("text", ""))),
-                    "jawaban": s.get("jawaban_benar", s.get("jawaban", "")),
+                    "jawaban": s.get("kunci_jawaban", s.get("jawaban", "")),
                     "pembahasan": s.get("pembahasan", s.get("explanation", ""))
                 })
                 nomor_isian += 1
@@ -75,7 +85,7 @@ async def export_docx(req: RequestExportDocx):
                 essay_list.append({
                     "nomor": nomor_essay,
                     "teks": s.get("teks", s.get("teks_soal", s.get("text", ""))),
-                    "jawaban": s.get("jawaban_benar", s.get("jawaban", "")),
+                    "jawaban": s.get("kunci_jawaban", s.get("jawaban", "")),
                     "pembahasan": s.get("pembahasan", s.get("explanation", ""))
                 })
                 nomor_essay += 1
