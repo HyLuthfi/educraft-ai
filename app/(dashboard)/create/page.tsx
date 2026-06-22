@@ -57,6 +57,9 @@ export default function CreateQuestionWizard() {
   const [historyMaterials, setHistoryMaterials] = useState<any[]>([]);
   const [isHistoryLoading, setIsHistoryLoading] = useState(false);
   const [isSavingToBank, setIsSavingToBank] = useState(false);
+  const [isSaveBankModalOpen, setIsSaveBankModalOpen] = useState(false);
+  const [saveBankTitle, setSaveBankTitle] = useState("");
+  const [saveBankFolder, setSaveBankFolder] = useState("Umum");
   const [instruksiKhusus, setInstruksiKhusus] = useState("");
   const [isMounted, setIsMounted] = useState(false);
 
@@ -259,9 +262,21 @@ export default function CreateQuestionWizard() {
     }
   };
 
-  const handleSaveToBank = async () => {
+  const openSaveBankModal = () => {
     if (generatedQuestions.length === 0) {
       toast.error("Belum ada soal untuk disimpan.");
+      return;
+    }
+    let defaultTitle = topicText || inputText.substring(0, 30) || "Kuis Tanpa Judul";
+    if (defaultTitle.length > 50) defaultTitle = defaultTitle.substring(0, 50) + "...";
+    setSaveBankTitle(defaultTitle);
+    setSaveBankFolder("Umum");
+    setIsSaveBankModalOpen(true);
+  };
+
+  const handleSaveToBank = async () => {
+    if (!saveBankTitle.trim()) {
+      toast.error("Judul tidak boleh kosong.");
       return;
     }
 
@@ -276,22 +291,19 @@ export default function CreateQuestionWizard() {
         throw new Error("Anda harus login untuk menyimpan soal.");
       }
 
-      // Beri judul otomatis berdasarkan topik atau materi pertama
-      let title = topicText || inputText.substring(0, 30) || "Kuis Tanpa Judul";
-      if (title.length > 50) title = title.substring(0, 50) + "...";
-
       const { error } = await supabase
         .from('bank_soal')
         .insert({
           user_id: user.id,
-          title: title,
-          folder: 'Umum',
+          title: saveBankTitle,
+          folder: saveBankFolder || 'Umum',
           content: { soal: generatedQuestions }
         });
 
       if (error) throw error;
 
       toast.success("Berhasil disimpan ke Bank Soal!", { id: toastId });
+      setIsSaveBankModalOpen(false);
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Gagal menyimpan ke Bank Soal.", { id: toastId });
@@ -987,7 +999,7 @@ export default function CreateQuestionWizard() {
                 </div>
                 <div className="flex gap-3">
                   <button 
-                    onClick={handleSaveToBank}
+                    onClick={openSaveBankModal}
                     disabled={isSavingToBank}
                     className="px-4 py-2 border border-black/20 font-medium hover:border-black transition-colors bg-white disabled:opacity-50"
                   >
@@ -1123,6 +1135,78 @@ export default function CreateQuestionWizard() {
           )}
         </AnimatePresence>
       </div>
+
+      <AnimatePresence>
+        {isSaveBankModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsSaveBankModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white border-2 border-black shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] overflow-hidden flex flex-col"
+            >
+              <div className="flex items-center justify-between p-6 border-b-2 border-black bg-gray-50">
+                <h3 className="text-xl font-bold flex items-center gap-2 text-black">
+                  Simpan ke Bank Soal
+                </h3>
+                <button
+                  onClick={() => setIsSaveBankModalOpen(false)}
+                  className="p-2 text-gray-400 hover:text-black transition-colors"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold uppercase tracking-wider text-gray-700">Judul Kuis</label>
+                  <input 
+                    type="text" 
+                    value={saveBankTitle} 
+                    onChange={(e) => setSaveBankTitle(e.target.value)}
+                    className="w-full p-3 border-2 border-black/20 focus:border-black outline-none transition-colors font-medium"
+                    placeholder="Contoh: Kuis Sejarah Bab 1"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold uppercase tracking-wider text-gray-700">Folder / Kategori</label>
+                  <input 
+                    type="text" 
+                    value={saveBankFolder} 
+                    onChange={(e) => setSaveBankFolder(e.target.value)}
+                    className="w-full p-3 border-2 border-black/20 focus:border-black outline-none transition-colors font-medium"
+                    placeholder="Contoh: Sejarah, Matematika, Umum"
+                  />
+                </div>
+              </div>
+
+              <div className="p-6 pt-0 flex justify-end gap-3">
+                <button 
+                  onClick={() => setIsSaveBankModalOpen(false)}
+                  className="px-6 py-2 border-2 border-black/20 font-bold hover:border-black transition-colors"
+                >
+                  Batal
+                </button>
+                <button 
+                  onClick={handleSaveToBank}
+                  disabled={isSavingToBank || !saveBankTitle.trim()}
+                  className="btn-primary px-8 py-2 font-bold flex items-center justify-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] transition-all bg-[#0a0a0a] disabled:opacity-50 disabled:cursor-not-allowed text-white"
+                >
+                  {isSavingToBank ? "Menyimpan..." : "Simpan"}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       <AnimatePresence>
         {isDownloadModalOpen && (
