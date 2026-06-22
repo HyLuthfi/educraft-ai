@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import GoogleFormExportButton from "@/app/components/GoogleFormExportButton";
 import {
   UploadCloud,
   FileText,
@@ -1098,6 +1099,7 @@ export default function CreateQuestionWizard() {
                           className="text-gray-300 group-hover:text-blue-500"
                         />
                       </button>
+
                     </div>
                   </div>
 
@@ -1126,19 +1128,17 @@ export default function CreateQuestionWizard() {
                         </div>
                       </button>
 
-                      <button className="p-6 border border-black/10 bg-white hover:border-[#673AB7] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
-                        <div className="w-12 h-12 rounded-full bg-[#673AB7]/10 text-[#673AB7] flex items-center justify-center font-bold text-xl mb-1">
-                          G
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-900 group-hover:text-[#673AB7]">
-                            Google Forms
-                          </div>
-                          <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
-                            Auto-Import
-                          </div>
-                        </div>
-                      </button>
+                      <GoogleFormExportButton 
+                        soalData={{
+                          header: {
+                            nama_sekolah: "EDUCRAFT AI",
+                            mata_pelajaran: "Materi Umum",
+                            kelas: "Umum",
+                            durasi: "60 Menit"
+                          },
+                          soal: generatedQuestions?.soal || generatedQuestions
+                        }}
+                      />
 
                       <button className="p-6 border border-black/10 bg-white hover:border-[#46178f] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
                         <div className="w-12 h-12 rounded-full bg-[#46178f]/10 text-[#46178f] flex items-center justify-center font-bold text-xl mb-1">
