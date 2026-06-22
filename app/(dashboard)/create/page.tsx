@@ -4,6 +4,7 @@ import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import GoogleFormExportButton from "@/app/components/GoogleFormExportButton";
+import QuizizzExportButton from "@/app/components/QuizizzExportButton";
 import {
   UploadCloud,
   FileText,
@@ -1114,19 +1115,11 @@ export default function CreateQuestionWizard() {
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <button className="p-6 border border-black/10 bg-white hover:border-[#864CFF] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group">
-                        <div className="w-12 h-12 rounded-full bg-[#864CFF]/10 text-[#864CFF] flex items-center justify-center font-bold text-xl mb-1">
-                          Q
-                        </div>
-                        <div>
-                          <div className="font-bold text-gray-900 group-hover:text-[#864CFF]">
-                            Quizizz
-                          </div>
-                          <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
-                            Format Excel
-                          </div>
-                        </div>
-                      </button>
+                      <QuizizzExportButton 
+                        soalData={{
+                          soal: generatedQuestions?.soal || generatedQuestions
+                        }}
+                      />
 
                       <GoogleFormExportButton 
                         soalData={{
