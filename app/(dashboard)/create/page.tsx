@@ -147,15 +147,16 @@ export default function CreateQuestionWizard() {
     type: string;
     level: string;
     count: number;
+    imageCount: number;
   };
   const [configBlocks, setConfigBlocks] = useState<ConfigBlock[]>([
-    { id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10 },
+    { id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10, imageCount: 0 },
   ]);
 
   const addBlock = () => {
     setConfigBlocks([
       ...configBlocks,
-      { id: Math.random().toString(), type: "Essay", level: "LOTS", count: 5 },
+      { id: Math.random().toString(), type: "Essay", level: "LOTS", count: 5, imageCount: 0 },
     ]);
   };
 
@@ -316,10 +317,12 @@ export default function CreateQuestionWizard() {
     setIsGenerating(true);
 
     try {
-      const jumlah_pg = configBlocks.filter((b) => b.type === "Pilihan Ganda").reduce((sum, b) => sum + b.count, 0);
-      const jumlah_isian = configBlocks.filter((b) => b.type === "Isian Singkat" || b.type === "Benar/Salah").reduce((sum, b) => sum + b.count, 0);
-      const jumlah_essay = configBlocks.filter((b) => b.type === "Essay").reduce((sum, b) => sum + b.count, 0);
-      const tingkat_kesulitan = configBlocks[0].level;
+      const blocks_payload = configBlocks.map(b => ({
+        tipe: b.type,
+        level: b.level,
+        count: b.count,
+        image_count: b.imageCount || 0
+      }));
 
       const res = await fetch("/api/generate", {
         method: "POST",
@@ -327,10 +330,7 @@ export default function CreateQuestionWizard() {
         body: JSON.stringify({
           konten_materi: inputText || topicText || "Materi Umum",
           config: {
-            jumlah_pg,
-            jumlah_isian,
-            jumlah_essay,
-            tingkat_kesulitan,
+            blocks: blocks_payload,
             level_bloom: "campuran",
             mata_pelajaran: "Umum",
             jenjang: "Umum",
@@ -755,70 +755,100 @@ export default function CreateQuestionWizard() {
                         {(index + 1).toString().padStart(2, "0")}
                       </div>
 
-                      <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                            Tipe Soal
-                          </label>
-                          <select
-                            value={block.type}
-                            onChange={(e) =>
-                              updateBlock(block.id, "type", e.target.value)
-                            }
-                            className="w-full p-3 bg-white border border-black/20 focus:border-black outline-none font-medium cursor-pointer"
-                          >
-                            <option value="Pilihan Ganda">Pilihan Ganda</option>
-                            <option value="Essay">Essay</option>
-                            <option value="Isian Singkat">Isian Singkat</option>
-                            <option value="Benar/Salah">Benar / Salah</option>
-                          </select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                            Level (Taksonomi)
-                          </label>
-                          <div className="flex">
-                            <button
-                              onClick={() =>
-                                updateBlock(block.id, "level", "LOTS")
-                              }
-                              className={`flex-1 py-3 px-2 border border-r-0 text-center text-sm font-bold transition-all ${block.level === "LOTS" ? "bg-black text-white border-black" : "bg-white border-black/20 text-gray-500 hover:bg-gray-100"}`}
-                            >
-                              LOTS (C1-C3)
-                            </button>
-                            <button
-                              onClick={() =>
-                                updateBlock(block.id, "level", "HOTS")
-                              }
-                              className={`flex-1 py-3 px-2 border text-center text-sm font-bold transition-all ${block.level === "HOTS" ? "bg-black text-white border-black" : "bg-white border-black/20 text-gray-500 hover:bg-gray-100"}`}
-                            >
-                              HOTS (C4-C6)
-                            </button>
-                          </div>
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
+                      <div className="flex-1 w-full flex flex-col gap-4">
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                          <div className="space-y-2">
                             <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                              Jumlah Soal
+                              Tipe Soal
                             </label>
-                            <span className="font-bold">{block.count}</span>
+                            <select
+                              value={block.type}
+                              onChange={(e) =>
+                                updateBlock(block.id, "type", e.target.value)
+                              }
+                              className="w-full p-3 bg-white border border-black/20 focus:border-black outline-none font-medium cursor-pointer"
+                            >
+                              <option value="Pilihan Ganda">Pilihan Ganda</option>
+                              <option value="Essay">Essay</option>
+                              <option value="Isian Singkat">Isian Singkat</option>
+                              <option value="Benar/Salah">Benar / Salah</option>
+                            </select>
                           </div>
-                          <input
-                            type="range"
-                            min="1"
-                            max="50"
-                            value={block.count}
-                            onChange={(e) =>
-                              updateBlock(
-                                block.id,
-                                "count",
-                                parseInt(e.target.value),
-                              )
-                            }
-                            className="w-full accent-black h-2 bg-gray-200 rounded-none appearance-none mt-2"
-                          />
+
+                          <div className="space-y-2">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                              Level (Taksonomi)
+                            </label>
+                            <div className="flex">
+                              <button
+                                onClick={() =>
+                                  updateBlock(block.id, "level", "LOTS")
+                                }
+                                className={`flex-1 py-3 px-2 border border-r-0 text-center text-sm font-bold transition-all ${block.level === "LOTS" ? "bg-black text-white border-black" : "bg-white border-black/20 text-gray-500 hover:bg-gray-100"}`}
+                              >
+                                LOTS (C1-C3)
+                              </button>
+                              <button
+                                onClick={() =>
+                                  updateBlock(block.id, "level", "HOTS")
+                                }
+                                className={`flex-1 py-3 px-2 border text-center text-sm font-bold transition-all ${block.level === "HOTS" ? "bg-black text-white border-black" : "bg-white border-black/20 text-gray-500 hover:bg-gray-100"}`}
+                              >
+                                HOTS (C4-C6)
+                              </button>
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                              <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                                Jumlah Soal
+                              </label>
+                              <span className="font-bold">{block.count}</span>
+                            </div>
+                            <input
+                              type="range"
+                              min="1"
+                              max="50"
+                              value={block.count}
+                              onChange={(e) =>
+                                updateBlock(
+                                  block.id,
+                                  "count",
+                                  parseInt(e.target.value),
+                                )
+                              }
+                              className="w-full accent-black h-2 bg-gray-200 rounded-none appearance-none mt-2"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-4 border-t border-black/10">
+                          <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                            Add-On Gambar Ilustrasi
+                          </label>
+                          <div className="p-3 bg-gray-50/50 border border-black/10 flex flex-col sm:flex-row items-center gap-4 justify-between">
+                            <div>
+                              <h4 className="font-bold text-sm">Sertakan Gambar</h4>
+                              <p className="text-[10px] text-gray-500">Pilih jumlah soal untuk diberi ilustrasi acak di racikan ini.</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <button 
+                                onClick={() => updateBlock(block.id, "imageCount", Math.max(0, (block.imageCount || 0) - 1))}
+                                className="w-8 h-8 flex items-center justify-center bg-white border border-black/20 hover:border-black font-bold"
+                              >-</button>
+                              <input 
+                                type="number"
+                                value={block.imageCount || 0}
+                                onChange={(e) => updateBlock(block.id, "imageCount", Math.min(block.count, Math.max(0, parseInt(e.target.value) || 0)))}
+                                className="w-12 h-8 text-center border border-black/20 focus:border-black font-bold outline-none text-sm"
+                              />
+                              <button 
+                                onClick={() => updateBlock(block.id, "imageCount", Math.min(block.count, (block.imageCount || 0) + 1))}
+                                className="w-8 h-8 flex items-center justify-center bg-white border border-black/20 hover:border-black font-bold"
+                              >+</button>
+                            </div>
+                          </div>
                         </div>
                       </div>
 
@@ -1051,6 +1081,20 @@ export default function CreateQuestionWizard() {
                       </button>
                     </div>
                     <p className="font-medium text-lg mb-4">{q.teks}</p>
+
+                    {q.image_prompt && (
+                      <div className="mb-4 border border-black/10 relative overflow-hidden bg-gray-100">
+                        <div className="absolute top-2 right-2 bg-black/50 backdrop-blur-sm text-white text-[10px] font-bold px-2 py-1 z-10 flex items-center gap-1">
+                          <Sparkles size={10} /> AI GENERATED
+                        </div>
+                        <img 
+                          src={q.image_url || `/api/image?prompt=${encodeURIComponent(q.image_prompt)}`} 
+                          alt="Ilustrasi Soal" 
+                          className="w-full h-auto object-cover max-h-[300px]"
+                          loading="lazy"
+                        />
+                      </div>
+                    )}
 
                     {q.opsi && (
                       <div className="space-y-2">
