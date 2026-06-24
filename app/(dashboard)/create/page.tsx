@@ -823,33 +823,35 @@ export default function CreateQuestionWizard() {
                           </div>
                         </div>
 
-                        <div className="space-y-2 pt-4 border-t border-black/10">
-                          <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
-                            Add-On Gambar Ilustrasi
-                          </label>
-                          <div className="p-3 bg-gray-50/50 border border-black/10 flex flex-col sm:flex-row items-center gap-4 justify-between">
-                            <div>
-                              <h4 className="font-bold text-sm">Sertakan Gambar</h4>
-                              <p className="text-[10px] text-gray-500">Pilih jumlah soal untuk diberi ilustrasi acak di racikan ini.</p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <button 
-                                onClick={() => updateBlock(block.id, "imageCount", Math.max(0, (block.imageCount || 0) - 1))}
-                                className="w-8 h-8 flex items-center justify-center bg-white border border-black/20 hover:border-black font-bold"
-                              >-</button>
-                              <input 
-                                type="number"
-                                value={block.imageCount || 0}
-                                onChange={(e) => updateBlock(block.id, "imageCount", Math.min(block.count, Math.max(0, parseInt(e.target.value) || 0)))}
-                                className="w-12 h-8 text-center border border-black/20 focus:border-black font-bold outline-none text-sm"
-                              />
-                              <button 
-                                onClick={() => updateBlock(block.id, "imageCount", Math.min(block.count, (block.imageCount || 0) + 1))}
-                                className="w-8 h-8 flex items-center justify-center bg-white border border-black/20 hover:border-black font-bold"
-                              >+</button>
+                        {false && (
+                          <div className="space-y-2 pt-4 border-t border-black/10">
+                            <label className="text-xs font-semibold uppercase tracking-wider text-gray-500">
+                              Add-On Gambar Ilustrasi
+                            </label>
+                            <div className="p-3 bg-gray-50/50 border border-black/10 flex flex-col sm:flex-row items-center gap-4 justify-between">
+                              <div>
+                                <h4 className="font-bold text-sm">Sertakan Gambar</h4>
+                                <p className="text-[10px] text-gray-500">Pilih jumlah soal untuk diberi ilustrasi acak di racikan ini.</p>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <button 
+                                  onClick={() => updateBlock(block.id, "imageCount", Math.max(0, (block.imageCount || 0) - 1))}
+                                  className="w-8 h-8 flex items-center justify-center bg-white border border-black/20 hover:border-black font-bold"
+                                >-</button>
+                                <input 
+                                  type="number"
+                                  value={block.imageCount || 0}
+                                  onChange={(e) => updateBlock(block.id, "imageCount", Math.min(block.count, Math.max(0, parseInt(e.target.value) || 0)))}
+                                  className="w-12 h-8 text-center border border-black/20 focus:border-black font-bold outline-none text-sm"
+                                />
+                                <button 
+                                  onClick={() => updateBlock(block.id, "imageCount", Math.min(block.count, (block.imageCount || 0) + 1))}
+                                  className="w-8 h-8 flex items-center justify-center bg-white border border-black/20 hover:border-black font-bold"
+                                >+</button>
+                              </div>
                             </div>
                           </div>
-                        </div>
+                        )}
                       </div>
 
                       {configBlocks.length > 1 && (
