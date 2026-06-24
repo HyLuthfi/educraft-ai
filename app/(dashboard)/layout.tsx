@@ -10,6 +10,7 @@ import {
   Settings,
   LogOut,
   LayoutDashboard,
+  Gamepad2,
 } from "lucide-react";
 
 export default function DashboardLayout({
@@ -83,6 +84,7 @@ export default function DashboardLayout({
 
   const navItems = [
     { name: "Buat Soal", href: "/create", icon: Sparkles },
+    { name: "Jawab Soal", href: "/play", icon: Gamepad2 },
     { name: "Bank Soal", href: "/library", icon: FileText },
     { name: "Pengaturan", href: "/settings", icon: Settings },
   ];
