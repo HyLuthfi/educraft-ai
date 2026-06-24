@@ -7,7 +7,7 @@ from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
-from router import generate, parse_file, ai_search, export_pdf, export_docx
+from router import generate, parse_file, ai_search, export_pdf, export_docx, solve
 
 app = FastAPI(
     title="EduCraft AI Engine",
@@ -46,6 +46,7 @@ app.include_router(parse_file.router, prefix="/api", tags=["Parse File"])
 app.include_router(ai_search.router, prefix="/api", tags=["AI Search"])
 app.include_router(export_pdf.router, prefix="/api", tags=["Export"])
 app.include_router(export_docx.router, prefix="/api", tags=["Export"])
+app.include_router(solve.router, prefix="/api", tags=["Solve"])
 
 
 @app.get("/")
