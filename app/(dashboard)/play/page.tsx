@@ -12,7 +12,10 @@ import {
   ChevronDown,
   Trash2,
   FileQuestion,
-  BookOpen
+  BookOpen,
+  Type,
+  UploadCloud,
+  Camera
 } from "lucide-react";
 
 export default function SolveQuestionWizard() {
@@ -149,19 +152,19 @@ export default function SolveQuestionWizard() {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-                    <button className="p-3 flex flex-col items-center justify-center gap-2 border border-black bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] -translate-y-0.5 relative">
-                      <div className="absolute top-1.5 right-1.5 text-black"><CheckCircle size={14} /></div>
-                      <span className="font-bold text-lg leading-none">T</span>
-                      <span className="font-semibold text-xs text-black">Teks Bebas</span>
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                    <button className="p-4 flex flex-col items-center justify-center gap-3 border border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1 relative">
+                      <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
+                      <Type size={24} className="text-black" />
+                      <span className="font-semibold text-sm text-black">Teks Bebas</span>
                     </button>
-                    <button className="p-3 flex flex-col items-center justify-center gap-2 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 opacity-50 cursor-not-allowed" title="Segera hadir">
-                      <span className="font-bold text-lg leading-none">PDF</span>
-                      <span className="font-semibold text-xs">Upload PDF</span>
+                    <button onClick={() => toast.info("Fitur Upload PDF segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                      <UploadCloud size={24} className="text-gray-400" />
+                      <span className="font-semibold text-sm text-center">Upload PDF</span>
                     </button>
-                    <button className="p-3 flex flex-col items-center justify-center gap-2 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 opacity-50 cursor-not-allowed" title="Segera hadir">
-                      <span className="font-bold text-lg leading-none">IMG</span>
-                      <span className="font-semibold text-xs">Foto/Kamera</span>
+                    <button onClick={() => toast.info("Fitur Kamera segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                      <Camera size={24} className="text-gray-400" />
+                      <span className="font-semibold text-sm text-center">Foto/Kamera</span>
                     </button>
                   </div>
 
@@ -193,19 +196,19 @@ export default function SolveQuestionWizard() {
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-3 mb-6">
-                    <button className="p-3 flex flex-col items-center justify-center gap-2 border border-black bg-gray-50 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] -translate-y-0.5 relative">
-                      <div className="absolute top-1.5 right-1.5 text-black"><CheckCircle size={14} /></div>
-                      <span className="font-bold text-lg leading-none">T</span>
-                      <span className="font-semibold text-xs text-black">Teks Bebas</span>
+                  <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                    <button className="p-4 flex flex-col items-center justify-center gap-3 border border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1 relative">
+                      <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
+                      <Type size={24} className="text-black" />
+                      <span className="font-semibold text-sm text-black">Teks Bebas</span>
                     </button>
-                    <button className="p-3 flex flex-col items-center justify-center gap-2 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 opacity-50 cursor-not-allowed" title="Segera hadir">
-                      <span className="font-bold text-lg leading-none">PDF</span>
-                      <span className="font-semibold text-xs">Upload PDF</span>
+                    <button onClick={() => toast.info("Fitur Upload PDF segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                      <UploadCloud size={24} className="text-gray-400" />
+                      <span className="font-semibold text-sm text-center">Upload PDF</span>
                     </button>
-                    <button className="p-3 flex flex-col items-center justify-center gap-2 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 opacity-50 cursor-not-allowed" title="Segera hadir">
-                      <span className="font-bold text-lg leading-none">IMG</span>
-                      <span className="font-semibold text-xs">Foto/Kamera</span>
+                    <button onClick={() => toast.info("Fitur Kamera segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                      <Camera size={24} className="text-gray-400" />
+                      <span className="font-semibold text-sm text-center">Foto/Kamera</span>
                     </button>
                   </div>
 
