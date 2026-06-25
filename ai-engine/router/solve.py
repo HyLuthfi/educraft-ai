@@ -1,37 +1,70 @@
 import json
 import logging
-from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel
-from service.gemini_service import panggil_gemini
+import shutil
+import tempfile
+import os
+from fastapi import APIRouter, HTTPException, Form, UploadFile, File
+from typing import List
+from service.gemini_service import panggil_gemini_multimodal
 from template.prompt_solve import SYSTEM_PROMPT_SOLVE, buat_user_prompt_solve
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
-class SolveConfig(BaseModel):
-    explanationLevel: str = "singkat"
-    strictReference: str = "campuran"
-    languageStyle: str = "formal"
-
-class SolveRequest(BaseModel):
-    raw_questions: str
-    reference: str = ""
-    config: SolveConfig
-
 @router.post("/solve")
-async def solve_questions(req: SolveRequest):
+async def solve_questions(
+    raw_questions: str = Form(""),
+    reference: str = Form(""),
+    config: str = Form("{}"),
+    raw_files: List[UploadFile] = File(default=[]),
+    reference_files: List[UploadFile] = File(default=[])
+):
     try:
+        config_dict = json.loads(config)
+        explanation_level = config_dict.get("explanationLevel", "singkat")
+        strict_reference = config_dict.get("strictReference", "campuran")
+        language_style = config_dict.get("languageStyle", "formal")
+
         sys_prompt = SYSTEM_PROMPT_SOLVE.format(
-            explanation_level=req.config.explanationLevel,
-            strict_reference=req.config.strictReference,
-            language_style=req.config.languageStyle
+            explanation_level=explanation_level,
+            strict_reference=strict_reference,
+            language_style=language_style
         )
         
-        user_prompt = buat_user_prompt_solve(req.raw_questions, req.reference)
+        user_prompt = buat_user_prompt_solve(raw_questions, reference)
         
-        response_text = panggil_gemini(sys_prompt, user_prompt, model_name="gemini-3.5-flash")
+        temp_dir = tempfile.mkdtemp()
+        saved_file_paths = []
         
+        try:
+            for f in raw_files:
+                if f.filename:
+                    path = os.path.join(temp_dir, f.filename)
+                    with open(path, "wb") as buffer:
+                        shutil.copyfileobj(f.file, buffer)
+                    saved_file_paths.append(path)
+                    
+            for f in reference_files:
+                if f.filename:
+                    path = os.path.join(temp_dir, f.filename)
+                    with open(path, "wb") as buffer:
+                        shutil.copyfileobj(f.file, buffer)
+                    saved_file_paths.append(path)
+                    
+            response_text = panggil_gemini_multimodal(sys_prompt, user_prompt, saved_file_paths, model_name="gemini-3.5-flash")
+            
+        finally:
+            for p in saved_file_paths:
+                if os.path.exists(p):
+                    try:
+                        os.remove(p)
+                    except: pass
+            if os.path.exists(temp_dir):
+                try:
+                    os.rmdir(temp_dir)
+                except: pass
+                
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         data = json.loads(clean_text)
         
