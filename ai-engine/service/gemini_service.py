@@ -83,6 +83,58 @@ def panggil_gemini(system_prompt: str, user_prompt: str, model_name: str = "gemi
             
     raise RuntimeError(f"Semua {max_key_attempts} API Key beserta Model Fallback telah dicoba dan gagal. Error terakhir: {str(last_error)}")
 
+def panggil_gemini_multimodal(system_prompt: str, user_prompt: str, file_paths: list[str], model_name: str = "gemini-3.5-flash") -> str:
+    if not key_cycler or len(api_keys) == 0:
+        raise RuntimeError("GEMINI_API_KEYS belum di-set di environment variables (.env)")
+
+    models_to_try = [model_name, "gemini-3-flash-preview"]
+    models_to_try = list(dict.fromkeys(models_to_try))
+    
+    max_key_attempts = len(api_keys)
+    last_error = None
+
+    for attempt in range(max_key_attempts):
+        current_key = next(key_cycler)
+        client = genai.Client(api_key=current_key)
+        
+        uploaded_files = []
+        try:
+            for path in file_paths:
+                uploaded_file = client.files.upload(file=path)
+                uploaded_files.append(uploaded_file)
+            
+            contents = uploaded_files + [user_prompt]
+            
+            for current_model in models_to_try:
+                try:
+                    response = client.models.generate_content(
+                        model=current_model,
+                        contents=contents,
+                        config=types.GenerateContentConfig(
+                            system_instruction=system_prompt,
+                            response_mime_type="application/json",
+                            response_schema=ResponseSoal,
+                            temperature=0.7,
+                        )
+                    )
+                    return response.text
+                except Exception as e:
+                    logger.warning(f"Key attempt {attempt+1}/{max_key_attempts}, Model {current_model} multimodal gagal: {str(e)}")
+                    last_error = e
+                    continue
+            
+        except Exception as e:
+            logger.warning(f"Gagal memproses multimodal file ke Gemini API: {str(e)}")
+            last_error = e
+        finally:
+            for uf in uploaded_files:
+                try:
+                    client.files.delete(name=uf.name)
+                except:
+                    pass
+
+    raise RuntimeError(f"Semua API Key dan Model Fallback telah dicoba dan gagal untuk Multimodal. Error terakhir: {str(last_error)}")
+
 def hitung_token(teks: str) -> int:
     return int(len(teks.split()) * 1.5)
 
