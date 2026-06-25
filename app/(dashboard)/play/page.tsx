@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -26,6 +26,27 @@ export default function SolveQuestionWizard() {
   const [rawQuestions, setRawQuestions] = useState("");
   const [referenceMaterial, setReferenceMaterial] = useState("");
   
+  const [rawFiles, setRawFiles] = useState<File[]>([]);
+  const [refFiles, setRefFiles] = useState<File[]>([]);
+  const rawPdfRef = useRef<HTMLInputElement>(null);
+  const rawImgRef = useRef<HTMLInputElement>(null);
+  const refPdfRef = useRef<HTMLInputElement>(null);
+  const refImgRef = useRef<HTMLInputElement>(null);
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isRef: boolean) => {
+    if (e.target.files) {
+      const newFiles = Array.from(e.target.files);
+      if (isRef) setRefFiles(prev => [...prev, ...newFiles]);
+      else setRawFiles(prev => [...prev, ...newFiles]);
+    }
+    e.target.value = "";
+  };
+
+  const removeFile = (idx: number, isRef: boolean) => {
+    if (isRef) setRefFiles(prev => prev.filter((_, i) => i !== idx));
+    else setRawFiles(prev => prev.filter((_, i) => i !== idx));
+  };
+  
   // Step 2 State
   const [params, setParams] = useState({
     explanationLevel: "singkat",
@@ -48,14 +69,17 @@ export default function SolveQuestionWizard() {
   const handleSolve = async () => {
     setIsSolving(true);
     try {
+      const formData = new FormData();
+      formData.append("raw_questions", rawQuestions);
+      formData.append("reference", referenceMaterial);
+      formData.append("config", JSON.stringify(params));
+      
+      rawFiles.forEach(f => formData.append("raw_files", f));
+      refFiles.forEach(f => formData.append("reference_files", f));
+
       const res = await fetch("/api/solve", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          raw_questions: rawQuestions,
-          reference: referenceMaterial,
-          config: params
-        })
+        body: formData
       });
 
       if (!res.ok) {
@@ -158,15 +182,17 @@ export default function SolveQuestionWizard() {
                       <Type size={24} className="text-black" />
                       <span className="font-semibold text-sm text-black">Teks Bebas</span>
                     </button>
-                    <button onClick={() => toast.info("Fitur Upload PDF segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                    <button onClick={() => rawPdfRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
                       <UploadCloud size={24} className="text-gray-400" />
                       <span className="font-semibold text-sm text-center">Upload PDF</span>
                     </button>
-                    <button onClick={() => toast.info("Fitur Kamera segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                    <button onClick={() => rawImgRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
                       <Camera size={24} className="text-gray-400" />
                       <span className="font-semibold text-sm text-center">Foto/Kamera</span>
                     </button>
                   </div>
+                  <input type="file" accept=".pdf" ref={rawPdfRef} className="hidden" multiple onChange={(e) => handleFileChange(e, false)} />
+                  <input type="file" accept="image/*" ref={rawImgRef} className="hidden" multiple onChange={(e) => handleFileChange(e, false)} />
 
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
@@ -179,6 +205,16 @@ export default function SolveQuestionWizard() {
                       value={rawQuestions}
                       onChange={(e) => setRawQuestions(e.target.value)}
                     ></textarea>
+                    {rawFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {rawFiles.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                            <span className="truncate max-w-[150px]">{f.name}</span>
+                            <button onClick={() => removeFile(i, false)} className="hover:text-red-400"><Trash2 size={12}/></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -202,15 +238,17 @@ export default function SolveQuestionWizard() {
                       <Type size={24} className="text-black" />
                       <span className="font-semibold text-sm text-black">Teks Bebas</span>
                     </button>
-                    <button onClick={() => toast.info("Fitur Upload PDF segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                    <button onClick={() => refPdfRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
                       <UploadCloud size={24} className="text-gray-400" />
                       <span className="font-semibold text-sm text-center">Upload PDF</span>
                     </button>
-                    <button onClick={() => toast.info("Fitur Kamera segera hadir!")} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
+                    <button onClick={() => refImgRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
                       <Camera size={24} className="text-gray-400" />
                       <span className="font-semibold text-sm text-center">Foto/Kamera</span>
                     </button>
                   </div>
+                  <input type="file" accept=".pdf" ref={refPdfRef} className="hidden" multiple onChange={(e) => handleFileChange(e, true)} />
+                  <input type="file" accept="image/*" ref={refImgRef} className="hidden" multiple onChange={(e) => handleFileChange(e, true)} />
 
                   <div className="space-y-2">
                     <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
@@ -223,6 +261,16 @@ export default function SolveQuestionWizard() {
                       value={referenceMaterial}
                       onChange={(e) => setReferenceMaterial(e.target.value)}
                     ></textarea>
+                    {refFiles.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {refFiles.map((f, i) => (
+                          <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                            <span className="truncate max-w-[150px]">{f.name}</span>
+                            <button onClick={() => removeFile(i, true)} className="hover:text-red-400"><Trash2 size={12}/></button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -230,9 +278,9 @@ export default function SolveQuestionWizard() {
               <div className="flex justify-end pt-6 border-t border-black/10">
                 <button
                   onClick={handleNext}
-                  disabled={!rawQuestions.trim()}
+                  disabled={!rawQuestions.trim() && rawFiles.length === 0}
                   className={`px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all ${
-                    !rawQuestions.trim()
+                    !rawQuestions.trim() && rawFiles.length === 0
                       ? "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300"
                       : "btn-primary hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]"
                   }`}
