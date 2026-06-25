@@ -2,17 +2,29 @@ import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
     const backendUrl = process.env.NEXT_PUBLIC_AI_ENGINE_URL || "http://127.0.0.1:8000";
     
-    const res = await fetch(`${backendUrl}/api/solve`, {
+    const contentType = req.headers.get("content-type") || "";
+    let fetchOptions: RequestInit = {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
         "X-API-Key": process.env.AI_ENGINE_API_KEY || "", 
       },
-      body: JSON.stringify(body),
-    });
+    };
+
+    if (contentType.includes("multipart/form-data")) {
+      const formData = await req.formData();
+      fetchOptions.body = formData;
+    } else {
+      const body = await req.json();
+      fetchOptions.headers = {
+        ...fetchOptions.headers,
+        "Content-Type": "application/json"
+      };
+      fetchOptions.body = JSON.stringify(body);
+    }
+    
+    const res = await fetch(`${backendUrl}/api/solve`, fetchOptions);
 
     if (!res.ok) {
       const errorText = await res.text();
