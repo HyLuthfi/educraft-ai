@@ -15,14 +15,17 @@ import {
   BookOpen,
   Type,
   UploadCloud,
-  Camera
+  Camera,
+  X
 } from "lucide-react";
 
 export default function SolveQuestionWizard() {
   const [step, setStep] = useState(1);
   const [isSolving, setIsSolving] = useState(false);
   
-  // Step 1 State
+  const [rawInputTypes, setRawInputTypes] = useState<string[]>(["text"]);
+  const [refInputTypes, setRefInputTypes] = useState<string[]>(["text"]);
+
   const [rawQuestions, setRawQuestions] = useState("");
   const [referenceMaterial, setReferenceMaterial] = useState("");
   
@@ -32,6 +35,18 @@ export default function SolveQuestionWizard() {
   const rawImgRef = useRef<HTMLInputElement>(null);
   const refPdfRef = useRef<HTMLInputElement>(null);
   const refImgRef = useRef<HTMLInputElement>(null);
+
+  const toggleInputType = (type: string, isRef: boolean) => {
+    const setter = isRef ? setRefInputTypes : setRawInputTypes;
+    const current = isRef ? refInputTypes : rawInputTypes;
+    if (current.includes(type)) {
+      if (current.length > 1) {
+        setter(current.filter((t) => t !== type));
+      }
+    } else {
+      setter([...current, type]);
+    }
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>, isRef: boolean) => {
     if (e.target.files) {
@@ -47,14 +62,12 @@ export default function SolveQuestionWizard() {
     else setRawFiles(prev => prev.filter((_, i) => i !== idx));
   };
   
-  // Step 2 State
   const [params, setParams] = useState({
     explanationLevel: "singkat",
     strictReference: "campuran",
     languageStyle: "formal"
   });
 
-  // Step 3 State
   const [solvedQuestions, setSolvedQuestions] = useState<any[]>([]);
 
   const slideVariants = {
@@ -97,6 +110,12 @@ export default function SolveQuestionWizard() {
       setIsSolving(false);
     }
   };
+
+  const inputTypeOptions = [
+    { id: "text", label: "Teks Bebas", icon: Type },
+    { id: "file", label: "Upload PDF", icon: UploadCloud },
+    { id: "image", label: "Foto/Kamera", icon: Camera },
+  ];
 
   return (
     <div className="max-w-5xl mx-auto p-6 md:p-10 min-h-screen">
@@ -157,7 +176,7 @@ export default function SolveQuestionWizard() {
               <div>
                 <h2 className="text-2xl font-bold mb-2">Input Soal Mentah & Referensi</h2>
                 <p className="text-gray-500">
-                  Paste tumpukan soal berantakan Anda di panel kiri. (Opsional) Tambahkan materi atau kunci referensi di panel kanan agar AI menjawab lebih presisi.
+                  Pilih satu atau beberapa kombinasi input sekaligus agar hasil AI lebih akurat.
                 </p>
               </div>
 
@@ -167,109 +186,228 @@ export default function SolveQuestionWizard() {
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h2 className="text-xl font-bold mb-1">Bahan Baku Soal Mentah</h2>
-                      <p className="text-sm text-gray-500">Pilih input teks untuk memasukkan soal berantakan Anda.</p>
+                      <p className="text-sm text-gray-500">Pilih satu atau beberapa jenis input untuk memasukkan soal berantakan Anda.</p>
                     </div>
-                    {rawQuestions && (
-                      <button onClick={() => setRawQuestions("")} className="px-3 py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-2">
-                        <Trash2 size={14} /> Bersihkan Teks
+                    {(rawQuestions || rawFiles.length > 0) && (
+                      <button onClick={() => { setRawQuestions(""); setRawFiles([]); }} className="px-3 py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-2">
+                        <Trash2 size={14} /> Reset
                       </button>
                     )}
                   </div>
                   
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-                    <button className="p-4 flex flex-col items-center justify-center gap-3 border border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1 relative">
-                      <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
-                      <Type size={24} className="text-black" />
-                      <span className="font-semibold text-sm text-black">Teks Bebas</span>
-                    </button>
-                    <button onClick={() => rawPdfRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
-                      <UploadCloud size={24} className="text-gray-400" />
-                      <span className="font-semibold text-sm text-center">Upload PDF</span>
-                    </button>
-                    <button onClick={() => rawImgRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
-                      <Camera size={24} className="text-gray-400" />
-                      <span className="font-semibold text-sm text-center">Foto/Kamera</span>
-                    </button>
+                    {inputTypeOptions.map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => toggleInputType(type.id, false)}
+                        className={`p-4 flex flex-col items-center justify-center gap-3 border transition-all relative ${
+                          rawInputTypes.includes(type.id)
+                            ? "border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1"
+                            : "border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500"
+                        }`}
+                      >
+                        {rawInputTypes.includes(type.id) && (
+                          <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
+                        )}
+                        <type.icon size={24} className={rawInputTypes.includes(type.id) ? "text-black" : "text-gray-400"} />
+                        <span className={`font-semibold text-sm text-center ${rawInputTypes.includes(type.id) ? "text-black" : ""}`}>
+                          {type.label}
+                        </span>
+                      </button>
+                    ))}
                   </div>
+
                   <input type="file" accept=".pdf" ref={rawPdfRef} className="hidden" multiple onChange={(e) => handleFileChange(e, false)} />
                   <input type="file" accept="image/*" ref={rawImgRef} className="hidden" multiple onChange={(e) => handleFileChange(e, false)} />
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
-                      <FileQuestion size={16} className="text-blue-600"/> Paste Soal Anda di sini <span className="text-red-500">*</span>
-                    </label>
-                    <textarea
-                      rows={6}
-                      className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none text-sm"
-                      placeholder="Paste soal-soal Anda di sini. Format teks tidak harus rapi, AI akan merapikannya."
-                      value={rawQuestions}
-                      onChange={(e) => setRawQuestions(e.target.value)}
-                    ></textarea>
-                    {rawFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {rawFiles.map((f, i) => (
-                          <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
-                            <span className="truncate max-w-[150px]">{f.name}</span>
-                            <button onClick={() => removeFile(i, false)} className="hover:text-red-400"><Trash2 size={12}/></button>
+                  <div className="space-y-6">
+                    {rawInputTypes.includes("text") && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
+                          <FileQuestion size={16} className="text-blue-600"/> Paste Soal Anda di sini <span className="text-red-500">*</span>
+                        </label>
+                        <textarea
+                          rows={6}
+                          className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none text-sm"
+                          placeholder="Paste soal-soal Anda di sini. Format teks tidak harus rapi, AI akan merapikannya."
+                          value={rawQuestions}
+                          onChange={(e) => setRawQuestions(e.target.value)}
+                        ></textarea>
+                      </motion.div>
+                    )}
+
+                    {rawInputTypes.includes("file") && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="border-2 border-dashed border-black/20 bg-gray-50 p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 transition-colors"
+                      >
+                        <UploadCloud size={40} className="text-gray-400 mb-4" />
+                        <p className="font-semibold text-black mb-1">Pilih file soal Anda</p>
+                        <p className="text-sm text-gray-500">Mendukung format .PDF (Max 100MB)</p>
+                        <button
+                          onClick={() => rawPdfRef.current?.click()}
+                          className="mt-6 px-6 py-2 bg-white border border-black/20 text-sm font-medium hover:border-black transition-colors"
+                        >
+                          Pilih File
+                        </button>
+                        {rawFiles.filter(f => f.type === "application/pdf").length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {rawFiles.filter(f => f.type === "application/pdf").map((f, i) => (
+                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                                <span className="truncate max-w-[150px]">{f.name}</span>
+                                <button onClick={() => removeFile(rawFiles.indexOf(f), false)} className="hover:text-red-400"><X size={12}/></button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {rawInputTypes.includes("image") && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="border-2 border-black/10 bg-gray-50 p-6 flex flex-col gap-4"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Camera size={20} className="text-gray-700" />
+                          <label className="text-sm font-semibold text-gray-700">Foto Soal (Buku/Kertas Ujian)</label>
+                        </div>
+                        <button
+                          onClick={() => rawImgRef.current?.click()}
+                          className="py-8 flex flex-col items-center justify-center gap-3 bg-white border border-black/20 hover:border-black hover:bg-gray-100 transition-all text-gray-600 hover:text-black"
+                        >
+                          <UploadCloud size={24} />
+                          <span className="font-medium text-sm">Upload Foto (JPG/PNG)</span>
+                        </button>
+                        {rawFiles.filter(f => f.type.startsWith("image/")).length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {rawFiles.filter(f => f.type.startsWith("image/")).map((f, i) => (
+                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                                <span className="truncate max-w-[150px]">{f.name}</span>
+                                <button onClick={() => removeFile(rawFiles.indexOf(f), false)} className="hover:text-red-400"><X size={12}/></button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-500 text-center">AI akan langsung membaca isi gambar tanpa OCR terpisah.</p>
+                      </motion.div>
                     )}
                   </div>
                 </div>
-
 
                 <div className="border border-black/10 p-6 bg-white">
                   <div className="flex justify-between items-start mb-4">
                     <div>
                       <h2 className="text-xl font-bold mb-1">Materi Referensi / Kunci (Opsional)</h2>
-                      <p className="text-sm text-gray-500">Pilih input teks untuk memberikan referensi jawaban kepada AI.</p>
+                      <p className="text-sm text-gray-500">Pilih satu atau beberapa jenis input untuk memberikan referensi jawaban kepada AI.</p>
                     </div>
-                    {referenceMaterial && (
-                      <button onClick={() => setReferenceMaterial("")} className="px-3 py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-2">
-                        <Trash2 size={14} /> Bersihkan Teks
+                    {(referenceMaterial || refFiles.length > 0) && (
+                      <button onClick={() => { setReferenceMaterial(""); setRefFiles([]); }} className="px-3 py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-2">
+                        <Trash2 size={14} /> Reset
                       </button>
                     )}
                   </div>
                   
                   <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
-                    <button className="p-4 flex flex-col items-center justify-center gap-3 border border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1 relative">
-                      <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
-                      <Type size={24} className="text-black" />
-                      <span className="font-semibold text-sm text-black">Teks Bebas</span>
-                    </button>
-                    <button onClick={() => refPdfRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
-                      <UploadCloud size={24} className="text-gray-400" />
-                      <span className="font-semibold text-sm text-center">Upload PDF</span>
-                    </button>
-                    <button onClick={() => refImgRef.current?.click()} className="p-4 flex flex-col items-center justify-center gap-3 border border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500 transition-all">
-                      <Camera size={24} className="text-gray-400" />
-                      <span className="font-semibold text-sm text-center">Foto/Kamera</span>
-                    </button>
+                    {inputTypeOptions.map((type) => (
+                      <button
+                        key={type.id}
+                        onClick={() => toggleInputType(type.id, true)}
+                        className={`p-4 flex flex-col items-center justify-center gap-3 border transition-all relative ${
+                          refInputTypes.includes(type.id)
+                            ? "border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1"
+                            : "border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500"
+                        }`}
+                      >
+                        {refInputTypes.includes(type.id) && (
+                          <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
+                        )}
+                        <type.icon size={24} className={refInputTypes.includes(type.id) ? "text-black" : "text-gray-400"} />
+                        <span className={`font-semibold text-sm text-center ${refInputTypes.includes(type.id) ? "text-black" : ""}`}>
+                          {type.label}
+                        </span>
+                      </button>
+                    ))}
                   </div>
+
                   <input type="file" accept=".pdf" ref={refPdfRef} className="hidden" multiple onChange={(e) => handleFileChange(e, true)} />
                   <input type="file" accept="image/*" ref={refImgRef} className="hidden" multiple onChange={(e) => handleFileChange(e, true)} />
 
-                  <div className="space-y-2">
-                    <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
-                      <BookOpen size={16} className="text-green-600"/> Paste Referensi di sini
-                    </label>
-                    <textarea
-                      rows={6}
-                      className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none text-sm"
-                      placeholder="Paste materi contekan, buku pedoman, atau kunci jawaban kotor di sini."
-                      value={referenceMaterial}
-                      onChange={(e) => setReferenceMaterial(e.target.value)}
-                    ></textarea>
-                    {refFiles.length > 0 && (
-                      <div className="flex flex-wrap gap-2 mt-3">
-                        {refFiles.map((f, i) => (
-                          <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
-                            <span className="truncate max-w-[150px]">{f.name}</span>
-                            <button onClick={() => removeFile(i, true)} className="hover:text-red-400"><Trash2 size={12}/></button>
+                  <div className="space-y-6">
+                    {refInputTypes.includes("text") && (
+                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
+                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
+                          <BookOpen size={16} className="text-green-600"/> Paste Referensi di sini
+                        </label>
+                        <textarea
+                          rows={6}
+                          className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none text-sm"
+                          placeholder="Paste materi contekan, buku pedoman, atau kunci jawaban kotor di sini."
+                          value={referenceMaterial}
+                          onChange={(e) => setReferenceMaterial(e.target.value)}
+                        ></textarea>
+                      </motion.div>
+                    )}
+
+                    {refInputTypes.includes("file") && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="border-2 border-dashed border-black/20 bg-gray-50 p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 transition-colors"
+                      >
+                        <UploadCloud size={40} className="text-gray-400 mb-4" />
+                        <p className="font-semibold text-black mb-1">Pilih file referensi Anda</p>
+                        <p className="text-sm text-gray-500">Mendukung format .PDF (Max 100MB)</p>
+                        <button
+                          onClick={() => refPdfRef.current?.click()}
+                          className="mt-6 px-6 py-2 bg-white border border-black/20 text-sm font-medium hover:border-black transition-colors"
+                        >
+                          Pilih File
+                        </button>
+                        {refFiles.filter(f => f.type === "application/pdf").length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {refFiles.filter(f => f.type === "application/pdf").map((f, i) => (
+                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                                <span className="truncate max-w-[150px]">{f.name}</span>
+                                <button onClick={() => removeFile(refFiles.indexOf(f), true)} className="hover:text-red-400"><X size={12}/></button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        )}
+                      </motion.div>
+                    )}
+
+                    {refInputTypes.includes("image") && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        className="border-2 border-black/10 bg-gray-50 p-6 flex flex-col gap-4"
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <Camera size={20} className="text-gray-700" />
+                          <label className="text-sm font-semibold text-gray-700">Foto Referensi (Buku/Kunci Jawaban)</label>
+                        </div>
+                        <button
+                          onClick={() => refImgRef.current?.click()}
+                          className="py-8 flex flex-col items-center justify-center gap-3 bg-white border border-black/20 hover:border-black hover:bg-gray-100 transition-all text-gray-600 hover:text-black"
+                        >
+                          <UploadCloud size={24} />
+                          <span className="font-medium text-sm">Upload Foto (JPG/PNG)</span>
+                        </button>
+                        {refFiles.filter(f => f.type.startsWith("image/")).length > 0 && (
+                          <div className="flex flex-wrap gap-2 mt-2">
+                            {refFiles.filter(f => f.type.startsWith("image/")).map((f, i) => (
+                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                                <span className="truncate max-w-[150px]">{f.name}</span>
+                                <button onClick={() => removeFile(refFiles.indexOf(f), true)} className="hover:text-red-400"><X size={12}/></button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                        <p className="text-xs text-gray-500 text-center">AI akan langsung membaca isi gambar tanpa OCR terpisah.</p>
+                      </motion.div>
                     )}
                   </div>
                 </div>
