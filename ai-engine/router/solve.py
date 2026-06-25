@@ -40,14 +40,14 @@ async def solve_questions(
         try:
             for f in raw_files:
                 if f.filename:
-                    path = os.path.join(temp_dir, f.filename)
+                    path = os.path.join(temp_dir, f"SOAL_{f.filename}")
                     with open(path, "wb") as buffer:
                         shutil.copyfileobj(f.file, buffer)
                     saved_file_paths.append(path)
                     
             for f in reference_files:
                 if f.filename:
-                    path = os.path.join(temp_dir, f.filename)
+                    path = os.path.join(temp_dir, f"REFERENSI_{f.filename}")
                     with open(path, "wb") as buffer:
                         shutil.copyfileobj(f.file, buffer)
                     saved_file_paths.append(path)

@@ -48,6 +48,11 @@ Catatan JSON:
 - Field "opsi" hanya untuk tipe "pg". Untuk essay/isian, hilangkan field "opsi" atau berikan null.
 - Field "kunci_jawaban" berisi label jawaban benar (untuk PG) atau teks jawaban singkat/panduan (untuk isian/essay).
 - Perbaiki typo atau format yang berantakan dari soal mentah.
+
+Konvensi Nama File Lampiran:
+- File dengan prefix "SOAL_" berisi soal mentah yang harus kamu jawab dan rapikan.
+- File dengan prefix "REFERENSI_" berisi materi referensi atau kunci jawaban yang harus kamu gunakan sebagai acuan.
+- Baca isi setiap file lampiran dan gabungkan dengan teks yang diberikan user (jika ada).
 """
 
 def buat_user_prompt_solve(raw_questions: str, reference: str) -> str:
