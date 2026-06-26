@@ -101,11 +101,21 @@ export default function SolveQuestionWizard() {
       }
       
       const data = await res.json();
-      setSolvedQuestions(data.soal || []);
+      
+      if (data.warning || !data.soal || data.soal.length === 0) {
+        toast.warning(
+          data.warning || "AI tidak menemukan soal yang valid dalam input Anda. Coba masukkan teks yang berisi pertanyaan atau soal ujian.",
+          { duration: 6000 }
+        );
+        setIsSolving(false);
+        return;
+      }
+
+      setSolvedQuestions(data.soal);
       setStep(3);
     } catch(err: any) {
       console.error(err);
-      toast.error(err.message || "Terjadi kesalahan");
+      toast.error(err.message || "Terjadi kesalahan saat memproses soal.");
     } finally {
       setIsSolving(false);
     }

@@ -66,7 +66,23 @@ async def solve_questions(
                 except: pass
                 
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
-        data = json.loads(clean_text)
+        
+        try:
+            data = json.loads(clean_text)
+        except json.JSONDecodeError:
+            logger.warning(f"AI mengembalikan respons yang bukan JSON valid: {clean_text[:200]}")
+            return {
+                "soal": [],
+                "warning": "AI tidak menemukan soal yang valid dalam input Anda. Pastikan input berisi pertanyaan atau soal yang jelas."
+            }
+        
+        soal_list = data.get("soal", [])
+        
+        if not soal_list or len(soal_list) == 0:
+            return {
+                "soal": [],
+                "warning": "AI tidak menemukan soal yang valid dalam input Anda. Coba masukkan teks yang berisi pertanyaan atau soal ujian."
+            }
         
         return data
     except Exception as e:
