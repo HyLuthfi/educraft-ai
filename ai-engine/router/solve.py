@@ -5,7 +5,7 @@ import tempfile
 import os
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from typing import List
-from service.gemini_service import panggil_gemini_multimodal, ResponseSolve
+from service.gemini_service import panggil_gemini, panggil_gemini_multimodal, ResponseSolve
 from template.prompt_solve import SYSTEM_PROMPT_SOLVE, buat_user_prompt_solve
 
 logger = logging.getLogger(__name__)
@@ -34,36 +34,42 @@ async def solve_questions(
         
         user_prompt = buat_user_prompt_solve(raw_questions, reference)
         
-        temp_dir = tempfile.mkdtemp()
-        saved_file_paths = []
+        has_raw_files = any(f.filename for f in raw_files)
+        has_ref_files = any(f.filename for f in reference_files)
         
-        try:
-            for f in raw_files:
-                if f.filename:
-                    path = os.path.join(temp_dir, f"SOAL_{f.filename}")
-                    with open(path, "wb") as buffer:
-                        shutil.copyfileobj(f.file, buffer)
-                    saved_file_paths.append(path)
-                    
-            for f in reference_files:
-                if f.filename:
-                    path = os.path.join(temp_dir, f"REFERENSI_{f.filename}")
-                    with open(path, "wb") as buffer:
-                        shutil.copyfileobj(f.file, buffer)
-                    saved_file_paths.append(path)
-                    
-            response_text = panggil_gemini_multimodal(sys_prompt, user_prompt, saved_file_paths, model_name="gemini-3.5-flash", response_schema=ResponseSolve)
+        if has_raw_files or has_ref_files:
+            temp_dir = tempfile.mkdtemp()
+            saved_file_paths = []
             
-        finally:
-            for p in saved_file_paths:
-                if os.path.exists(p):
+            try:
+                for f in raw_files:
+                    if f.filename:
+                        path = os.path.join(temp_dir, f"SOAL_{f.filename}")
+                        with open(path, "wb") as buffer:
+                            shutil.copyfileobj(f.file, buffer)
+                        saved_file_paths.append(path)
+                        
+                for f in reference_files:
+                    if f.filename:
+                        path = os.path.join(temp_dir, f"REFERENSI_{f.filename}")
+                        with open(path, "wb") as buffer:
+                            shutil.copyfileobj(f.file, buffer)
+                        saved_file_paths.append(path)
+                        
+                response_text = panggil_gemini_multimodal(sys_prompt, user_prompt, saved_file_paths, model_name="gemini-3.5-flash", response_schema=ResponseSolve)
+                
+            finally:
+                for p in saved_file_paths:
+                    if os.path.exists(p):
+                        try:
+                            os.remove(p)
+                        except: pass
+                if os.path.exists(temp_dir):
                     try:
-                        os.remove(p)
+                        os.rmdir(temp_dir)
                     except: pass
-            if os.path.exists(temp_dir):
-                try:
-                    os.rmdir(temp_dir)
-                except: pass
+        else:
+            response_text = panggil_gemini(sys_prompt, user_prompt, model_name="gemini-3.5-flash")
                 
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         
