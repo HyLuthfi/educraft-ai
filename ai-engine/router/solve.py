@@ -5,7 +5,7 @@ import tempfile
 import os
 from fastapi import APIRouter, HTTPException, Form, UploadFile, File
 from typing import List
-from service.gemini_service import panggil_gemini_multimodal
+from service.gemini_service import panggil_gemini_multimodal, ResponseSolve
 from template.prompt_solve import SYSTEM_PROMPT_SOLVE, buat_user_prompt_solve
 
 logger = logging.getLogger(__name__)
@@ -52,7 +52,7 @@ async def solve_questions(
                         shutil.copyfileobj(f.file, buffer)
                     saved_file_paths.append(path)
                     
-            response_text = panggil_gemini_multimodal(sys_prompt, user_prompt, saved_file_paths, model_name="gemini-3.5-flash")
+            response_text = panggil_gemini_multimodal(sys_prompt, user_prompt, saved_file_paths, model_name="gemini-3.5-flash", response_schema=ResponseSolve)
             
         finally:
             for p in saved_file_paths:

@@ -42,6 +42,21 @@ class SoalItem(BaseModel):
 class ResponseSoal(BaseModel):
     soal: list[SoalItem] = Field(description="Daftar soal yang dihasilkan")
 
+class SolveOpsi(BaseModel):
+    label: str = Field(description="A, B, C, D")
+    teks: str = Field(description="Teks pilihan ganda")
+    benar: bool = Field(description="True jika ini jawaban benar")
+
+class SolveItem(BaseModel):
+    tipe: str = Field(description="'pg', 'isian', atau 'essay'")
+    teks: str = Field(description="Teks pertanyaan yang sudah dirapikan")
+    opsi: list[SolveOpsi] | None = Field(default=None, description="Hanya untuk soal PG")
+    kunci_jawaban: str = Field(description="Label jawaban benar (PG) atau teks jawaban (isian/essay)")
+    pembahasan: str = Field(default="", description="Penjelasan jawaban")
+
+class ResponseSolve(BaseModel):
+    soal: list[SolveItem] = Field(description="Daftar soal yang sudah dijawab dan dirapikan")
+
 
 def panggil_gemini(system_prompt: str, user_prompt: str, model_name: str = "gemini-3.5-flash") -> str:
     """
@@ -83,9 +98,12 @@ def panggil_gemini(system_prompt: str, user_prompt: str, model_name: str = "gemi
             
     raise RuntimeError(f"Semua {max_key_attempts} API Key beserta Model Fallback telah dicoba dan gagal. Error terakhir: {str(last_error)}")
 
-def panggil_gemini_multimodal(system_prompt: str, user_prompt: str, file_paths: list[str], model_name: str = "gemini-3.5-flash") -> str:
+def panggil_gemini_multimodal(system_prompt: str, user_prompt: str, file_paths: list[str], model_name: str = "gemini-3.5-flash", response_schema=None) -> str:
     if not key_cycler or len(api_keys) == 0:
         raise RuntimeError("GEMINI_API_KEYS belum di-set di environment variables (.env)")
+
+    if response_schema is None:
+        response_schema = ResponseSoal
 
     models_to_try = [model_name, "gemini-3-flash-preview"]
     models_to_try = list(dict.fromkeys(models_to_try))
@@ -113,7 +131,7 @@ def panggil_gemini_multimodal(system_prompt: str, user_prompt: str, file_paths: 
                         config=types.GenerateContentConfig(
                             system_instruction=system_prompt,
                             response_mime_type="application/json",
-                            response_schema=ResponseSoal,
+                            response_schema=response_schema,
                             temperature=0.7,
                         )
                     )
