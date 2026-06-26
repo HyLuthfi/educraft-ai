@@ -27,22 +27,22 @@ Kedalaman Pembahasan:
 - Jika "detail": Berikan penjelasan step-by-step yang sangat rinci.
 
 Selalu kembalikan response dalam format JSON berikut:
-{
+{{
   "soal": [
-    {
+    {{
       "tipe": "pg" | "isian" | "essay",
       "teks": "...",
       "opsi": [
-        {"label": "A", "teks": "...", "benar": false},
-        {"label": "B", "teks": "...", "benar": true},
-        {"label": "C", "teks": "...", "benar": false},
-        {"label": "D", "teks": "...", "benar": false}
+        {{"label": "A", "teks": "...", "benar": false}},
+        {{"label": "B", "teks": "...", "benar": true}},
+        {{"label": "C", "teks": "...", "benar": false}},
+        {{"label": "D", "teks": "...", "benar": false}}
       ],
       "kunci_jawaban": "B",
       "pembahasan": "..."
-    }
+    }}
   ]
-}
+}}
 
 Catatan JSON:
 - Field "opsi" hanya untuk tipe "pg". Untuk essay/isian, hilangkan field "opsi" atau berikan null.
