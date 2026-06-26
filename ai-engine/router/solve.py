@@ -69,7 +69,7 @@ async def solve_questions(
                         os.rmdir(temp_dir)
                     except: pass
         else:
-            response_text = panggil_gemini(sys_prompt, user_prompt, model_name="gemini-3.5-flash")
+            response_text = panggil_gemini(sys_prompt, user_prompt, model_name="gemini-3.5-flash", response_schema=ResponseSolve)
                 
         clean_text = response_text.replace("```json", "").replace("```", "").strip()
         
