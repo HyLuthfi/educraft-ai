@@ -57,6 +57,26 @@ class SolveItem(BaseModel):
 class ResponseSolve(BaseModel):
     soal: list[SolveItem] = Field(description="Daftar soal yang sudah dijawab dan dirapikan")
 
+class KoreksiItem(BaseModel):
+    nomor: int = Field(description="Nomor soal")
+    pertanyaan: str = Field(description="Teks pertanyaan (jika ada, atau kosong jika tidak diketahui)")
+    jawaban_siswa: str = Field(description="Jawaban yang diberikan oleh siswa")
+    kunci_jawaban: str = Field(description="Jawaban yang benar menurut kunci")
+    status: str = Field(description="'benar' jika tepat, 'salah' jika tidak tepat, atau 'setengah' jika mendapat nilai sebagian (misal untuk essay)")
+    nilai: float = Field(description="Nilai yang diperoleh siswa untuk soal ini (misal 0.0 sampai 1.0, atau sesuai bobot)")
+    catatan: str = Field(description="Penjelasan singkat kenapa jawaban ini dinilai benar/salah/setengah")
+
+class HasilSiswa(BaseModel):
+    nama_siswa: str = Field(description="Nama siswa")
+    nilai_akhir: float = Field(description="Nilai akhir siswa (skala 0-100 atau sesuai skala terpilih)")
+    status_kelulusan: str = Field(description="'tuntas' atau 'belum_tuntas' berdasarkan KKM")
+    detail_koreksi: list[KoreksiItem] = Field(description="Rincian hasil koreksi per nomor soal")
+    rekomendasi: str = Field(description="Rekomendasi tindak lanjut pribadi (misal: perlu remedial, topik yang perlu diperkuat)")
+
+class ResponseKoreksi(BaseModel):
+    hasil: list[HasilSiswa] = Field(description="Daftar hasil koreksi untuk masing-masing siswa")
+    analitik_kelas: str = Field(description="Analisis analitik kelas secara keseluruhan (materi terlemah, rata-rata kelas, tingkat kelulusan, saran pembelajaran berikutnya)")
+
 
 def panggil_gemini(system_prompt: str, user_prompt: str, model_name: str = "gemini-3.5-flash", response_schema=None) -> str:
     """

@@ -11,7 +11,7 @@ def test_endpoint_ai_search_sukses(client):
     }
     '''
     
-    with patch("router.ai_search.panggil_groq", return_value=mock_response):
+    with patch("router.ai_search.panggil_gemini", return_value=mock_response):
         payload = {
             "topik": "Fotosintesis",
             "jenjang": "SMA",

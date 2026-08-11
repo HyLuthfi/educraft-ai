@@ -43,20 +43,29 @@ export const metadata: Metadata = {
   },
 }
 
+import { ThemeProvider } from "../components/theme-provider"
+
 export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="id" className={`${inter.variable} ${plusJakarta.variable} ${playfair.variable}`}>
+    <html lang="id" className={`${inter.variable} ${plusJakarta.variable} ${playfair.variable}`} suppressHydrationWarning>
       <head>
         <meta name="theme-color" content="#ffffff" />
       </head>
       <body>
-        <div className="noise-overlay" />
-        {children}
-        <Toaster position="bottom-right" richColors />
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <div className="noise-overlay" />
+          {children}
+          <Toaster position="bottom-right" richColors />
+        </ThemeProvider>
       </body>
     </html>
   )
