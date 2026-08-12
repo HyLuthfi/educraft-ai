@@ -7,7 +7,7 @@ def test_endpoint_koreksi_sukses(client):
         "hasil": [
             {
                 "nama_siswa": "Budi",
-                "nilai_akhir": 100,
+                "nilai_akhir": "100",
                 "status_kelulusan": "tuntas",
                 "detail_koreksi": [
                     {
@@ -53,7 +53,7 @@ def test_endpoint_koreksi_sukses(client):
         assert "hasil" in data
         assert len(data["hasil"]) == 1
         assert data["hasil"][0]["nama_siswa"] == "Budi"
-        assert data["hasil"][0]["nilai_akhir"] == 100
+        assert data["hasil"][0]["nilai_akhir"] == "100"
         assert data["analitik_kelas"] == "Rata-rata kelas sangat baik."
 
 def test_endpoint_koreksi_error_validasi(client):

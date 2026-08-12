@@ -362,12 +362,14 @@ export default function AutoKoreksiPage() {
                 <GraduationCap className="text-blue-500" size={18} /> Rata-Rata Nilai
               </div>
               <div className="text-4xl font-editorial font-bold text-black dark:text-white">
-                {(
-                  koreksiResult.hasil.reduce(
-                    (acc, curr) => acc + (typeof curr.nilai_akhir === "number" ? curr.nilai_akhir : 0),
-                    0
-                  ) / koreksiResult.hasil.length
-                ).toFixed(1)}
+                {(() => {
+                  const validScores = koreksiResult.hasil
+                    .map((s) => typeof s.nilai_akhir === "number" ? s.nilai_akhir : parseFloat(s.nilai_akhir))
+                    .filter((score) => !isNaN(score));
+                  return validScores.length > 0
+                    ? (validScores.reduce((acc, curr) => acc + curr, 0) / validScores.length).toFixed(1)
+                    : "-";
+                })()}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Berdasarkan total {koreksiResult.hasil.length} siswa</p>
             </div>
@@ -394,9 +396,14 @@ export default function AutoKoreksiPage() {
                 <Award className="text-yellow-500" size={18} /> Nilai Tertinggi
               </div>
               <div className="text-4xl font-editorial font-bold text-black dark:text-white">
-                {Math.max(
-                  ...koreksiResult.hasil.map((s) => (typeof s.nilai_akhir === "number" ? s.nilai_akhir : 0))
-                )}
+                {(() => {
+                  const validScores = koreksiResult.hasil
+                    .map((s) => typeof s.nilai_akhir === "number" ? s.nilai_akhir : parseFloat(s.nilai_akhir))
+                    .filter((score) => !isNaN(score));
+                  return validScores.length > 0
+                    ? Math.max(...validScores).toString()
+                    : "-";
+                })()}
               </div>
               <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Perolehan nilai tertinggi kelas</p>
             </div>

@@ -68,7 +68,7 @@ class KoreksiItem(BaseModel):
 
 class HasilSiswa(BaseModel):
     nama_siswa: str = Field(description="Nama siswa")
-    nilai_akhir: float = Field(description="Nilai akhir siswa (skala 0-100 atau sesuai skala terpilih)")
+    nilai_akhir: str = Field(description="Nilai akhir siswa (angka dalam bentuk string untuk skala 10/100, atau huruf mutu A/B/C/D/E untuk skala huruf)")
     status_kelulusan: str = Field(description="'tuntas' atau 'belum_tuntas' berdasarkan KKM")
     detail_koreksi: list[KoreksiItem] = Field(description="Rincian hasil koreksi per nomor soal")
     rekomendasi: str = Field(description="Rekomendasi tindak lanjut pribadi (misal: perlu remedial, topik yang perlu diperkuat)")

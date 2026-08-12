@@ -461,7 +461,7 @@ export default function CreateQuestionWizard() {
                     setInputText("");
                     setTopicText("");
                     setInputTypes(["text"]);
-                    setConfigBlocks([{ id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10 }]);
+                    setConfigBlocks([{ id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10, imageCount: 0 }]);
                     setInstruksiKhusus("");
                     setGeneratedQuestions([]);
                     toast.success("Formulir berhasil di-reset");
@@ -1343,7 +1343,7 @@ export default function CreateQuestionWizard() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <QuizizzExportButton 
                         soalData={{
-                          soal: generatedQuestions?.soal || generatedQuestions
+                          soal: generatedQuestions
                         }}
                       />
 
@@ -1355,7 +1355,7 @@ export default function CreateQuestionWizard() {
                             kelas: "Umum",
                             durasi: "60 Menit"
                           },
-                          soal: generatedQuestions?.soal || generatedQuestions
+                          soal: generatedQuestions
                         }}
                       />
 
