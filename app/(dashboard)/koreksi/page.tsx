@@ -25,6 +25,7 @@ import {
   Printer,
   ChevronRight,
 } from "lucide-react";
+import KoreksiCharts from "@/app/components/KoreksiCharts";
 
 type InputMethod = "text" | "file" | "image";
 
@@ -416,6 +417,9 @@ export default function AutoKoreksiPage() {
             </h3>
             <p className="text-sm leading-relaxed whitespace-pre-wrap">{koreksiResult.analitik_kelas}</p>
           </div>
+
+          {/* Visualisasi Grafik Analitik */}
+          <KoreksiCharts koreksiResult={koreksiResult} skala={scoringConfig.skala} />
 
           {/* Detail Koreksi Per-Siswa */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
