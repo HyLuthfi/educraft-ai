@@ -75,11 +75,11 @@ export default function RegisterPage() {
       transition={{ staggerChildren: 0.1 }}
       className="w-full max-w-sm mx-auto"
     >
-      <motion.div variants={ANIMASI_ITEM} className="mb-8">
-        <h1 className="text-4xl font-editorial font-medium tracking-tight text-black mb-2">
+      <motion.div variants={ANIMASI_ITEM} className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-4xl font-editorial font-medium tracking-tight text-black dark:text-white mb-1.5 sm:mb-2">
           Buat Akun Baru
         </h1>
-        <p className="text-gray-500 font-light">
+        <p className="text-xs sm:text-base text-gray-500 dark:text-gray-400 font-light">
           Gratis selamanya untuk guru di seluruh Indonesia.
         </p>
       </motion.div>
@@ -90,19 +90,19 @@ export default function RegisterPage() {
         className="space-y-5"
       >
         {errorMsg && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-500 text-red-700 text-sm font-medium rounded-md">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-950/30 border border-red-500 text-red-700 dark:text-red-400 text-sm font-medium rounded-md">
             {errorMsg}
           </div>
         )}
         {successMsg && (
-          <div className="mb-4 p-4 bg-green-50 border border-green-500 text-green-700 text-sm font-medium rounded-md">
+          <div className="mb-4 p-4 bg-green-50 dark:bg-green-950/30 border border-green-500 text-green-700 dark:text-green-400 text-sm font-medium rounded-md">
             {successMsg}
           </div>
         )}
         <div>
           <label
             htmlFor="nama-register"
-            className="block text-sm font-medium text-black mb-2"
+            className="block text-sm font-medium text-black dark:text-white mb-2"
           >
             Nama Lengkap
           </label>
@@ -120,7 +120,7 @@ export default function RegisterPage() {
                 setFormData({ ...formData, nama: e.target.value })
               }
               placeholder="Nama lengkap Anda"
-              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
+              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] dark:bg-[#2a2a2a] dark:text-white border border-black/10 dark:border-white/20 focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none transition-all duration-300 rounded-none"
             />
           </div>
         </div>
@@ -128,7 +128,7 @@ export default function RegisterPage() {
         <div>
           <label
             htmlFor="email-register"
-            className="block text-sm font-medium text-black mb-2"
+            className="block text-sm font-medium text-black dark:text-white mb-2"
           >
             Email
           </label>
@@ -146,7 +146,7 @@ export default function RegisterPage() {
                 setFormData({ ...formData, email: e.target.value })
               }
               placeholder="guru@sekolah.sch.id"
-              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
+              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] dark:bg-[#2a2a2a] dark:text-white border border-black/10 dark:border-white/20 focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none transition-all duration-300 rounded-none"
             />
           </div>
         </div>
@@ -154,7 +154,7 @@ export default function RegisterPage() {
         <div>
           <label
             htmlFor="password-register"
-            className="block text-sm font-medium text-black mb-2"
+            className="block text-sm font-medium text-black dark:text-white mb-2"
           >
             Password
           </label>
@@ -173,7 +173,7 @@ export default function RegisterPage() {
                 setFormData({ ...formData, password: e.target.value })
               }
               placeholder="Minimal 8 karakter"
-              className="w-full pl-12 pr-12 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
+              className="w-full pl-12 pr-12 py-3 bg-[#f9f9f9] dark:bg-[#2a2a2a] dark:text-white border border-black/10 dark:border-white/20 focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none transition-all duration-300 rounded-none"
             />
             <button
               type="button"
@@ -224,10 +224,10 @@ export default function RegisterPage() {
 
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-black/10" />
+            <div className="w-full border-t border-black/10 dark:border-white/15" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-gray-400 font-medium tracking-widest">
+            <span className="bg-white dark:bg-[#121212] px-4 text-gray-400 font-medium tracking-widest">
               atau
             </span>
           </div>
@@ -236,7 +236,7 @@ export default function RegisterPage() {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full py-3.5 bg-white border border-black/10 hover:border-black/30 hover:bg-gray-50 text-black flex items-center justify-center gap-3 rounded-none transition-all"
+          className="w-full py-3.5 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/20 hover:border-black/30 dark:hover:border-white/40 hover:bg-gray-50 dark:hover:bg-[#252525] text-black dark:text-white flex items-center justify-center gap-3 rounded-none transition-all"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -262,12 +262,12 @@ export default function RegisterPage() {
 
       <motion.p
         variants={ANIMASI_ITEM}
-        className="text-center mt-8 text-sm text-gray-500"
+        className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400"
       >
         Sudah punya akun?{" "}
         <Link
           href="/login"
-          className="font-semibold text-black hover:underline transition-colors"
+          className="font-semibold text-black dark:text-white hover:underline transition-colors"
         >
           Masuk di sini
         </Link>

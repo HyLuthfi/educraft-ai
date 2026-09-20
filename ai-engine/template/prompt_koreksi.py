@@ -37,3 +37,33 @@ def buat_user_prompt_koreksi(soal_kunci: str, daftar_siswa: list[dict]) -> str:
 
     prompt += "\nTugasmu: Koreksi dan berikan nilai bagi seluruh siswa tersebut sesuai format JSON yang telah ditentukan."
     return prompt
+
+
+def buat_user_prompt_koreksi_satu(soal_kunci: str, siswa: dict) -> str:
+    """Versi single-student: koreksi 1 siswa saja (untuk pemrosesan paralel)."""
+    prompt = ""
+    if soal_kunci.strip():
+        prompt += "LEMBAR SOAL & KUNCI JAWABAN ACUAN:\n"
+        prompt += "---\n" + soal_kunci.strip() + "\n---\n\n"
+    else:
+        prompt += "ACUAN KUNCI JAWABAN:\nTidak ada lembar soal acuan. Koreksi jawaban siswa berdasarkan akurasi faktual sains/pengetahuan umum dari pertanyaan yang tertera di dalam jawaban mereka.\n\n"
+
+    prompt += "JAWABAN SISWA:\n"
+    prompt += f"Nama: {siswa.get('name') or 'Siswa'}\n"
+    prompt += f"Jawaban:\n{siswa.get('textContent') or '(Tidak ada jawaban)'}\n---\n"
+    prompt += "\nTugasmu: Koreksi dan berikan nilai bagi SATU siswa ini sesuai format JSON yang telah ditentukan."
+    return prompt
+
+
+SYSTEM_PROMPT_ANALITIK = """Kamu adalah Asisten AI Analis Pendidikan. Berdasarkan ringkasan hasil koreksi beberapa siswa dalam satu kelas, buat analisis analitik kelas keseluruhan: materi/soal terlemah, rata-rata kelas, tingkat kelulusan, dan saran pengajaran berikutnya bagi guru. Jawab ringkas dan langsung (plain text, bukan JSON)."""
+
+
+def buat_prompt_analitik(daftar_hasil: list[dict]) -> str:
+    prompt = "RINGKASAN HASIL KOREKSI KELAS:\n\n"
+    for i, h in enumerate(daftar_hasil, 1):
+        prompt += f"{i}. {h.get('nama_siswa','?')} — Nilai: {h.get('nilai_akhir','?')} — Status: {h.get('status_kelulusan','?')}\n"
+        rekom = h.get("rekomendasi")
+        if rekom:
+            prompt += f"   Rekomendasi: {rekom}\n"
+    prompt += "\nBuat analisis analitik kelas keseluruhan sesuai instruksi."
+    return prompt

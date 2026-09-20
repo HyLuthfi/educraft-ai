@@ -28,7 +28,7 @@ def test_endpoint_koreksi_sukses(client):
     """
     
     # Mock panggilan Gemini di router.koreksi
-    with patch("router.koreksi.panggil_gemini", return_value=mock_response):
+    with patch("router.koreksi.panggil_ai", return_value=mock_response):
         payload = {
             "soalText": "1. Siapa presiden pertama Indonesia? Kunci: Soekarno",
             "students": [

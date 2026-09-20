@@ -1,11 +1,10 @@
 import json
 import logging
 import asyncio
-import random
 from fastapi import APIRouter, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 
-from service.gemini_service import panggil_gemini, generate_image
+from service.ai_service import panggil_ai, generate_image
 from template.prompt_generate import SYSTEM_PROMPT_GENERATE, buat_user_prompt
 
 router = APIRouter()
@@ -36,13 +35,14 @@ class RequestRegenerate(BaseModel):
     soal_lama: str
     konten_materi: str
     config: ConfigSoal | None = None
+    instruksi: str | None = None
 
 
-async def eksekusi_gemini_dengan_retry(user_prompt: str) -> list:
+async def eksekusi_ai_dengan_retry(user_prompt: str) -> list:
     maks_retry = 3
     for percobaan in range(maks_retry):
         try:
-            hasil_mentah = await asyncio.to_thread(panggil_gemini, SYSTEM_PROMPT_GENERATE, user_prompt)
+            hasil_mentah = await asyncio.to_thread(panggil_ai, SYSTEM_PROMPT_GENERATE, user_prompt)
             hasil = json.loads(hasil_mentah)
             if "soal" not in hasil:
                 raise ValueError("Response tidak mengandung key 'soal'")
@@ -59,45 +59,26 @@ async def eksekusi_gemini_dengan_retry(user_prompt: str) -> list:
 
 @router.post("/generate")
 async def generate_soal(req: RequestGenerate):
-    blocks_reguler = []
-    blocks_gambar = []
-    
-    for b in req.config.blocks:
-        count_reguler = b.count - b.image_count
-        count_gambar = b.image_count
-        
-        if count_reguler > 0:
-            blocks_reguler.append(BlockSoal(tipe=b.tipe, level=b.level, count=count_reguler, image_count=0))
-            
-        if count_gambar > 0:
-            blocks_gambar.append(BlockSoal(tipe=b.tipe, level=b.level, count=count_gambar, image_count=count_gambar))
-
     semua_soal = []
-    
-    if blocks_reguler:
-        prompt_reg = buat_user_prompt(
-            konten_materi=req.konten_materi, blocks=blocks_reguler,
+
+    # Generate per-blok mengikuti urutan input parameter.
+    # Hasil dikelompokkan per tipe sesuai urutan blok (mis. Essay semua, lalu PG semua).
+    for b in req.config.blocks:
+        prompt = buat_user_prompt(
+            konten_materi=req.konten_materi, blocks=[b],
             level_bloom=req.config.level_bloom, mata_pelajaran=req.config.mata_pelajaran,
             jenjang=req.config.jenjang, bahasa=req.config.bahasa,
-            instruksi_khusus=req.config.instruksi_khusus, mode="reguler"
+            instruksi_khusus=req.config.instruksi_khusus,
+            mode="gambar" if b.image_count > 0 else "reguler"
         )
-        semua_soal.extend(await eksekusi_gemini_dengan_retry(prompt_reg))
+        semua_soal.extend(await eksekusi_ai_dengan_retry(prompt))
 
-    if blocks_gambar:
-        prompt_gam = buat_user_prompt(
-            konten_materi=req.konten_materi, blocks=blocks_gambar,
-            level_bloom=req.config.level_bloom, mata_pelajaran=req.config.mata_pelajaran,
-            jenjang=req.config.jenjang, bahasa=req.config.bahasa,
-            instruksi_khusus=req.config.instruksi_khusus, mode="gambar"
-        )
-        semua_soal.extend(await eksekusi_gemini_dengan_retry(prompt_gam))
-
-    random.shuffle(semua_soal)
     return {"soal": semua_soal}
 
 
 @router.post("/regenerate")
 async def regenerate_soal(req: RequestRegenerate):
+    instruksi_txt = f"\nInstruksi khusus dari guru: {req.instruksi}\n" if req.instruksi else ""
     prompt_regenerate = f"""Soal lama yang perlu diganti:
 ---
 {req.soal_lama}
@@ -107,11 +88,11 @@ Materi referensi:
 ---
 {req.konten_materi[:4000]}
 ---
-
+{instruksi_txt}
 Buatkan 1 soal pengganti yang BERBEDA dari soal lama di atas, tapi tetap berdasarkan materi yang sama. Kembalikan dalam format JSON yang sama."""
 
     try:
-        hasil_mentah = panggil_gemini(SYSTEM_PROMPT_GENERATE, prompt_regenerate)
+        hasil_mentah = panggil_ai(SYSTEM_PROMPT_GENERATE, prompt_regenerate)
         return json.loads(hasil_mentah)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

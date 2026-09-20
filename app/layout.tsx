@@ -22,24 +22,35 @@ const playfair = Playfair_Display({
 })
 
 export const metadata: Metadata = {
-  title: "EduCraft AI - Generator Soal Cerdas untuk Guru",
+  title: "EduCraft AI — Asisten Mengajar Ber-AI untuk Guru",
   description:
-    "Ubah materi apapun menjadi soal berkualitas tinggi dalam hitungan menit. Didukung AI, siap cetak, siap pakai di platform apapun.",
+    "Satu platform AI untuk semua tugas mengajar: buat & koreksi soal, absensi murid, bagi kelompok, rapor, dan ranking siswa. Hemat waktu, guru pegang kendali penuh.",
   authors: [{ name: "EduCraft Team" }],
   keywords: [
+    "asisten guru AI",
+    "aplikasi guru",
     "generator soal",
+    "koreksi otomatis",
+    "absensi murid",
+    "rapor siswa",
     "AI pendidikan",
-    "soal ujian otomatis",
-    "soal HOTS",
-    "Bloom Taxonomy",
     "guru Indonesia",
   ],
   openGraph: {
-    title: "EduCraft AI - Generator Soal Cerdas untuk Guru",
+    title: "EduCraft AI — Asisten Mengajar Ber-AI untuk Guru",
     description:
-      "Ubah materi apapun menjadi soal berkualitas tinggi dalam hitungan menit.",
+      "Satu platform AI untuk semua tugas mengajar: soal, koreksi, absensi, kelompok, rapor, hingga ranking siswa.",
     type: "website",
     locale: "id_ID",
+  },
+  icons: {
+    icon: [
+      { url: "/favicon.ico" },
+      { url: "/logo-mark-v2.png", type: "image/png" },
+    ],
+    apple: [
+      { url: "/logo-mark-v2.png" },
+    ],
   },
 }
 
@@ -58,8 +69,7 @@ export default function RootLayout({
       <body>
         <ThemeProvider
           attribute="class"
-          defaultTheme="system"
-          enableSystem
+          defaultTheme="light"
           disableTransitionOnChange
         >
           <div className="noise-overlay" />

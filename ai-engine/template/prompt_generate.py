@@ -35,6 +35,7 @@ Selalu kembalikan response dalam format JSON berikut:
 
 Catatan:
 - Field "opsi" hanya untuk tipe "pg"
+- Untuk soal tipe "Benar/Salah" (atau "benar_salah"): buat sebagai tipe "pg" dengan TEPAT 2 opsi -> {"label":"A","teks":"Benar"} dan {"label":"B","teks":"Salah"}, salah satunya benar. Teks soal berupa pernyataan yang dinilai benar/salah.
 - Field "rubrik" hanya untuk tipe "essay"
 - Field "kunci_jawaban" berisi label jawaban benar (untuk PG) atau jawaban singkat (untuk isian)
 - Field "image_prompt" HANYA diisi jika dikonfigurasi ada soal bergambar. Jika diisi, isinya HARUS deskripsi gambar yang fotorealistik dan sangat detail dalam BAHASA INGGRIS. GAMBAR INI BUKAN SEKADAR HIASAN! Gambar harus memuat objek/situasi yang menjadi inti pertanyaan (soal visual). Teks soal harus merujuk ke gambar.
@@ -58,6 +59,13 @@ def buat_user_prompt(
         count = b.count
         
         instruksi_gambar = ""
+        instruksi_tipe = ""
+        if str(tipe).strip().lower() in ("benar/salah", "benar salah", "benar_salah", "bs"):
+            instruksi_tipe = (
+                " (Ini soal BENAR/SALAH: buat sebagai tipe 'pg' dengan TEPAT 2 opsi "
+                "[{label:'A',teks:'Benar'},{label:'B',teks:'Salah'}], teks soal berupa pernyataan yang dinilai benar atau salah.)"
+            )
+
         if mode == "gambar":
             instruksi_gambar = (
                 " (SANGAT PENTING: SEMUA soal di blok ini WAJIB bergantung pada gambar. "
@@ -68,7 +76,7 @@ def buat_user_prompt(
         elif mode == "reguler":
             instruksi_gambar = " (PENTING: DILARANG KERAS menyertakan/mengisi field 'image_prompt', biarkan kosong)"
             
-        blok_str = f"Blok {i+1}: Buat {count} soal dengan tipe {tipe}, Kesulitan: {level}.{instruksi_gambar}"
+        blok_str = f"Blok {i+1}: Buat {count} soal dengan tipe {tipe}, Kesulitan: {level}.{instruksi_tipe}{instruksi_gambar}"
         bagian_blok.append(blok_str)
         
     konfig_blok_str = "\n".join([f"- {b}" for b in bagian_blok])

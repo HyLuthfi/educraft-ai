@@ -69,3 +69,6 @@ __pycache__/
 # IDEs
 .idea/
 *.swp
+
+# supabase temp
+supabase/.temp/

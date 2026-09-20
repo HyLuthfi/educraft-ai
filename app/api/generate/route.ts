@@ -20,12 +20,13 @@ export async function POST(req: Request) {
         let judul = body.konten_materi.substring(0, 50).trim();
         if (body.konten_materi.length > 50) judul += "...";
         
-        await supabase.from("bank_materi").insert({
+        const { error: insertError } = await supabase.from("bank_materi").insert({
           user_id: user.id,
           judul: judul,
           jenis_sumber: "teks",
           konten_mentah: body.konten_materi
         });
+        if (insertError) console.error("Gagal simpan riwayat bank_materi:", insertError.message);
       }
     }
 
@@ -51,51 +52,16 @@ export async function POST(req: Request) {
     }
 
     const data = await res.json();
-    
-    // --- OPSI 2: Download dari Pollinations & Upload ke Supabase ---
+
+    // Set image_url langsung ke URL Pollinations (tanpa download+upload blocking).
+    // Server balas instan; client render gambar secara lazy.
     if (data.soal && Array.isArray(data.soal)) {
-      const uploadPromises = data.soal.map(async (soalItem: any) => {
+      for (const soalItem of data.soal) {
         if (soalItem.image_prompt && soalItem.image_prompt.trim() !== "") {
-          try {
-            // 1. Fetch dari Pollinations
-            const promptEncoded = encodeURIComponent(soalItem.image_prompt);
-            const pollUrl = `https://image.pollinations.ai/prompt/${promptEncoded}?width=800&height=400&nologo=true&seed=42`;
-            const imageRes = await fetch(pollUrl);
-            if (!imageRes.ok) throw new Error("Gagal fetch dari Pollinations");
-            
-            const arrayBuffer = await imageRes.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-            
-            // 2. Upload ke Supabase
-            const fileName = `generated_${Date.now()}_${Math.random().toString(36).substring(7)}.jpg`;
-            
-            const { error: uploadError } = await supabase.storage
-              .from("assets")
-              .upload(fileName, buffer, {
-                contentType: "image/jpeg",
-                upsert: false
-              });
-              
-            if (uploadError) {
-               console.error("Gagal upload Supabase:", uploadError);
-               soalItem.image_url = pollUrl; // Fallback
-            } else {
-               // 3. Dapatkan Public URL permanen
-               const { data: publicUrlData } = supabase.storage
-                 .from("assets")
-                 .getPublicUrl(fileName);
-                 
-               soalItem.image_url = publicUrlData.publicUrl;
-            }
-          } catch (e) {
-             console.error("Gagal proses gambar:", e);
-             soalItem.image_url = `https://image.pollinations.ai/prompt/${encodeURIComponent(soalItem.image_prompt)}?width=800&height=400&nologo=true&seed=42`;
-          }
+          const promptEncoded = encodeURIComponent(soalItem.image_prompt);
+          soalItem.image_url = `https://image.pollinations.ai/prompt/${promptEncoded}?width=800&height=400&nologo=true&seed=42`;
         }
-      });
-      
-      // Eksekusi semua proses download & upload secara paralel!
-      await Promise.all(uploadPromises);
+      }
     }
 
     return NextResponse.json(data);

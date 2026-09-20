@@ -30,7 +30,7 @@ export default function AuthVisual() {
               <Sparkles className="w-4 h-4 text-white" />
             </div>
             <div className="text-sm font-semibold text-white drop-shadow-md">
-              HOTS C4-C6
+              Absensi Tercatat
             </div>
           </div>
           <div className="h-2 w-3/4 bg-white/30 rounded-full mb-2"></div>
@@ -53,14 +53,14 @@ export default function AuthVisual() {
             </div>
             <div>
               <div className="text-sm font-bold text-white drop-shadow-md">
-                Modul Selesai
+                Rapor Selesai
               </div>
-              <div className="text-xs text-white/80">20 Soal Pilihan Ganda</div>
+              <div className="text-xs text-white/80">32 Siswa Terekap</div>
             </div>
           </div>
           <div className="flex items-center gap-2 text-xs font-medium text-white bg-white/20 p-2 rounded-lg border border-white/30 backdrop-blur-sm">
-            <CheckCircle className="w-4 h-4 text-green-400" /> Siap Diekspor ke
-            PDF
+            <CheckCircle className="w-4 h-4 text-green-400" /> Siap Dibagikan ke
+            Wali Murid
           </div>
         </motion.div>
       </div>
@@ -71,8 +71,8 @@ export default function AuthVisual() {
           <span className="italic text-white/80">asisten pribadi</span> Anda."
         </h2>
         <p className="text-white/80 font-light text-base drop-shadow-sm">
-          Ribuan pendidik telah menghemat ratusan jam kerja dengan bantuan AI
-          kami.
+          Dari soal hingga rapor, EduCraft AI menemani setiap langkah mengajar
+          Anda.
         </p>
       </div>
     </div>

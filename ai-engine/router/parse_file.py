@@ -68,8 +68,8 @@ async def parse_image(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail="Ukuran file melebihi batas 20MB")
 
     try:
-        from service.gemini_service import baca_gambar_gemini
-        teks_hasil = baca_gambar_gemini(konten, file.content_type)
+        from service.ai_service import baca_gambar_ai
+        teks_hasil = baca_gambar_ai(konten, file.content_type)
         return {
             "teks_hasil": teks_hasil.strip(),
             "tipe_file": file.content_type,

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -24,10 +24,15 @@ import {
   RotateCcw,
   Printer,
   ChevronRight,
+  Save,
+  Pencil,
 } from "lucide-react";
 import KoreksiCharts from "@/app/components/KoreksiCharts";
+import { buatSupabaseClient } from "@/lib/supabase/client";
 
 type InputMethod = "text" | "file" | "image";
+
+type Phase = "idle" | "menunggu" | "ocr" | "koreksi" | "selesai" | "gagal";
 
 type StudentCard = {
   id: string;
@@ -36,6 +41,9 @@ type StudentCard = {
   textContent: string;
   fileName: string;
   isParsing: boolean;
+  imageFile: File | null;   // lazy: foto disimpan, OCR ditunda sampai Mulai Koreksi
+  imageName: string;
+  phase: Phase;
 };
 
 type ScoringConfig = {
@@ -68,6 +76,103 @@ interface ResponseKoreksi {
   analitik_kelas: string;
 }
 
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => {
+      const result = reader.result as string;
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = (error) => reject(error);
+  });
+};
+
+function MarkdownText({ text }: { text: string }) {
+  if (!text) return null;
+
+  const lines = text.split("\n");
+
+  return (
+    <div className="space-y-1">
+      {lines.map((line, idx) => {
+        let cleanLine = line.trim();
+        if (!cleanLine) return <div key={idx} className="h-2" />;
+
+        // Header Check (e.g. ## Title)
+        const isHeader = cleanLine.startsWith("##");
+        if (isHeader) {
+          const content = cleanLine.replace(/^##\s*/, "");
+          return (
+            <h4 key={idx} className="font-black text-base mt-4 mb-2 text-yellow-950 dark:text-yellow-300">
+              {parseInlineMarkdown(content)}
+            </h4>
+          );
+        }
+
+        // List item with bullet (e.g. * Item or - Item)
+        const isBulletList = cleanLine.startsWith("* ") || cleanLine.startsWith("- ");
+        if (isBulletList) {
+          const content = cleanLine.replace(/^[\*\-]\s+/, "");
+          return (
+            <div key={idx} className="flex gap-2 pl-4 py-0.5">
+              <span className="text-yellow-600 dark:text-yellow-400 font-black">•</span>
+              <span className="flex-1 text-yellow-900 dark:text-yellow-100">{parseInlineMarkdown(content)}</span>
+            </div>
+          );
+        }
+
+        // List item with number (e.g. 1. Item)
+        const isNumberedList = /^\d+\.\s+/.test(cleanLine);
+        if (isNumberedList) {
+          const match = cleanLine.match(/^(\d+)\.\s+(.*)/);
+          const num = match ? match[1] : "1";
+          const content = match ? match[2] : cleanLine;
+          return (
+            <div key={idx} className="flex gap-2 pl-4 py-0.5">
+              <span className="text-yellow-600 dark:text-yellow-400 font-bold">{num}.</span>
+              <span className="flex-1 text-yellow-900 dark:text-yellow-100">{parseInlineMarkdown(content)}</span>
+            </div>
+          );
+        }
+
+        // Normal paragraph line
+        return (
+          <p key={idx} className="pl-0 text-yellow-900 dark:text-yellow-100">
+            {parseInlineMarkdown(line)}
+          </p>
+        );
+      })}
+    </div>
+  );
+}
+
+function parseInlineMarkdown(text: string) {
+  const regex = /\*\*(.*?)\*\*/g;
+  const parts = [];
+  let lastIndex = 0;
+  let match;
+
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(text.slice(lastIndex, match.index));
+    }
+    parts.push(
+      <strong key={match.index} className="font-extrabold text-yellow-950 dark:text-yellow-100 brightness-110">
+        {match[1]}
+      </strong>
+    );
+    lastIndex = regex.lastIndex;
+  }
+
+  if (lastIndex < text.length) {
+    parts.push(text.slice(lastIndex));
+  }
+
+  return parts.length > 0 ? parts : text;
+}
+
 export default function AutoKoreksiPage() {
   // ── Soal / Kunci Jawaban (Opsional) ──
   const [isSoalOpen, setIsSoalOpen] = useState(true);
@@ -89,13 +194,108 @@ export default function AutoKoreksiPage() {
 
   // ── Daftar Siswa ──
   const [students, setStudents] = useState<StudentCard[]>([
-    { id: "s1", name: "", inputMethod: "text", textContent: "", fileName: "", isParsing: false },
+    { id: "s1", name: "", inputMethod: "text", textContent: "", fileName: "", isParsing: false, imageFile: null, imageName: "", phase: "idle" },
   ]);
 
   // ── Hasil & Loading ──
   const [isKoreksiLoading, setIsKoreksiLoading] = useState(false);
   const [koreksiResult, setKoreksiResult] = useState<ResponseKoreksi | null>(null);
   const [activeStudentDetail, setActiveStudentDetail] = useState<number | null>(null);
+
+  // ── Simpan Sesi ke Supabase ──
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+
+  // ── Load State from LocalStorage ──
+  useEffect(() => {
+    try {
+      const savedSoalText = localStorage.getItem("educraft_soalText");
+      if (savedSoalText !== null) setSoalText(savedSoalText);
+
+      const savedSoalFileName = localStorage.getItem("educraft_soalFileName");
+      if (savedSoalFileName !== null) setSoalFileName(savedSoalFileName);
+
+      const savedScoringConfig = localStorage.getItem("educraft_scoringConfig");
+      if (savedScoringConfig !== null) {
+        setScoringConfig(JSON.parse(savedScoringConfig));
+      }
+
+      const savedStudents = localStorage.getItem("educraft_students");
+      if (savedStudents !== null) {
+        const parsed = JSON.parse(savedStudents);
+        const restored = parsed.map((s: any) => ({
+          ...s,
+          imageFile: null,
+          imageName: "", // Hapus nama file foto karena file aslinya hilang saat refresh
+          phase: "idle", // Reset phase ke idle saat refresh
+        }));
+        setStudents(restored);
+      }
+
+      const savedKoreksiResult = localStorage.getItem("educraft_koreksiResult");
+      if (savedKoreksiResult !== null) {
+        setKoreksiResult(JSON.parse(savedKoreksiResult));
+      }
+      
+      const savedActiveStudentDetail = localStorage.getItem("educraft_activeStudentDetail");
+      if (savedActiveStudentDetail !== null) {
+        setActiveStudentDetail(JSON.parse(savedActiveStudentDetail));
+      }
+    } catch (e) {
+      console.error("Gagal memuat state dari localStorage:", e);
+    }
+  }, []);
+
+  // ── Save State to LocalStorage ──
+  useEffect(() => {
+    try {
+      localStorage.setItem("educraft_soalText", soalText);
+      localStorage.setItem("educraft_soalFileName", soalFileName);
+    } catch (e) {
+      console.error(e);
+    }
+  }, [soalText, soalFileName]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("educraft_scoringConfig", JSON.stringify(scoringConfig));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [scoringConfig]);
+
+  useEffect(() => {
+    try {
+      const serializable = students.map(({ imageFile, ...rest }) => rest);
+      localStorage.setItem("educraft_students", JSON.stringify(serializable));
+    } catch (e) {
+      console.error(e);
+    }
+  }, [students]);
+
+  useEffect(() => {
+    try {
+      if (koreksiResult) {
+        localStorage.setItem("educraft_koreksiResult", JSON.stringify(koreksiResult));
+      } else {
+        localStorage.removeItem("educraft_koreksiResult");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [koreksiResult]);
+
+  useEffect(() => {
+    try {
+      if (activeStudentDetail !== null) {
+        localStorage.setItem("educraft_activeStudentDetail", JSON.stringify(activeStudentDetail));
+      } else {
+        localStorage.removeItem("educraft_activeStudentDetail");
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, [activeStudentDetail]);
 
   // ── Student CRUD ──
   const addStudent = () => {
@@ -108,6 +308,9 @@ export default function AutoKoreksiPage() {
         textContent: "",
         fileName: "",
         isParsing: false,
+        imageFile: null,
+        imageName: "",
+        phase: "idle",
       },
     ]);
   };
@@ -192,7 +395,6 @@ export default function AutoKoreksiPage() {
         updateStudent(studentId, {
           textContent: data.teks_hasil,
           fileName: file.name,
-          name: students.find((s) => s.id === studentId)?.name || file.name.replace(/\.[^/.]+$/, ""),
           isParsing: false,
         });
         toast.success("Teks berhasil diekstrak!", { id: toastId });
@@ -207,50 +409,62 @@ export default function AutoKoreksiPage() {
   const handleStudentImage = async (studentId: string, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    updateStudent(studentId, { isParsing: true });
-    const toastId = toast.loading(`Menjalankan OCR pada gambar...`);
-    try {
-      const formData = new FormData();
-      formData.append("file", file);
-      const res = await fetch("/api/parse-image", { method: "POST", body: formData });
-      if (!res.ok) throw new Error();
-      const data = await res.json();
-      if (data.teks_hasil) {
-        updateStudent(studentId, {
-          textContent: data.teks_hasil,
-          isParsing: false,
-        });
-        toast.success("Gambar berhasil dipindai!", { id: toastId });
-      }
-    } catch {
-      toast.error("Gagal memindai gambar.", { id: toastId });
-      updateStudent(studentId, { isParsing: false });
-    }
+    updateStudent(studentId, {
+      imageFile: file,
+      imageName: file.name,
+    });
+    toast.success("Foto jawaban disimpan. OCR akan diproses saat koreksi dimulai.");
     e.target.value = "";
   };
 
   // ── AI Correct Operation ──
   const handleKoreksi = async () => {
-    const filledStudents = students.filter((s) => s.textContent.trim());
+    const filledStudents = students.filter(
+      (s) => s.textContent.trim().length > 0 || (s.inputMethod === "image" && s.imageFile !== null)
+    );
     if (filledStudents.length === 0) {
       toast.error("Belum ada jawaban siswa yang diisi.");
       return;
     }
 
     setIsKoreksiLoading(true);
-    const toastId = toast.loading("AI sedang menganalisis & mengoreksi jawaban...");
+    // Set all filled students to "menunggu" status
+    setStudents((prev) =>
+      prev.map((s) =>
+        filledStudents.some((fs) => fs.id === s.id) ? { ...s, phase: "menunggu" } : s
+      )
+    );
+    const toastId = toast.loading("AI sedang mempersiapkan koreksi...");
 
     try {
+      // Convert images to base64
+      const processedStudents = await Promise.all(
+        filledStudents.map(async (s) => {
+          let base64: string | null = null;
+          let mime: string | null = null;
+          if (s.inputMethod === "image" && s.imageFile) {
+            base64 = await fileToBase64(s.imageFile);
+            mime = s.imageFile.type;
+          }
+          const originalIndex = students.findIndex((orig) => orig.id === s.id);
+          return {
+            id: s.id,
+            name: s.name.trim() || `Siswa ${originalIndex + 1}`,
+            textContent: s.textContent,
+            imageBase64: base64,
+            imageMime: mime,
+          };
+        })
+      );
+
+      toast.loading("Memulai pemrosesan paralel...", { id: toastId });
+
       const res = await fetch("/api/koreksi", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           soalText,
-          students: filledStudents.map((s) => ({
-            id: s.id,
-            name: s.name || `Siswa ${s.id}`,
-            textContent: s.textContent,
-          })),
+          students: processedStudents,
           config: scoringConfig,
         }),
       });
@@ -260,19 +474,151 @@ export default function AutoKoreksiPage() {
         throw new Error(errorText || "Gagal menghubungi server");
       }
 
-      const data = await res.json();
-      setKoreksiResult(data);
+      // Fallback untuk backend lama yang mengembalikan JSON utuh (misal belum di-restart)
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("text/event-stream")) {
+        const data = await res.json();
+        if (data.hasil) {
+          const finalResult: ResponseKoreksi = {
+            hasil: data.hasil,
+            analitik_kelas: data.analitik_kelas || "Analisis selesai.",
+          };
+          setStudents((prev) => prev.map((s) => ({ ...s, phase: "selesai" })));
+          setKoreksiResult(finalResult);
+          setActiveStudentDetail(0);
+          setIsSaved(false);
+          toast.success("Koreksi AI selesai (fallback JSON)!", { id: toastId });
+          return;
+        }
+      }
+
+      if (!res.body) {
+        throw new Error("Respons stream kosong dari server");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      const results: HasilSiswa[] = [];
+      let globalAnalitik = "";
+
+      toast.loading("Menganalisis & mengoreksi (paralel)...", { id: toastId });
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split("\n\n");
+        buffer = lines.pop() || "";
+
+        for (const line of lines) {
+          const cleanLine = line.trim();
+          if (cleanLine.startsWith("data: ")) {
+            try {
+              const payload = JSON.parse(cleanLine.slice(6));
+              if (payload.type === "status") {
+                setStudents((prev) =>
+                  prev.map((s) => (s.id === payload.id ? { ...s, phase: payload.phase } : s))
+                );
+              } else if (payload.type === "hasil") {
+                results.push(payload.data);
+              } else if (payload.type === "analitik") {
+                globalAnalitik = payload.data;
+              }
+            } catch (e) {
+              console.error("Error parsing SSE line:", e, cleanLine);
+            }
+          }
+        }
+      }
+
+      if (results.length === 0) {
+        throw new Error("Tidak ada hasil koreksi yang berhasil diproses");
+      }
+
+      const finalResult: ResponseKoreksi = {
+        hasil: results,
+        analitik_kelas: globalAnalitik || "Analisis kelas selesai.",
+      };
+
+      setKoreksiResult(finalResult);
       setActiveStudentDetail(0);
+      setIsSaved(false);
       toast.success("Koreksi AI selesai!", { id: toastId });
     } catch (err: any) {
       console.error(err);
       toast.error("Gagal melakukan koreksi AI: " + (err.message || "Error tidak diketahui"), { id: toastId });
+      // Reset status on error
+      setStudents((prev) => prev.map((s) => ({ ...s, phase: "idle" })));
     } finally {
       setIsKoreksiLoading(false);
     }
   };
 
-  const filledCount = students.filter((s) => s.textContent.trim()).length;
+  const filledCount = students.filter(
+    (s) => s.textContent.trim().length > 0 || (s.inputMethod === "image" && s.imageFile !== null)
+  ).length;
+
+  // ── Simpan hasil koreksi ke Supabase ──
+  const handleSaveSesi = async () => {
+    if (!koreksiResult || isSaving || isSaved) return;
+
+    setIsSaving(true);
+    const toastId = toast.loading("Menyimpan sesi koreksi...");
+    try {
+      const supabase = buatSupabaseClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("Anda harus login untuk menyimpan sesi.", { id: toastId });
+        setIsSaving(false);
+        return;
+      }
+
+      // Hitung ringkasan denormalisasi
+      const validScores = koreksiResult.hasil
+        .map((s) => (typeof s.nilai_akhir === "number" ? s.nilai_akhir : parseFloat(s.nilai_akhir)))
+        .filter((score) => !isNaN(score));
+      const rataRata =
+        validScores.length > 0
+          ? validScores.reduce((acc, curr) => acc + curr, 0) / validScores.length
+          : null;
+      const tuntas = koreksiResult.hasil.filter((s) => s.status_kelulusan === "tuntas").length;
+      const tingkatKetuntasan =
+        koreksiResult.hasil.length > 0 ? (tuntas / koreksiResult.hasil.length) * 100 : null;
+
+      const defaultTitle = `Sesi Koreksi — ${new Date().toLocaleString("id-ID", {
+        dateStyle: "medium",
+        timeStyle: "short",
+      })}`;
+
+      const { error } = await supabase.from("sesi_koreksi").insert({
+        user_id: user.id,
+        title: defaultTitle,
+        jumlah_siswa: koreksiResult.hasil.length,
+        rata_rata: rataRata,
+        tingkat_ketuntasan: tingkatKetuntasan,
+        skala: scoringConfig.skala,
+        kkm: scoringConfig.kkm,
+        hasil: koreksiResult,
+        config: scoringConfig,
+      });
+
+      if (error) throw error;
+
+      setIsSaved(true);
+      toast.success("Sesi koreksi berhasil disimpan!", { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Gagal menyimpan sesi: " + (err.message || "Error tidak diketahui"), {
+        id: toastId,
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // ── Tabs rendering helper ──
   const InputMethodTabs = ({
@@ -293,35 +639,65 @@ export default function AutoKoreksiPage() {
         <button
           key={m.id}
           onClick={() => onChange(m.id)}
-          className={`flex items-center gap-1.5 font-semibold transition-all ${
-            size === "sm" ? "px-3 py-1.5 text-xs" : "px-4 py-2 text-sm"
+          className={`flex items-center gap-1 sm:gap-1.5 font-semibold transition-all ${
+            size === "sm" ? "px-2 sm:px-3 py-1 sm:py-1.5 text-[11px] sm:text-xs" : "px-3 sm:px-4 py-1.5 sm:py-2 text-xs sm:text-sm"
           } ${
             active === m.id
               ? "bg-black dark:bg-white text-white dark:text-black"
               : "bg-gray-100 dark:bg-[#333] text-gray-500 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-[#444]"
           }`}
         >
-          <m.icon size={size === "sm" ? 13 : 15} />
-          {m.label}
+          <m.icon size={size === "sm" ? 12 : 14} />
+          <span>{m.label}</span>
         </button>
       ))}
     </div>
   );
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-10 pb-32">
+    <div className="max-w-5xl mx-auto p-4 sm:p-6 md:p-10 pb-32">
       {/* ────────────────── LAYOUT LOADING ────────────────── */}
       {isKoreksiLoading && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex flex-col items-center justify-center p-6 text-center">
-          <div className="bg-white dark:bg-[#1e1e1e] border-4 border-black dark:border-white/20 p-10 max-w-md w-full shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] space-y-6">
-            <div className="relative w-20 h-20 mx-auto">
-              <div className="absolute inset-0 border-4 border-gray-100 rounded-full"></div>
-              <div className="absolute inset-0 border-4 border-t-yellow-400 border-r-blue-500 rounded-full animate-spin"></div>
-              <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black dark:text-white" size={32} />
+          <div className="bg-white dark:bg-[#1e1e1e] border-4 border-black dark:border-white/20 p-8 max-w-md w-full shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] space-y-6">
+            <div className="relative w-16 h-16 mx-auto">
+              <div className="absolute inset-0 border-4 border-gray-100 dark:border-zinc-800 rounded-full"></div>
+              <div className="absolute inset-0 border-4 border-t-black dark:border-t-white border-r-transparent rounded-full animate-spin"></div>
+              <Sparkles className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black dark:text-white" size={24} />
             </div>
-            <h3 className="text-2xl font-black uppercase tracking-wider dark:text-white">Menilai Jawaban...</h3>
-            <p className="text-gray-600 dark:text-gray-400 font-medium text-sm leading-relaxed">
-              AI sedang mencocokkan pola jawaban, mengevaluasi isian esai, serta menyusun analitik ketuntasan kelas. Harap tunggu beberapa saat.
+            <h3 className="text-xl font-black uppercase tracking-wider dark:text-white">Menilai Jawaban...</h3>
+            
+            {/* Real-time progress per student list */}
+            <div className="border-t border-b border-black/10 dark:border-white/10 py-4 text-left font-mono text-xs max-h-56 overflow-y-auto space-y-2">
+              {students.filter(s => s.phase !== "idle").map(s => {
+                let badgeColor = "text-gray-400";
+                let badgeText = "Menunggu";
+                if (s.phase === "ocr") {
+                  badgeColor = "text-cyan-500 font-bold animate-pulse";
+                  badgeText = "OCR Gambar";
+                } else if (s.phase === "koreksi") {
+                  badgeColor = "text-yellow-500 font-bold animate-pulse";
+                  badgeText = "Koreksi AI";
+                } else if (s.phase === "selesai") {
+                  badgeColor = "text-green-500 font-bold";
+                  badgeText = "Selesai";
+                } else if (s.phase === "gagal") {
+                  badgeColor = "text-red-500 font-bold";
+                  badgeText = "Gagal";
+                }
+                return (
+                  <div key={s.id} className="flex justify-between items-center gap-2">
+                    <span className="truncate max-w-[200px] font-semibold dark:text-zinc-300">
+                      {s.name || `Siswa`}
+                    </span>
+                    <span className={badgeColor}>{badgeText}</span>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <p className="text-gray-600 dark:text-gray-400 font-medium text-xs leading-relaxed">
+              Jawaban siswa sedang diproses secara paralel. Analitik performa kelas akan disusun setelah semua selesai.
             </p>
           </div>
         </div>
@@ -335,34 +711,50 @@ export default function AutoKoreksiPage() {
           className="space-y-8"
         >
           {/* Header Hasil */}
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-black/10 dark:border-white/10 pb-6 print:hidden">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b-2 border-black/10 dark:border-white/10 pb-5 sm:pb-6 print:hidden">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-blue-600 dark:text-blue-400">Hasil Analisis AI</span>
-              <h1 className="text-3xl font-editorial font-bold text-black dark:text-white mt-1">Laporan Auto-Koreksi</h1>
+              <span className="text-xs font-bold uppercase tracking-widest text-black dark:text-white">Hasil Analisis AI</span>
+              <h1 className="text-2xl sm:text-3xl font-editorial font-bold text-black dark:text-white mt-1">Laporan Auto-Koreksi</h1>
             </div>
-            <div className="flex gap-3">
+            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
               <button
                 onClick={() => setKoreksiResult(null)}
-                className="px-5 py-3 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-sm flex items-center gap-2 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-all bg-white dark:bg-[#1e1e1e] dark:text-white"
+                className="py-2.5 px-2 sm:px-4 md:px-5 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-all bg-white dark:bg-[#1e1e1e] dark:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] active:translate-y-0.5"
               >
-                <RotateCcw size={16} /> Edit Data
+                <RotateCcw size={14} className="shrink-0" />
+                <span className="truncate">Edit Data</span>
+              </button>
+              <button
+                onClick={handleSaveSesi}
+                disabled={isSaving || isSaved}
+                className={`py-2.5 px-2 sm:px-4 md:px-5 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] disabled:opacity-60 disabled:cursor-not-allowed active:translate-y-0.5 ${
+                  isSaved
+                    ? "bg-green-500 text-white border-green-600"
+                    : "bg-white dark:bg-[#1e1e1e] dark:text-white hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
+                }`}
+              >
+                {isSaved ? <CheckCircle size={14} className="shrink-0" /> : <Save size={14} className="shrink-0" />}
+                <span className="truncate">{isSaving ? "Menyimpan..." : isSaved ? "Tersimpan" : "Simpan Sesi"}</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="px-5 py-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-sm flex items-center gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)]"
+                className="py-2.5 px-2 sm:px-4 md:px-5 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-y-0.5"
               >
-                <Printer size={16} /> Cetak
+                <Printer size={14} className="shrink-0" />
+                <span className="truncate">Cetak</span>
               </button>
             </div>
           </div>
 
-          {/* Grid Analitik Kelas */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="border-2 border-black dark:border-white/20 p-6 bg-white dark:bg-[#1e1e1e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-xs mb-3">
-                <GraduationCap className="text-blue-500" size={18} /> Rata-Rata Nilai
+          {/* Grid Analitik Kelas: Compact 3-col on Mobile */}
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 md:gap-6">
+            {/* Rata-Rata Nilai */}
+            <div className="border-2 border-black dark:border-white/20 p-2.5 sm:p-5 md:p-6 bg-white dark:bg-[#1e1e1e] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.05)] flex flex-col justify-between">
+              <div className="flex items-center gap-1 sm:gap-2 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[9px] sm:text-xs mb-1 sm:mb-3">
+                <GraduationCap className="text-black dark:text-white shrink-0" size={13} />
+                <span className="truncate">Rata-Rata</span>
               </div>
-              <div className="text-4xl font-editorial font-bold text-black dark:text-white">
+              <div className="text-xl sm:text-3xl md:text-4xl font-editorial font-bold text-black dark:text-white">
                 {(() => {
                   const validScores = koreksiResult.hasil
                     .map((s) => typeof s.nilai_akhir === "number" ? s.nilai_akhir : parseFloat(s.nilai_akhir))
@@ -372,14 +764,18 @@ export default function AutoKoreksiPage() {
                     : "-";
                 })()}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Berdasarkan total {koreksiResult.hasil.length} siswa</p>
+              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                <span className="hidden sm:inline">Total </span>{koreksiResult.hasil.length} siswa
+              </p>
             </div>
 
-            <div className="border-2 border-black dark:border-white/20 p-6 bg-white dark:bg-[#1e1e1e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-xs mb-3">
-                <TrendingUp className="text-green-500" size={18} /> Tingkat Ketuntasan
+            {/* Tingkat Ketuntasan */}
+            <div className="border-2 border-black dark:border-white/20 p-2.5 sm:p-5 md:p-6 bg-white dark:bg-[#1e1e1e] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.05)] flex flex-col justify-between">
+              <div className="flex items-center gap-1 sm:gap-2 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[9px] sm:text-xs mb-1 sm:mb-3">
+                <TrendingUp className="text-green-500 shrink-0" size={13} />
+                <span className="truncate">Ketuntasan</span>
               </div>
-              <div className="text-4xl font-editorial font-bold text-black dark:text-white">
+              <div className="text-xl sm:text-3xl md:text-4xl font-editorial font-bold text-black dark:text-white">
                 {(
                   (koreksiResult.hasil.filter((s) => s.status_kelulusan === "tuntas").length /
                     koreksiResult.hasil.length) *
@@ -387,16 +783,18 @@ export default function AutoKoreksiPage() {
                 ).toFixed(0)}
                 %
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">
-                {koreksiResult.hasil.filter((s) => s.status_kelulusan === "tuntas").length} dari {koreksiResult.hasil.length} siswa lulus KKM ({scoringConfig.kkm})
+              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                {koreksiResult.hasil.filter((s) => s.status_kelulusan === "tuntas").length}/{koreksiResult.hasil.length} lulus
               </p>
             </div>
 
-            <div className="border-2 border-black dark:border-white/20 p-6 bg-white dark:bg-[#1e1e1e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
-              <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-xs mb-3">
-                <Award className="text-yellow-500" size={18} /> Nilai Tertinggi
+            {/* Nilai Tertinggi */}
+            <div className="border-2 border-black dark:border-white/20 p-2.5 sm:p-5 md:p-6 bg-white dark:bg-[#1e1e1e] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.05)] flex flex-col justify-between">
+              <div className="flex items-center gap-1 sm:gap-2 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[9px] sm:text-xs mb-1 sm:mb-3">
+                <Award className="text-black dark:text-white shrink-0" size={13} />
+                <span className="truncate">Tertinggi</span>
               </div>
-              <div className="text-4xl font-editorial font-bold text-black dark:text-white">
+              <div className="text-xl sm:text-3xl md:text-4xl font-editorial font-bold text-black dark:text-white">
                 {(() => {
                   const validScores = koreksiResult.hasil
                     .map((s) => typeof s.nilai_akhir === "number" ? s.nilai_akhir : parseFloat(s.nilai_akhir))
@@ -406,90 +804,120 @@ export default function AutoKoreksiPage() {
                     : "-";
                 })()}
               </div>
-              <p className="text-xs text-gray-500 dark:text-gray-400 mt-2">Perolehan nilai tertinggi kelas</p>
+              <p className="text-[9px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 truncate">
+                Skor maks
+              </p>
             </div>
           </div>
 
           {/* Rekomendasi / Analitik Global */}
-          <div className="border-2 border-black dark:border-white/20 p-6 bg-yellow-50 dark:bg-yellow-950/10 text-yellow-900 dark:text-yellow-400">
-            <h3 className="font-bold text-sm uppercase tracking-wider mb-2 flex items-center gap-2">
-              <AlertTriangle size={16} /> Analisis Performa Kelas (AI Insights)
+          <div className="border-2 border-black dark:border-white/20 p-4 sm:p-6 bg-yellow-50 dark:bg-yellow-950/10 text-yellow-900 dark:text-yellow-400 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]">
+            <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider mb-2 flex items-center gap-2">
+              <AlertTriangle size={16} className="shrink-0" /> Analisis Performa Kelas (AI Insights)
             </h3>
-            <p className="text-sm leading-relaxed whitespace-pre-wrap">{koreksiResult.analitik_kelas}</p>
+            <div className="text-xs sm:text-sm leading-relaxed text-yellow-900 dark:text-yellow-400">
+              <MarkdownText text={koreksiResult.analitik_kelas} />
+            </div>
           </div>
 
           {/* Visualisasi Grafik Analitik */}
           <KoreksiCharts koreksiResult={koreksiResult} skala={scoringConfig.skala} />
 
           {/* Detail Koreksi Per-Siswa */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8">
             {/* List Siswa */}
-            <div className="space-y-3 print:hidden">
-              <h3 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 px-1">Daftar Siswa</h3>
-              <div className="space-y-2">
+            <div className="space-y-2 lg:space-y-3 print:hidden">
+              <div className="flex items-center justify-between px-1">
+                <h3 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                  Daftar Siswa ({koreksiResult.hasil.length})
+                </h3>
+                <span className="text-[10px] text-gray-400 lg:hidden">Geser untuk pilih &rarr;</span>
+              </div>
+              <div className="flex lg:flex-col overflow-x-auto lg:overflow-visible gap-2 pb-2 lg:pb-0 no-scrollbar">
                 {koreksiResult.hasil.map((siswa, idx) => (
                   <button
                     key={idx}
                     onClick={() => setActiveStudentDetail(idx)}
-                    className={`w-full text-left p-4 border-2 flex items-center justify-between transition-all ${
+                    className={`shrink-0 text-left p-2.5 sm:p-3 lg:p-3.5 border-2 flex items-center justify-between gap-3 transition-all min-w-[140px] lg:w-full ${
                       activeStudentDetail === idx
-                        ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.15)]"
+                        ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] sm:shadow-[3px_3px_0px_0px_rgba(0,0,0,0.15)]"
                         : "border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] hover:border-black/30 dark:hover:border-white/30 dark:text-white"
                     }`}
                   >
                     <div>
-                      <div className="font-bold text-sm">{siswa.nama_siswa}</div>
-                      <div className="text-xs opacity-75 mt-0.5">
-                        Status: <span className="uppercase font-bold">{siswa.status_kelulusan === "tuntas" ? "Tuntas" : "Remedial"}</span>
+                      <div className="font-bold text-xs sm:text-sm whitespace-nowrap">{siswa.nama_siswa}</div>
+                      <div className="text-[10px] sm:text-xs opacity-75 mt-0.5 whitespace-nowrap">
+                        <span className="uppercase font-bold">{siswa.status_kelulusan === "tuntas" ? "Tuntas" : "Remedial"}</span>
                       </div>
                     </div>
-                    <div className="text-xl font-editorial font-bold">{siswa.nilai_akhir}</div>
+                    <div className="text-base sm:text-lg lg:text-xl font-editorial font-bold">{siswa.nilai_akhir}</div>
                   </button>
                 ))}
               </div>
             </div>
 
             {/* Rincian per Nomor */}
-            <div className="lg:col-span-2 space-y-6">
+            <div className="lg:col-span-2 space-y-3 sm:space-y-6">
               {activeStudentDetail !== null && koreksiResult.hasil[activeStudentDetail] && (
-                <div className="bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-6 space-y-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)] print:border-none print:shadow-none">
+                <div className="bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-3.5 sm:p-5 lg:p-6 space-y-3 sm:space-y-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.05)] print:border-none print:shadow-none">
                   {/* Info Header Siswa */}
-                  <div className="border-b border-black/10 dark:border-white/10 pb-4 flex justify-between items-start">
-                    <div>
-                      <h3 className="text-2xl font-editorial font-bold dark:text-white">
-                        {koreksiResult.hasil[activeStudentDetail].nama_siswa}
-                      </h3>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider font-bold">
-                        Rekomendasi: <span className="text-yellow-600 dark:text-yellow-400">{koreksiResult.hasil[activeStudentDetail].rekomendasi}</span>
-                      </p>
+                  <div className="border-b border-black/10 dark:border-white/10 pb-2.5 sm:pb-3 flex justify-between items-center gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="text-lg sm:text-2xl font-editorial font-bold dark:text-white truncate">
+                          {koreksiResult.hasil[activeStudentDetail].nama_siswa}
+                        </h3>
+                        <span
+                          className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${
+                            koreksiResult.hasil[activeStudentDetail].status_kelulusan === "tuntas"
+                              ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400 border border-green-300 dark:border-green-800"
+                              : "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 border border-red-300 dark:border-red-800"
+                          }`}
+                        >
+                          {koreksiResult.hasil[activeStudentDetail].status_kelulusan === "tuntas" ? "Tuntas" : "Remedial"}
+                        </span>
+                      </div>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs text-gray-400 uppercase font-bold tracking-wider">Nilai Akhir</div>
-                      <div className="text-3xl font-editorial font-bold dark:text-white">
+                    <div className="text-right shrink-0">
+                      <div className="text-[9px] sm:text-xs text-gray-400 uppercase font-bold tracking-wider">Nilai Akhir</div>
+                      <div className="text-xl sm:text-3xl font-editorial font-bold dark:text-white leading-tight">
                         {koreksiResult.hasil[activeStudentDetail].nilai_akhir}
                       </div>
                     </div>
                   </div>
 
+                  {/* Rekomendasi Siswa */}
+                  {koreksiResult.hasil[activeStudentDetail].rekomendasi && (
+                    <div className="bg-amber-500/10 dark:bg-amber-500/15 border border-amber-500/20 p-2.5 sm:p-3 text-xs leading-relaxed">
+                      <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[10px] text-amber-700 dark:text-amber-400 mb-1">
+                        <span className="shrink-0">⚡</span>
+                        <span>Rekomendasi & Catatan Siswa</span>
+                      </div>
+                      <div className="font-normal text-xs text-neutral-800 dark:text-neutral-200 leading-relaxed normal-case">
+                        {parseInlineMarkdown(koreksiResult.hasil[activeStudentDetail].rekomendasi)}
+                      </div>
+                    </div>
+                  )}
+
                   {/* List Soal Item */}
-                  <div className="space-y-4">
+                  <div className="space-y-2.5 sm:space-y-3">
                     {koreksiResult.hasil[activeStudentDetail].detail_koreksi.map((item, index) => (
                       <div
                         key={index}
-                        className={`p-4 border border-black/10 dark:border-white/10 ${
+                        className={`p-2.5 sm:p-3.5 border border-black/10 dark:border-white/10 ${
                           item.status === "benar"
-                            ? "bg-green-50/50 dark:bg-green-950/10 border-green-200 dark:border-green-900/30"
+                            ? "bg-green-50/40 dark:bg-green-950/10 border-green-200 dark:border-green-900/30"
                             : item.status === "setengah"
-                            ? "bg-yellow-50/50 dark:bg-yellow-950/10 border-yellow-200 dark:border-yellow-900/30"
-                            : "bg-red-50/50 dark:bg-red-950/10 border-red-200 dark:border-red-900/30"
+                            ? "bg-yellow-50/40 dark:bg-yellow-950/10 border-yellow-200 dark:border-yellow-900/30"
+                            : "bg-red-50/40 dark:bg-red-950/10 border-red-200 dark:border-red-900/30"
                         }`}
                       >
                         {/* Judul & Skor Soal */}
-                        <div className="flex justify-between items-start gap-4 mb-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-sm dark:text-white">Soal #{item.nomor}</span>
+                        <div className="flex justify-between items-center gap-2 mb-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-bold text-xs sm:text-sm dark:text-white">Soal #{item.nomor}</span>
                             <span
-                              className={`text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider ${
+                              className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${
                                 item.status === "benar"
                                   ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
                                   : item.status === "setengah"
@@ -500,32 +928,36 @@ export default function AutoKoreksiPage() {
                               {item.status}
                             </span>
                           </div>
-                          <span className="text-xs font-semibold text-gray-500 dark:text-gray-400">
+                          <span className="text-[11px] sm:text-xs font-semibold text-gray-500 dark:text-gray-400">
                             Skor: <span className="font-bold text-black dark:text-white">{item.nilai}</span>
                           </span>
                         </div>
 
                         {/* Pertanyaan jika ada */}
                         {item.pertanyaan && (
-                          <div className="text-xs text-gray-400 dark:text-gray-500 mb-3 italic">"{item.pertanyaan}"</div>
+                          <div className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 mb-2 italic leading-relaxed">
+                            "{item.pertanyaan}"
+                          </div>
                         )}
 
                         {/* Jawaban vs Kunci */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm mt-2">
-                          <div className="bg-white/80 dark:bg-black/20 p-2.5 border border-black/5">
-                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Jawaban Siswa</div>
-                            <div className="font-mono dark:text-white">{item.jawaban_siswa || "(Kosong)"}</div>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 sm:gap-2.5 text-xs mt-1">
+                          <div className="bg-white/90 dark:bg-black/30 p-2 border border-black/5 dark:border-white/10">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Jawaban Siswa</div>
+                            <div className="font-mono text-xs dark:text-white break-words leading-relaxed">
+                              {item.jawaban_siswa || <span className="italic text-gray-400">(Kosong)</span>}
+                            </div>
                           </div>
-                          <div className="bg-white/80 dark:bg-black/20 p-2.5 border border-black/5">
-                            <div className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">Kunci Acuan</div>
-                            <div className="font-mono dark:text-white">{item.kunci_jawaban}</div>
+                          <div className="bg-white/90 dark:bg-black/30 p-2 border border-black/5 dark:border-white/10">
+                            <div className="text-[9px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Kunci Acuan</div>
+                            <div className="font-mono text-xs dark:text-white break-words leading-relaxed">{item.kunci_jawaban}</div>
                           </div>
                         </div>
 
                         {/* Catatan Koreksi */}
                         {item.catatan && (
-                          <div className="text-xs text-gray-500 dark:text-gray-400 mt-3 border-t border-black/5 pt-2">
-                            💡 {item.catatan}
+                          <div className="text-[11px] sm:text-xs text-gray-600 dark:text-gray-300 mt-2 border-t border-black/5 dark:border-white/5 pt-1.5 leading-relaxed">
+                            💡 {parseInlineMarkdown(item.catatan)}
                           </div>
                         )}
                       </div>
@@ -550,7 +982,7 @@ export default function AutoKoreksiPage() {
               className="w-full flex items-center justify-between bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)] transition-colors hover:bg-gray-50 dark:hover:bg-[#252525]"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-500 text-white flex items-center justify-center">
+                <div className="w-10 h-10 bg-black text-white flex items-center justify-center">
                   <FileText size={20} />
                 </div>
                 <div className="text-left">
@@ -598,7 +1030,7 @@ export default function AutoKoreksiPage() {
                     {soalInputMethod === "text" && (
                       <textarea
                         rows={5}
-                        className="w-full p-4 bg-gray-50 dark:bg-[#2a2a2a] border border-black/10 dark:border-white/10 focus:border-black dark:focus:border-white focus:ring-1 focus:ring-black dark:focus:ring-white outline-none resize-none transition-all font-mono text-sm dark:text-white"
+                        className="w-full p-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black dark:border-white/10 focus:bg-white dark:focus:bg-[#333] focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:border-white outline-none resize-none transition-all font-mono text-sm text-black dark:text-white"
                         placeholder={"Ketik soal atau kunci jawaban di sini...\n\nFormat kunci jawaban:\n1. A\n2. B\n3. C\n\nAtau soal lengkap:\n1. Siapa presiden pertama Indonesia?\na. Soekarno  b. Soeharto  c. Habibie  d. Megawati\nJawaban: A"}
                         value={soalText}
                         onChange={(e) => setSoalText(e.target.value)}
@@ -667,7 +1099,7 @@ export default function AutoKoreksiPage() {
               className="w-full flex items-center justify-between bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-5 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)] transition-colors hover:bg-gray-50 dark:hover:bg-[#252525]"
             >
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-500 text-white flex items-center justify-center">
+                <div className="w-10 h-10 bg-black text-white flex items-center justify-center">
                   <Settings2 size={20} />
                 </div>
                 <div className="text-left">
@@ -836,28 +1268,28 @@ export default function AutoKoreksiPage() {
           </motion.div>
 
           {/* FLOATING ACTION BAR */}
-          <div className="fixed bottom-0 left-0 right-0 md:left-64 z-40 print:hidden">
-            <div className="bg-white dark:bg-[#1e1e1e] border-t-2 border-black dark:border-white/20 px-6 py-4 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.5)] transition-colors">
-              <div className="flex items-center gap-4 text-sm">
-                <span className="text-gray-500 dark:text-gray-400">
-                  <span className="font-bold text-black dark:text-white text-lg">{filledCount}</span> siswa siap dikoreksi
+          <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-64 z-30 print:hidden">
+            <div className="bg-white dark:bg-[#1e1e1e] border-t-2 border-black dark:border-white/20 px-3 sm:px-6 py-2.5 sm:py-4 flex items-center justify-between shadow-[0_-4px_20px_rgba(0,0,0,0.1)] dark:shadow-[0_-4px_20px_rgba(0,0,0,0.5)] transition-colors gap-2">
+              <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm min-w-0">
+                <span className="text-gray-500 dark:text-gray-400 truncate">
+                  <span className="font-bold text-black dark:text-white text-base sm:text-lg">{filledCount}</span> siswa siap
                 </span>
                 {soalText && (
-                  <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-bold px-2 py-1 uppercase tracking-wider hidden sm:inline-block">
-                    ✓ Kunci acuan aktif
+                  <span className="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-[10px] sm:text-xs font-bold px-1.5 sm:px-2 py-0.5 sm:py-1 uppercase tracking-wider hidden sm:inline-block">
+                    ✓ Kunci aktif
                   </span>
                 )}
               </div>
               <button
                 onClick={handleKoreksi}
                 disabled={filledCount === 0}
-                className={`px-8 py-3 flex items-center gap-2 font-bold uppercase tracking-wider text-sm transition-all ${
+                className={`px-4 sm:px-8 py-2.5 sm:py-3 flex items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm shrink-0 transition-all ${
                   filledCount === 0
                     ? "bg-gray-200 dark:bg-gray-700 text-gray-400 dark:text-gray-500 cursor-not-allowed"
-                    : "bg-black dark:bg-white text-white dark:text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] active:translate-y-[3px] active:translate-x-[3px] active:shadow-none"
+                    : "bg-black dark:bg-white text-white dark:text-black shadow-[3px_3px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] hover:translate-y-[2px] hover:translate-x-[2px] active:translate-y-[3px] active:translate-x-[3px] active:shadow-none"
                 }`}
               >
-                <Sparkles size={18} /> Mulai Koreksi AI
+                <Sparkles size={16} /> Koreksi AI
               </button>
             </div>
           </div>
@@ -891,7 +1323,7 @@ function StudentAnswerCard({
 }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const imgRef = useRef<HTMLInputElement>(null);
-  const hasContent = student.textContent.trim().length > 0;
+  const hasContent = student.textContent.trim().length > 0 || (student.inputMethod === "image" && student.imageFile !== null);
 
   return (
     <motion.div
@@ -906,25 +1338,41 @@ function StudentAnswerCard({
       }`}
     >
       {/* Card Header */}
-      <div className="flex items-center justify-between px-5 py-4 border-b border-black/10 dark:border-white/10">
-        <div className="flex items-center gap-3">
+      <div className="flex items-center justify-between px-3 sm:px-5 py-2.5 sm:py-4 border-b border-black/10 dark:border-white/10 gap-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <div
-            className={`w-9 h-9 flex items-center justify-center font-bold text-sm ${
+            className={`w-7 h-7 sm:w-9 sm:h-9 shrink-0 flex items-center justify-center font-bold text-xs sm:text-sm ${
               hasContent ? "bg-green-500 text-white" : "bg-gray-200 dark:bg-[#333] text-gray-500 dark:text-gray-400"
             }`}
           >
-            {hasContent ? <CheckCircle size={16} /> : (index + 1).toString().padStart(2, "0")}
+            {hasContent ? <CheckCircle size={14} /> : (index + 1).toString().padStart(2, "0")}
           </div>
-          <input
-            type="text"
-            value={student.name}
-            onChange={(e) => onUpdate({ name: e.target.value })}
-            placeholder={`Siswa ${index + 1}`}
-            className="bg-transparent border-none outline-none font-bold text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 w-52"
-          />
+          <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2 min-w-0">
+            <div className="relative flex items-center group/input min-w-0">
+              <input
+                type="text"
+                value={student.name}
+                onChange={(e) => onUpdate({ name: e.target.value })}
+                placeholder={`Siswa ${index + 1}`}
+                className="bg-transparent border-b border-dashed border-black/20 dark:border-white/20 hover:border-black/50 dark:hover:border-white/50 focus:border-solid focus:border-black dark:focus:border-white outline-none font-bold text-xs sm:text-sm dark:text-white placeholder:text-gray-400 dark:placeholder:text-gray-500 w-24 xs:w-32 sm:w-44 md:w-52 pr-4 sm:pr-6 pb-0.5 transition-all truncate"
+              />
+              <Pencil size={11} className="absolute right-1 text-gray-400 opacity-40 group-hover/input:opacity-100 group-focus-within/input:opacity-0 transition-opacity pointer-events-none" />
+            </div>
+            {student.phase !== "idle" && (
+              <span className={`text-[9px] font-bold px-1.5 py-0.2 uppercase tracking-wider self-start sm:self-auto rounded ${
+                student.phase === "menunggu" ? "bg-gray-100 dark:bg-zinc-800 text-gray-500" :
+                student.phase === "ocr" ? "bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 animate-pulse" :
+                student.phase === "koreksi" ? "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 animate-pulse" :
+                student.phase === "selesai" ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400" :
+                "bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400"
+              }`}>
+                {student.phase}
+              </span>
+            )}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <InputMethodTabs active={student.inputMethod} onChange={(m) => onUpdate({ inputMethod: m })} size="sm" />
           {totalStudents > 1 && (
             <button
@@ -980,23 +1428,27 @@ function StudentAnswerCard({
             <input type="file" ref={imgRef} className="hidden" accept="image/jpeg,image/png,image/webp" onChange={onImageUpload} />
             <button
               onClick={() => imgRef.current?.click()}
-              disabled={student.isParsing}
-              className="px-4 py-1.5 bg-white dark:bg-[#333] border border-black/20 dark:border-white/20 text-xs font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 dark:text-white"
+              className="px-4 py-1.5 bg-white dark:bg-[#333] border border-black/20 dark:border-white/20 text-xs font-medium hover:border-black dark:hover:border-white transition-colors dark:text-white"
             >
-              {student.isParsing ? "Membaca..." : "Upload Foto"}
+              {student.imageFile ? "Ubah Foto" : "Upload Foto"}
             </button>
+            {student.imageName && (
+              <div className="mt-2 text-xs text-green-600 dark:text-green-400 flex items-center gap-1">
+                <CheckCircle size={12} /> {student.imageName} (Menunggu Koreksi AI)
+              </div>
+            )}
           </div>
         )}
 
         {/* Show parsed content if loaded via file/image */}
-        {hasContent && student.inputMethod !== "text" && (
+        {student.textContent.trim().length > 0 && student.inputMethod !== "text" && (
           <div className="mt-3 p-3 bg-green-50 dark:bg-green-950/20 border border-green-200 dark:border-green-800/40">
             <div className="flex items-center justify-between mb-1">
               <span className="text-xs text-green-700 dark:text-green-400 font-bold uppercase tracking-wider flex items-center gap-1">
                 <CheckCircle size={12} /> Hasil Pembacaan
               </span>
               <button
-                onClick={() => onUpdate({ textContent: "", fileName: "" })}
+                onClick={() => onUpdate({ textContent: "", fileName: "", imageFile: null, imageName: "" })}
                 className="text-xs text-red-500 hover:text-red-700 font-semibold"
               >
                 Hapus

@@ -26,7 +26,7 @@ export default function LoginPage() {
     setSedangProses(true);
     setErrorMsg("");
 
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")) {
       setErrorMsg("Kunci API Supabase belum dikonfigurasi di file .env.local Anda!");
       setSedangProses(false);
       return;
@@ -46,7 +46,7 @@ export default function LoginPage() {
   }
 
   async function handleGoogleLogin() {
-    if (process.env.NEXT_PUBLIC_SUPABASE_URL === undefined) {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL.includes("placeholder")) {
       setErrorMsg("Kunci API Supabase belum dikonfigurasi di file .env.local Anda!");
       return;
     }
@@ -66,12 +66,12 @@ export default function LoginPage() {
       transition={{ staggerChildren: 0.1 }}
       className="w-full max-w-sm mx-auto"
     >
-      <motion.div variants={ANIMASI_ITEM} className="mb-8">
-        <h1 className="text-4xl font-editorial font-medium tracking-tight text-black mb-2">
+      <motion.div variants={ANIMASI_ITEM} className="mb-6 sm:mb-8">
+        <h1 className="text-2xl sm:text-4xl font-editorial font-medium tracking-tight text-black dark:text-white mb-1.5 sm:mb-2">
           Selamat Datang Kembali
         </h1>
-        <p className="text-gray-500 font-light">
-          Silakan masuk untuk melanjutkan meracik soal.
+        <p className="text-xs sm:text-base text-gray-500 dark:text-gray-400 font-light">
+          Masuk untuk melanjutkan mengelola kelas Anda.
         </p>
       </motion.div>
 
@@ -81,14 +81,14 @@ export default function LoginPage() {
         className="space-y-5"
       >
         {errorMsg && (
-          <div className="mb-4 p-4 bg-red-50 border border-red-500 text-red-700 text-sm font-medium rounded-md">
+          <div className="mb-4 p-4 bg-red-50 dark:bg-red-950/30 border-2 border-red-500 text-red-700 dark:text-red-400 text-sm font-medium rounded-none">
             {errorMsg}
           </div>
         )}
         <div>
           <label
             htmlFor="email-login"
-            className="block text-sm font-medium text-black mb-2"
+            className="block text-sm font-medium text-black dark:text-white mb-2"
           >
             Email
           </label>
@@ -106,7 +106,7 @@ export default function LoginPage() {
                 setFormData({ ...formData, email: e.target.value })
               }
               placeholder="guru@sekolah.sch.id"
-              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
+              className="w-full pl-12 pr-4 py-3 bg-[#f9f9f9] dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none transition-all duration-200 rounded-none"
             />
           </div>
         </div>
@@ -114,7 +114,7 @@ export default function LoginPage() {
         <div>
           <label
             htmlFor="password-login"
-            className="block text-sm font-medium text-black mb-2"
+            className="block text-sm font-medium text-black dark:text-white mb-2"
           >
             Password
           </label>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                 setFormData({ ...formData, password: e.target.value })
               }
               placeholder="Masukkan password"
-              className="w-full pl-12 pr-12 py-3 bg-[#f9f9f9] border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none transition-all duration-300 rounded-none"
+              className="w-full pl-12 pr-12 py-3 bg-[#f9f9f9] dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none transition-all duration-200 rounded-none"
             />
             <button
               type="button"
@@ -141,14 +141,6 @@ export default function LoginPage() {
             >
               {tampilPassword ? <EyeOff size={18} /> : <Eye size={18} />}
             </button>
-          </div>
-          <div className="flex justify-end mt-2">
-            <Link
-              href="#"
-              className="text-xs text-gray-500 hover:text-black hover:underline transition-colors"
-            >
-              Lupa Password?
-            </Link>
           </div>
         </div>
 
@@ -191,10 +183,10 @@ export default function LoginPage() {
 
         <div className="relative my-8">
           <div className="absolute inset-0 flex items-center">
-            <div className="w-full border-t border-black/10" />
+            <div className="w-full border-t border-black/10 dark:border-white/15" />
           </div>
           <div className="relative flex justify-center text-xs uppercase">
-            <span className="bg-white px-4 text-gray-400 font-medium tracking-widest">
+            <span className="bg-white dark:bg-[#121212] px-4 text-gray-400 font-medium tracking-widest">
               atau
             </span>
           </div>
@@ -203,7 +195,7 @@ export default function LoginPage() {
         <button
           type="button"
           onClick={handleGoogleLogin}
-          className="w-full py-3.5 bg-white border border-black/10 hover:border-black/30 hover:bg-gray-50 text-black flex items-center justify-center gap-3 rounded-none transition-all"
+          className="w-full py-3.5 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 hover:bg-gray-50 dark:hover:bg-[#252525] text-black dark:text-white flex items-center justify-center gap-3 rounded-none transition-all shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] active:translate-y-[3px] active:translate-x-[3px] active:shadow-none"
         >
           <svg className="w-5 h-5" viewBox="0 0 24 24">
             <path
@@ -229,12 +221,12 @@ export default function LoginPage() {
 
       <motion.p
         variants={ANIMASI_ITEM}
-        className="text-center mt-8 text-sm text-gray-500"
+        className="text-center mt-8 text-sm text-gray-500 dark:text-gray-400"
       >
         Belum punya akun?{" "}
         <Link
           href="/register"
-          className="font-semibold text-black hover:underline transition-colors"
+          className="font-semibold text-black dark:text-white hover:underline transition-colors"
         >
           Daftar sekarang
         </Link>

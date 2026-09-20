@@ -48,8 +48,8 @@ function toNumber(v: number | string): number {
 // ── Kartu pembungkus konsisten Neo-Brutalism ──
 function ChartCard({ title, icon, children }: { title: string; icon?: React.ReactNode; children: React.ReactNode }) {
   return (
-    <div className="border-2 border-black dark:border-white/20 p-6 bg-white dark:bg-[#1e1e1e] shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.05)]">
-      <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-5 flex items-center gap-2">
+    <div className="border-2 border-black dark:border-white/20 p-3 sm:p-6 bg-white dark:bg-[#1e1e1e] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.05)]">
+      <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-2.5 sm:mb-5 flex items-center gap-2">
         {icon} {title}
       </h4>
       {children}
@@ -273,11 +273,11 @@ export default function KoreksiCharts({
   if (!hasil || hasil.length === 0) return null;
 
   return (
-    <div className="space-y-6">
-      <h3 className="font-bold text-sm uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
+    <div className="space-y-4 sm:space-y-6">
+      <h3 className="font-bold text-xs sm:text-sm uppercase tracking-wider text-black dark:text-white flex items-center gap-2">
         Visualisasi Analitik Kelas
       </h3>
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         <ChartCard title={skala === "huruf" ? "Distribusi Huruf Mutu" : "Distribusi Nilai"}>
           <DistribusiNilai hasil={hasil} skala={skala} />
         </ChartCard>

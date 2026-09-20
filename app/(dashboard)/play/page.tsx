@@ -69,6 +69,47 @@ export default function SolveQuestionWizard() {
   });
 
   const [solvedQuestions, setSolvedQuestions] = useState<any[]>([]);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Autosave draft (teks saja; File tak bisa diserialisasi ke localStorage).
+  useEffect(() => {
+    setIsMounted(true);
+    const saved = localStorage.getItem("educraft_play_draft");
+    if (saved) {
+      try {
+        const p = JSON.parse(saved);
+        if (p.step) setStep(p.step);
+        if (p.rawInputTypes) setRawInputTypes(p.rawInputTypes);
+        if (p.refInputTypes) setRefInputTypes(p.refInputTypes);
+        if (p.rawQuestions !== undefined) setRawQuestions(p.rawQuestions);
+        if (p.referenceMaterial !== undefined) setReferenceMaterial(p.referenceMaterial);
+        if (p.params) setParams(p.params);
+        if (p.solvedQuestions) setSolvedQuestions(p.solvedQuestions);
+      } catch {}
+    }
+  }, []);
+
+  useEffect(() => {
+    if (!isMounted) return;
+    localStorage.setItem(
+      "educraft_play_draft",
+      JSON.stringify({ step, rawInputTypes, refInputTypes, rawQuestions, referenceMaterial, params, solvedQuestions }),
+    );
+  }, [step, rawInputTypes, refInputTypes, rawQuestions, referenceMaterial, params, solvedQuestions, isMounted]);
+
+  const resetAll = () => {
+    localStorage.removeItem("educraft_play_draft");
+    setStep(1);
+    setRawInputTypes(["text"]);
+    setRefInputTypes(["text"]);
+    setRawQuestions("");
+    setReferenceMaterial("");
+    setRawFiles([]);
+    setRefFiles([]);
+    setParams({ explanationLevel: "singkat", strictReference: "campuran", languageStyle: "formal" });
+    setSolvedQuestions([]);
+    toast.success("Formulir berhasil di-reset");
+  };
 
   const slideVariants = {
     enter: (direction: number) => ({ x: direction > 0 ? 50 : -50, opacity: 0 }),
@@ -128,15 +169,23 @@ export default function SolveQuestionWizard() {
   ];
 
   return (
-    <div className="max-w-5xl mx-auto p-6 md:p-10 min-h-screen">
-      <div className="mb-12">
-        <h1 className="text-3xl font-editorial font-bold text-black mb-6">
-          Bot Penjawab & Perapi Soal
-        </h1>
+    <div className="max-w-5xl mx-auto p-3 sm:p-6 md:p-10 pb-24">
+      <div className="mb-4 sm:mb-10">
+        <div className="flex justify-between items-center mb-3 sm:mb-6">
+          <h1 className="text-xl sm:text-3xl font-editorial font-bold text-black dark:text-white">
+            Bot Penjawab & Perapi Soal
+          </h1>
+          <button
+            onClick={resetAll}
+            className="px-2.5 sm:px-4 py-1 sm:py-2 border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2"
+          >
+            <Trash2 size={14} /> Reset
+          </button>
+        </div>
         <div className="relative flex justify-between items-start sm:items-center">
-          <div className="absolute top-5 left-10 right-10 h-1 bg-gray-200 z-0 hidden sm:block">
+          <div className="absolute top-4 sm:top-5 left-8 sm:left-10 right-8 sm:right-10 h-1 bg-gray-200 dark:bg-white/10 z-0 hidden sm:block">
             <motion.div
-              className="h-full bg-black"
+              className="h-full bg-black dark:bg-white"
               initial={{ width: "0%" }}
               animate={{ width: step === 1 ? "0%" : step === 2 ? "50%" : "100%" }}
               transition={{ duration: 0.5 }}
@@ -148,16 +197,16 @@ export default function SolveQuestionWizard() {
             { id: 2, label: "2. Parameter" },
             { id: 3, label: "3. Hasil" },
           ].map((s) => (
-            <div key={s.id} className="relative z-10 flex flex-col items-center gap-3 bg-[#f9f9f9] px-2 sm:px-4">
+            <div key={s.id} className="relative z-10 flex flex-col items-center gap-1 sm:gap-3 bg-[#f9f9f9] dark:bg-[#121212] px-1 sm:px-4">
               <div
-                className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm transition-colors duration-500
-                ${step >= s.id ? "bg-black text-white" : "bg-white border-2 border-black/10 text-gray-400"}
-                ${step === s.id ? "shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-[2px]" : ""}
+                className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-colors duration-500
+                ${step >= s.id ? "bg-black dark:bg-white text-white dark:text-black" : "bg-white dark:bg-[#1e1e1e] border-2 border-black/10 dark:border-white/10 text-gray-400 dark:text-gray-500"}
+                ${step === s.id ? "shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] -translate-y-[1px]" : ""}
               `}
               >
-                {step > s.id ? <CheckCircle size={18} /> : s.id}
+                {step > s.id ? <CheckCircle size={14} className="sm:w-[18px] sm:h-[18px]" /> : s.id}
               </div>
-              <span className={`hidden sm:block text-xs font-semibold uppercase tracking-wider ${step >= s.id ? "text-black" : "text-gray-500"}`}>
+              <span className={`hidden sm:block text-xs font-semibold uppercase tracking-wider ${step >= s.id ? "text-black dark:text-white" : "text-gray-500 dark:text-gray-400"}`}>
                 {s.label}
               </span>
             </div>
@@ -165,11 +214,11 @@ export default function SolveQuestionWizard() {
         </div>
       </div>
 
-      <div className="relative bg-white border border-black/10 p-8 shadow-xl min-h-[500px]">
-        <div className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-black -mt-0.5 -ml-0.5"></div>
-        <div className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-black -mt-0.5 -mr-0.5"></div>
-        <div className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-black -mb-0.5 -ml-0.5"></div>
-        <div className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-black -mb-0.5 -mr-0.5"></div>
+      <div className="relative bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-3 sm:p-6 md:p-8 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.12)] sm:dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.12)] min-h-0 sm:min-h-[500px]">
+        <div className="absolute top-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-l-2 border-black dark:border-white/20 -mt-0.5 -ml-0.5"></div>
+        <div className="absolute top-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-t-2 border-r-2 border-black dark:border-white/20 -mt-0.5 -mr-0.5"></div>
+        <div className="absolute bottom-0 left-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-l-2 border-black dark:border-white/20 -mb-0.5 -ml-0.5"></div>
+        <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-black dark:border-white/20 -mb-0.5 -mr-0.5"></div>
 
         <AnimatePresence mode="wait" custom={1}>
           {step === 1 && (
@@ -181,46 +230,45 @@ export default function SolveQuestionWizard() {
               animate="center"
               exit="exit"
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
-              className="space-y-8"
+              className="space-y-4 sm:space-y-8"
             >
               <div>
-                <h2 className="text-2xl font-bold mb-2">Input Soal Mentah & Referensi</h2>
-                <p className="text-gray-500">
+                <h2 className="text-lg sm:text-2xl font-bold mb-1 sm:mb-2">Input Soal Mentah & Referensi</h2>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   Pilih satu atau beberapa kombinasi input sekaligus agar hasil AI lebih akurat.
                 </p>
               </div>
 
-              <div className="space-y-8">
-
-                <div className="border border-black/10 p-6 bg-white">
-                  <div className="flex justify-between items-start mb-4">
+              <div className="space-y-4 sm:space-y-8">
+                <div className="border-2 border-black dark:border-white/20 p-3 sm:p-6 bg-white dark:bg-[#1e1e1e]">
+                  <div className="flex justify-between items-start mb-3 sm:mb-4">
                     <div>
-                      <h2 className="text-xl font-bold mb-1">Bahan Baku Soal Mentah</h2>
-                      <p className="text-sm text-gray-500">Pilih satu atau beberapa jenis input untuk memasukkan soal berantakan Anda.</p>
+                      <h2 className="text-base sm:text-xl font-bold mb-0.5 sm:mb-1">Bahan Baku Soal Mentah</h2>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Pilih satu atau beberapa jenis input untuk memasukkan soal berantakan Anda.</p>
                     </div>
                     {(rawQuestions || rawFiles.length > 0) && (
-                      <button onClick={() => { setRawQuestions(""); setRawFiles([]); }} className="px-3 py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-2">
-                        <Trash2 size={14} /> Reset
+                      <button onClick={() => { setRawQuestions(""); setRawFiles([]); }} className="px-2.5 sm:px-3 py-1 sm:py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-1">
+                        <Trash2 size={13} /> Reset
                       </button>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
                     {inputTypeOptions.map((type) => (
                       <button
                         key={type.id}
                         onClick={() => toggleInputType(type.id, false)}
-                        className={`p-4 flex flex-col items-center justify-center gap-3 border transition-all relative ${
+                        className={`p-2.5 sm:p-4 flex flex-col items-center justify-center gap-1.5 sm:gap-3 border transition-all relative ${
                           rawInputTypes.includes(type.id)
-                            ? "border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1"
-                            : "border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500"
+                            ? "border-black dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-0.5 sm:-translate-y-1"
+                            : "border-black/10 dark:border-white/10 hover:border-black/30 hover:bg-gray-50 dark:bg-[#2a2a2a] text-gray-500 dark:text-gray-400"
                         }`}
                       >
                         {rawInputTypes.includes(type.id) && (
-                          <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
+                          <div className="absolute top-1 right-1 sm:top-2 sm:right-2 text-black dark:text-white"><CheckCircle size={14} /></div>
                         )}
-                        <type.icon size={24} className={rawInputTypes.includes(type.id) ? "text-black" : "text-gray-400"} />
-                        <span className={`font-semibold text-sm text-center ${rawInputTypes.includes(type.id) ? "text-black" : ""}`}>
+                        <type.icon size={20} className={`sm:w-6 sm:h-6 ${rawInputTypes.includes(type.id) ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500"}`} />
+                        <span className={`font-semibold text-xs sm:text-sm text-center ${rawInputTypes.includes(type.id) ? "text-black dark:text-white" : ""}`}>
                           {type.label}
                         </span>
                       </button>
@@ -230,15 +278,15 @@ export default function SolveQuestionWizard() {
                   <input type="file" accept=".pdf" ref={rawPdfRef} className="hidden" multiple onChange={(e) => handleFileChange(e, false)} />
                   <input type="file" accept="image/*" ref={rawImgRef} className="hidden" multiple onChange={(e) => handleFileChange(e, false)} />
 
-                  <div className="space-y-6">
+                  <div className="space-y-4 sm:space-y-6">
                     {rawInputTypes.includes("text") && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
-                          <FileQuestion size={16} className="text-blue-600"/> Paste Soal Anda di sini <span className="text-red-500">*</span>
+                        <label className="text-[11px] sm:text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 sm:gap-2 uppercase tracking-wider">
+                          <FileQuestion size={14} className="text-black dark:text-white"/> Paste Soal Anda di sini <span className="text-red-500">*</span>
                         </label>
                         <textarea
-                          rows={6}
-                          className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none text-sm"
+                          rows={5}
+                          className="w-full p-2.5 sm:p-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] outline-none resize-none text-xs sm:text-sm transition-all"
                           placeholder="Paste soal-soal Anda di sini. Format teks tidak harus rapi, AI akan merapikannya."
                           value={rawQuestions}
                           onChange={(e) => setRawQuestions(e.target.value)}
@@ -250,22 +298,22 @@ export default function SolveQuestionWizard() {
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="border-2 border-dashed border-black/20 bg-gray-50 p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 transition-colors"
+                        className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-4 sm:p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-colors"
                       >
-                        <UploadCloud size={40} className="text-gray-400 mb-4" />
-                        <p className="font-semibold text-black mb-1">Pilih file soal Anda</p>
-                        <p className="text-sm text-gray-500">Mendukung format .PDF (Max 100MB)</p>
+                        <UploadCloud size={32} className="sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500 mb-2 sm:mb-4" />
+                        <p className="font-semibold text-black dark:text-white text-xs sm:text-base mb-1">Pilih file soal Anda</p>
+                        <p className="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">Mendukung format .PDF (Max 100MB)</p>
                         <button
                           onClick={() => rawPdfRef.current?.click()}
-                          className="mt-6 px-6 py-2 bg-white border border-black/20 text-sm font-medium hover:border-black transition-colors"
+                          className="mt-3 sm:mt-6 px-4 sm:px-6 py-1.5 sm:py-2 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 text-xs sm:text-sm font-medium hover:border-black dark:border-white/20 transition-colors"
                         >
                           Pilih File
                         </button>
                         {rawFiles.filter(f => f.type === "application/pdf").length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-4">
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
                             {rawFiles.filter(f => f.type === "application/pdf").map((f, i) => (
-                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
-                                <span className="truncate max-w-[150px]">{f.name}</span>
+                              <div key={i} className="flex items-center gap-1.5 bg-black text-white px-2.5 py-1 text-[11px] sm:text-xs font-semibold">
+                                <span className="truncate max-w-[120px] sm:max-w-[150px]">{f.name}</span>
                                 <button onClick={() => removeFile(rawFiles.indexOf(f), false)} className="hover:text-red-400"><X size={12}/></button>
                               </div>
                             ))}
@@ -278,64 +326,64 @@ export default function SolveQuestionWizard() {
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="border-2 border-black/10 bg-gray-50 p-6 flex flex-col gap-4"
+                        className="border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a] p-3.5 sm:p-6 flex flex-col gap-3 sm:gap-4"
                       >
-                        <div className="flex items-center gap-2 mb-2">
-                          <Camera size={20} className="text-gray-700" />
-                          <label className="text-sm font-semibold text-gray-700">Foto Soal (Buku/Kertas Ujian)</label>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Camera size={18} className="text-gray-700 dark:text-gray-300" />
+                          <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">Foto Soal (Buku/Kertas Ujian)</label>
                         </div>
                         <button
                           onClick={() => rawImgRef.current?.click()}
-                          className="py-8 flex flex-col items-center justify-center gap-3 bg-white border border-black/20 hover:border-black hover:bg-gray-100 transition-all text-gray-600 hover:text-black"
+                          className="py-5 sm:py-8 flex flex-col items-center justify-center gap-2 sm:gap-3 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 hover:border-black dark:border-white/20 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-all text-gray-600 dark:text-gray-400 hover:text-black dark:text-white"
                         >
-                          <UploadCloud size={24} />
-                          <span className="font-medium text-sm">Upload Foto (JPG/PNG)</span>
+                          <UploadCloud size={22} />
+                          <span className="font-medium text-xs sm:text-sm">Upload Foto (JPG/PNG)</span>
                         </button>
                         {rawFiles.filter(f => f.type.startsWith("image/")).length > 0 && (
-                          <div className="flex flex-wrap gap-2 mt-2">
+                          <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-2">
                             {rawFiles.filter(f => f.type.startsWith("image/")).map((f, i) => (
-                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
-                                <span className="truncate max-w-[150px]">{f.name}</span>
+                              <div key={i} className="flex items-center gap-1.5 bg-black text-white px-2.5 py-1 text-[11px] sm:text-xs font-semibold">
+                                <span className="truncate max-w-[120px] sm:max-w-[150px]">{f.name}</span>
                                 <button onClick={() => removeFile(rawFiles.indexOf(f), false)} className="hover:text-red-400"><X size={12}/></button>
                               </div>
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-gray-500 text-center">AI akan langsung membaca isi gambar tanpa OCR terpisah.</p>
+                        <p className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 text-center">AI akan langsung membaca isi gambar tanpa OCR terpisah.</p>
                       </motion.div>
                     )}
                   </div>
                 </div>
 
-                <div className="border border-black/10 p-6 bg-white">
-                  <div className="flex justify-between items-start mb-4">
+                <div className="border-2 border-black dark:border-white/20 p-3 sm:p-6 bg-white dark:bg-[#1e1e1e]">
+                  <div className="flex justify-between items-start mb-3 sm:mb-4">
                     <div>
-                      <h2 className="text-xl font-bold mb-1">Materi Referensi / Kunci (Opsional)</h2>
-                      <p className="text-sm text-gray-500">Pilih satu atau beberapa jenis input untuk memberikan referensi jawaban kepada AI.</p>
+                      <h2 className="text-base sm:text-xl font-bold mb-0.5 sm:mb-1">Materi Referensi / Kunci (Opsional)</h2>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Pilih satu atau beberapa jenis input untuk memberikan referensi jawaban kepada AI.</p>
                     </div>
                     {(referenceMaterial || refFiles.length > 0) && (
-                      <button onClick={() => { setReferenceMaterial(""); setRefFiles([]); }} className="px-3 py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-2">
-                        <Trash2 size={14} /> Reset
+                      <button onClick={() => { setReferenceMaterial(""); setRefFiles([]); }} className="px-2.5 sm:px-3 py-1 sm:py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-1">
+                        <Trash2 size={13} /> Reset
                       </button>
                     )}
                   </div>
                   
-                  <div className="grid grid-cols-3 md:grid-cols-5 gap-4 mb-6">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
                     {inputTypeOptions.map((type) => (
                       <button
                         key={type.id}
                         onClick={() => toggleInputType(type.id, true)}
-                        className={`p-4 flex flex-col items-center justify-center gap-3 border transition-all relative ${
+                        className={`p-2.5 sm:p-4 flex flex-col items-center justify-center gap-1.5 sm:gap-3 border transition-all relative ${
                           refInputTypes.includes(type.id)
-                            ? "border-black bg-gray-50 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-1"
-                            : "border-black/10 hover:border-black/30 hover:bg-gray-50 text-gray-500"
+                            ? "border-black dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] -translate-y-0.5 sm:-translate-y-1"
+                            : "border-black/10 dark:border-white/10 hover:border-black/30 hover:bg-gray-50 dark:bg-[#2a2a2a] text-gray-500 dark:text-gray-400"
                         }`}
                       >
                         {refInputTypes.includes(type.id) && (
-                          <div className="absolute top-2 right-2 text-black"><CheckCircle size={16} /></div>
+                          <div className="absolute top-1 right-1 sm:top-2 sm:right-2 text-black dark:text-white"><CheckCircle size={14} /></div>
                         )}
-                        <type.icon size={24} className={refInputTypes.includes(type.id) ? "text-black" : "text-gray-400"} />
-                        <span className={`font-semibold text-sm text-center ${refInputTypes.includes(type.id) ? "text-black" : ""}`}>
+                        <type.icon size={20} className={`sm:w-6 sm:h-6 ${refInputTypes.includes(type.id) ? "text-black dark:text-white" : "text-gray-400 dark:text-gray-500"}`} />
+                        <span className={`font-semibold text-xs sm:text-sm text-center ${refInputTypes.includes(type.id) ? "text-black dark:text-white" : ""}`}>
                           {type.label}
                         </span>
                       </button>
@@ -348,12 +396,12 @@ export default function SolveQuestionWizard() {
                   <div className="space-y-6">
                     {refInputTypes.includes("text") && (
                       <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="space-y-2">
-                        <label className="text-xs font-semibold text-gray-700 flex items-center gap-2 uppercase tracking-wider">
-                          <BookOpen size={16} className="text-green-600"/> Paste Referensi di sini
+                        <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-2 uppercase tracking-wider">
+                          <BookOpen size={16} className="text-black dark:text-white"/> Paste Referensi di sini
                         </label>
                         <textarea
                           rows={6}
-                          className="w-full p-4 bg-gray-50 border border-black/10 focus:border-black focus:ring-1 focus:ring-black outline-none resize-none text-sm"
+                          className="w-full p-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none resize-none text-sm transition-all"
                           placeholder="Paste materi contekan, buku pedoman, atau kunci jawaban kotor di sini."
                           value={referenceMaterial}
                           onChange={(e) => setReferenceMaterial(e.target.value)}
@@ -365,21 +413,21 @@ export default function SolveQuestionWizard() {
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="border-2 border-dashed border-black/20 bg-gray-50 p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 transition-colors"
+                        className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-colors"
                       >
-                        <UploadCloud size={40} className="text-gray-400 mb-4" />
-                        <p className="font-semibold text-black mb-1">Pilih file referensi Anda</p>
-                        <p className="text-sm text-gray-500">Mendukung format .PDF (Max 100MB)</p>
+                        <UploadCloud size={40} className="text-gray-400 dark:text-gray-500 dark:text-gray-400 mb-4" />
+                        <p className="font-semibold text-black dark:text-white mb-1">Pilih file referensi Anda</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Mendukung format .PDF (Max 100MB)</p>
                         <button
                           onClick={() => refPdfRef.current?.click()}
-                          className="mt-6 px-6 py-2 bg-white border border-black/20 text-sm font-medium hover:border-black transition-colors"
+                          className="mt-6 px-6 py-2 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 text-sm font-medium hover:border-black dark:border-white/20 transition-colors"
                         >
                           Pilih File
                         </button>
                         {refFiles.filter(f => f.type === "application/pdf").length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-4">
                             {refFiles.filter(f => f.type === "application/pdf").map((f, i) => (
-                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 text-xs font-semibold">
                                 <span className="truncate max-w-[150px]">{f.name}</span>
                                 <button onClick={() => removeFile(refFiles.indexOf(f), true)} className="hover:text-red-400"><X size={12}/></button>
                               </div>
@@ -393,15 +441,15 @@ export default function SolveQuestionWizard() {
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="border-2 border-black/10 bg-gray-50 p-6 flex flex-col gap-4"
+                        className="border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a] p-6 flex flex-col gap-4"
                       >
                         <div className="flex items-center gap-2 mb-2">
-                          <Camera size={20} className="text-gray-700" />
-                          <label className="text-sm font-semibold text-gray-700">Foto Referensi (Buku/Kunci Jawaban)</label>
+                          <Camera size={20} className="text-gray-700 dark:text-gray-300" />
+                          <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">Foto Referensi (Buku/Kunci Jawaban)</label>
                         </div>
                         <button
                           onClick={() => refImgRef.current?.click()}
-                          className="py-8 flex flex-col items-center justify-center gap-3 bg-white border border-black/20 hover:border-black hover:bg-gray-100 transition-all text-gray-600 hover:text-black"
+                          className="py-8 flex flex-col items-center justify-center gap-3 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 hover:border-black dark:border-white/20 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-all text-gray-600 dark:text-gray-400 hover:text-black dark:text-white"
                         >
                           <UploadCloud size={24} />
                           <span className="font-medium text-sm">Upload Foto (JPG/PNG)</span>
@@ -409,27 +457,27 @@ export default function SolveQuestionWizard() {
                         {refFiles.filter(f => f.type.startsWith("image/")).length > 0 && (
                           <div className="flex flex-wrap gap-2 mt-2">
                             {refFiles.filter(f => f.type.startsWith("image/")).map((f, i) => (
-                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 rounded-full text-xs font-semibold">
+                              <div key={i} className="flex items-center gap-2 bg-black text-white px-3 py-1.5 text-xs font-semibold">
                                 <span className="truncate max-w-[150px]">{f.name}</span>
                                 <button onClick={() => removeFile(refFiles.indexOf(f), true)} className="hover:text-red-400"><X size={12}/></button>
                               </div>
                             ))}
                           </div>
                         )}
-                        <p className="text-xs text-gray-500 text-center">AI akan langsung membaca isi gambar tanpa OCR terpisah.</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 text-center">AI akan langsung membaca isi gambar tanpa OCR terpisah.</p>
                       </motion.div>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="flex justify-end pt-6 border-t border-black/10">
+              <div className="flex justify-end pt-6 border-t border-black/10 dark:border-white/10">
                 <button
                   onClick={handleNext}
                   disabled={!rawQuestions.trim() && rawFiles.length === 0}
                   className={`px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] transition-all ${
                     !rawQuestions.trim() && rawFiles.length === 0
-                      ? "bg-gray-200 text-gray-400 cursor-not-allowed border border-gray-300"
+                      ? "bg-gray-200 text-gray-400 dark:text-gray-500 dark:text-gray-400 cursor-not-allowed border border-gray-300"
                       : "btn-primary hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)]"
                   }`}
                 >
@@ -448,25 +496,25 @@ export default function SolveQuestionWizard() {
               animate="center"
               exit="exit"
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
-              className="space-y-8"
+              className="space-y-4 sm:space-y-8"
             >
               <div>
-                <h2 className="text-2xl font-bold mb-2">Parameter Penjawab</h2>
-                <p className="text-gray-500">
+                <h2 className="text-lg sm:text-2xl font-bold mb-1 sm:mb-2">Parameter Penjawab</h2>
+                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                   Atur cara AI merapikan format dan mengulas jawaban Anda.
                 </p>
               </div>
 
-              <div className="space-y-6 max-w-2xl">
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold uppercase tracking-wider text-gray-700">Kedalaman Pembahasan</label>
-                  <div className="flex gap-2">
+              <div className="space-y-4 sm:space-y-6 max-w-2xl">
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Kedalaman Pembahasan</label>
+                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2">
                     {["tanpa_pembahasan", "singkat", "detail"].map((val) => (
                       <button
                         key={val}
                         onClick={() => setParams({...params, explanationLevel: val})}
-                        className={`flex-1 py-3 px-4 border font-bold text-sm transition-all ${
-                          params.explanationLevel === val ? "bg-black text-white border-black" : "bg-white border-black/20 text-gray-500 hover:bg-gray-50"
+                        className={`flex-1 py-2 sm:py-3 px-3 sm:px-4 border font-bold text-xs sm:text-sm transition-all ${
+                          params.explanationLevel === val ? "bg-black text-white border-black dark:border-white/20" : "bg-white dark:bg-[#1e1e1e] border-black/20 dark:border-white/20 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-[#2a2a2a]"
                         }`}
                       >
                         {val === "tanpa_pembahasan" ? "Tanpa Pembahasan" : val === "singkat" ? "Singkat" : "Detail & Step-by-step"}
@@ -475,15 +523,15 @@ export default function SolveQuestionWizard() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold uppercase tracking-wider text-gray-700">Sumber Referensi Jawaban</label>
-                  <div className="flex gap-2">
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Sumber Referensi Jawaban</label>
+                  <div className="flex flex-col sm:flex-row gap-1.5 sm:gap-2">
                     {["strict", "campuran"].map((val) => (
                       <button
                         key={val}
                         onClick={() => setParams({...params, strictReference: val})}
-                        className={`flex-1 py-3 px-4 border font-bold text-sm transition-all ${
-                          params.strictReference === val ? "bg-black text-white border-black" : "bg-white border-black/20 text-gray-500 hover:bg-gray-50"
+                        className={`flex-1 py-2 sm:py-3 px-3 sm:px-4 border font-bold text-xs sm:text-sm transition-all ${
+                          params.strictReference === val ? "bg-black text-white border-black dark:border-white/20" : "bg-white dark:bg-[#1e1e1e] border-black/20 dark:border-white/20 text-gray-500 dark:text-gray-400 hover:bg-gray-50 dark:bg-[#2a2a2a]"
                         }`}
                       >
                         {val === "strict" ? "Hanya dari Panel Kanan" : "Campur dengan Otak AI"}
@@ -492,12 +540,12 @@ export default function SolveQuestionWizard() {
                   </div>
                 </div>
 
-                <div className="space-y-3">
-                  <label className="text-sm font-semibold uppercase tracking-wider text-gray-700">Gaya Bahasa</label>
+                <div className="space-y-2 sm:space-y-3">
+                  <label className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">Gaya Bahasa</label>
                   <select 
                     value={params.languageStyle}
                     onChange={(e) => setParams({...params, languageStyle: e.target.value})}
-                    className="w-full p-4 border border-black/20 focus:border-black outline-none font-bold"
+                    className="w-full p-2.5 sm:p-4 text-xs sm:text-base border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] outline-none font-bold transition-all"
                   >
                     <option value="formal">Akademis Formal (Indonesia)</option>
                     <option value="santai">Ramah Anak / Santai (Indonesia)</option>
@@ -506,18 +554,18 @@ export default function SolveQuestionWizard() {
                 </div>
               </div>
 
-              <div className="flex justify-between pt-6 border-t border-black/10">
+              <div className="flex justify-between items-center pt-4 sm:pt-6 border-t border-black/10 dark:border-white/10 gap-2">
                 <button
                   onClick={handlePrev}
-                  className="px-6 py-3 font-medium text-gray-500 hover:text-black flex items-center gap-2 transition-colors"
+                  className="px-3 sm:px-6 py-2 sm:py-3 font-medium text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-black dark:text-white flex items-center gap-1.5 transition-colors"
                 >
-                  <ChevronLeft size={18} /> Kembali
+                  <ChevronLeft size={16} /> Kembali
                 </button>
                 <button
                   onClick={handleSolve}
-                  className="btn-primary px-8 py-3 flex items-center gap-2 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[2px] hover:translate-x-[2px] hover:shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] transition-all bg-blue-600 border-blue-800"
+                  className="btn-primary px-4 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[1px] hover:translate-x-[1px] active:shadow-none transition-all"
                 >
-                  <Sparkles size={18} className="text-white" /> Jawab Soal Sekarang
+                  <Sparkles size={16} className="text-current" /> Jawab Soal Sekarang
                 </button>
               </div>
             </motion.div>
@@ -532,16 +580,16 @@ export default function SolveQuestionWizard() {
               className="flex flex-col items-center justify-center py-20"
             >
               <div className="relative w-24 h-24 mb-8">
-                <svg className="animate-spin w-full h-full text-black/10" viewBox="0 0 24 24">
+                <svg className="animate-spin w-full h-full text-black dark:text-white/10" viewBox="0 0 24 24">
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" />
                 </svg>
-                <svg className="animate-spin w-full h-full text-blue-600 absolute top-0 left-0" viewBox="0 0 24 24" style={{ animationDirection: "reverse", animationDuration: "2s" }}>
+                <svg className="animate-spin w-full h-full text-black dark:text-white absolute top-0 left-0" viewBox="0 0 24 24" style={{ animationDirection: "reverse", animationDuration: "2s" }}>
                   <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" fill="none" strokeDasharray="15 45" />
                 </svg>
-                <Bot className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600 animate-pulse" size={32} />
+                <Bot className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black dark:text-white animate-pulse" size={32} />
               </div>
               <h2 className="text-2xl font-bold mb-2">AI Sedang Bekerja...</h2>
-              <p className="text-gray-500 animate-pulse">Merapikan format dan memecahkan soal Anda</p>
+              <p className="text-gray-500 dark:text-gray-400 animate-pulse">Merapikan format dan memecahkan soal Anda</p>
             </motion.div>
           )}
 
@@ -554,61 +602,61 @@ export default function SolveQuestionWizard() {
               animate="center"
               exit="exit"
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
-              className="space-y-6"
+              className="space-y-4 sm:space-y-6"
             >
-              <div className="flex justify-between items-center mb-6 border-b border-black/10 pb-6">
+              <div className="flex justify-between items-center mb-3 sm:mb-6 border-b border-black/10 dark:border-white/10 pb-3 sm:pb-6 gap-2">
                 <div>
-                  <h2 className="text-2xl font-bold mb-2">Hasil Pemecahan Soal</h2>
-                  <p className="text-gray-500">Soal Anda telah dirapikan dan dijawab oleh AI.</p>
+                  <h2 className="text-lg sm:text-2xl font-bold mb-0.5 sm:mb-2">Hasil Pemecahan Soal</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Soal Anda telah dirapikan dan dijawab oleh AI.</p>
                 </div>
                 <button
                   onClick={() => setStep(1)}
-                  className="px-6 py-2 border-2 border-black font-bold hover:bg-gray-100 transition-colors shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[2px] active:translate-x-[2px] active:shadow-none"
+                  className="px-3 sm:px-6 py-1.5 sm:py-2 text-xs sm:text-sm border-2 border-black dark:border-white/20 font-bold hover:bg-gray-100 dark:bg-[#2a2a2a] transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-[1px] active:translate-x-[1px] active:shadow-none"
                 >
                   Ulangi
                 </button>
               </div>
 
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 {solvedQuestions.map((q, idx) => (
-                  <div key={idx} className="border border-black/10 p-6 bg-white shadow-sm relative overflow-hidden group hover:border-black/30 transition-all">
-                    <div className="flex gap-4">
-                      <div className="w-8 h-8 shrink-0 bg-gray-100 border border-black/10 flex items-center justify-center font-bold text-gray-500 text-sm">
+                  <div key={idx} className="border border-black/10 dark:border-white/10 p-3 sm:p-6 bg-white dark:bg-[#1e1e1e] shadow-sm relative overflow-hidden group hover:border-black/30 transition-all">
+                    <div className="flex gap-2.5 sm:gap-4">
+                      <div className="w-6 h-6 sm:w-8 sm:h-8 shrink-0 bg-gray-100 dark:bg-[#2a2a2a] border border-black/10 dark:border-white/10 flex items-center justify-center font-bold text-gray-500 dark:text-gray-400 text-xs sm:text-sm">
                         {idx + 1}
                       </div>
-                      <div className="flex-1">
-                        <div className="flex items-center gap-2 mb-3">
-                          <span className="text-[10px] font-bold uppercase tracking-wider bg-black text-white px-2 py-1">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2 sm:mb-3">
+                          <span className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider bg-black text-white px-2 py-0.5 sm:py-1">
                             {q.tipe.toUpperCase()}
                           </span>
                         </div>
-                        <p className="font-semibold text-lg mb-4 whitespace-pre-wrap">{q.teks}</p>
+                        <p className="font-semibold text-sm sm:text-lg mb-3 sm:mb-4 whitespace-pre-wrap break-words">{q.teks}</p>
                         
                         {q.tipe === "pg" && q.opsi && (
-                          <div className="grid md:grid-cols-2 gap-3 mb-6">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
                             {q.opsi.map((opt: any, oIdx: number) => (
                               <div 
                                 key={oIdx} 
-                                className={`p-3 border flex gap-3 ${
+                                className={`p-2 sm:p-3 border flex gap-2 text-xs sm:text-sm ${
                                   opt.benar 
-                                    ? "bg-green-50 border-green-500 text-green-900 shadow-[inset_4px_0_0_0_#22c55e]" 
-                                    : "border-black/10 text-gray-600"
+                                    ? "bg-green-50 border-green-500 text-green-900 shadow-[inset_3px_0_0_0_#22c55e]" 
+                                    : "border-black/10 dark:border-white/10 text-gray-600 dark:text-gray-400"
                                 }`}
                               >
-                                <span className={`font-bold ${opt.benar ? "text-green-700" : "text-gray-400"}`}>{opt.label}.</span>
-                                <span>{opt.teks}</span>
+                                <span className={`font-bold ${opt.benar ? "text-green-700" : "text-gray-400 dark:text-gray-500"}`}>{opt.label}.</span>
+                                <span className="break-words">{opt.teks}</span>
                               </div>
                             ))}
                           </div>
                         )}
 
-                        <div className="bg-blue-50/50 border border-blue-200 p-4 relative">
-                          <h4 className="font-bold text-blue-800 text-xs uppercase tracking-wider mb-2 flex items-center gap-2">
-                            <Sparkles size={14} /> Kunci Jawaban & Pembahasan
+                        <div className="bg-blue-50/50 border border-blue-200 p-3 sm:p-4 relative">
+                          <h4 className="font-bold text-blue-800 text-[11px] sm:text-xs uppercase tracking-wider mb-1.5 sm:mb-2 flex items-center gap-1.5">
+                            <Sparkles size={13} /> Kunci Jawaban & Pembahasan
                           </h4>
-                          <p className="font-bold text-black mb-2">Jawaban: {q.kunci_jawaban}</p>
+                          <p className="font-bold text-black dark:text-white text-xs sm:text-sm mb-1.5">Jawaban: {q.kunci_jawaban}</p>
                           {q.pembahasan && (
-                            <p className="text-gray-700 text-sm whitespace-pre-wrap">{q.pembahasan}</p>
+                            <p className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm whitespace-pre-wrap break-words">{q.pembahasan}</p>
                           )}
                         </div>
                       </div>
