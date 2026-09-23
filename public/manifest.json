@@ -1,0 +1,24 @@
+{
+  "name": "EduCraft AI - Asisten Pendidik Cerdas",
+  "short_name": "EduCraft AI",
+  "description": "Platform peracik soal, koreksi ujian AI & asisten pembelajaran guru cerdas.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F0F11",
+  "theme_color": "#0F0F11",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/logo-mark-v2.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/logo-mark-v2.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

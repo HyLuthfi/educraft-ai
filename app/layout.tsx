@@ -52,9 +52,11 @@ export const metadata: Metadata = {
       { url: "/logo-mark-v2.png" },
     ],
   },
+  manifest: "/manifest.json",
 }
 
 import { ThemeProvider } from "../components/theme-provider"
+import { OfflineDetector } from "./components/OfflineDetector"
 
 export default function RootLayout({
   children,
@@ -64,9 +66,12 @@ export default function RootLayout({
   return (
     <html lang="id" className={`${inter.variable} ${plusJakarta.variable} ${playfair.variable}`} suppressHydrationWarning>
       <head>
-        <meta name="theme-color" content="#ffffff" />
+        <meta name="theme-color" content="#0F0F11" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
       </head>
       <body>
+        <OfflineDetector />
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
