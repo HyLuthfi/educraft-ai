@@ -219,18 +219,30 @@ export default function DashboardLayout({
 
         <div className="p-4 border-t border-black/10 dark:border-white/10">
           <div className="flex items-center gap-3 p-2">
-            <div className="w-10 h-10 rounded bg-gray-200 dark:bg-[#2a2a2a] flex items-center justify-center font-bold text-gray-600 dark:text-gray-300">
-              {userProfile.initial}
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <p className="text-sm font-bold truncate dark:text-white">{userProfile.full_name}</p>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-yellow-400 text-black border border-black/10 rounded shadow-sm">
-                  ★ {userProfile.plan}
-                </span>
+            <Link
+              href="/profil"
+              className="flex items-center gap-3 flex-1 min-w-0 group hover:opacity-90 transition-opacity"
+              title="Lihat Profil Saya"
+            >
+              <div className="w-10 h-10 rounded bg-gray-200 dark:bg-[#2a2a2a] group-hover:bg-yellow-400 group-hover:text-black transition-colors flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 shrink-0">
+                {userProfile.initial}
               </div>
-            </div>
-            <button onClick={handleLogoutClick} className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors">
+              <div className="flex-1 overflow-hidden">
+                <p className="text-sm font-bold truncate dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                  {userProfile.full_name}
+                </p>
+                <div className="flex items-center gap-1.5 mt-0.5">
+                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-yellow-400 text-black border border-black/10 rounded shadow-sm">
+                    ★ {userProfile.plan}
+                  </span>
+                </div>
+              </div>
+            </Link>
+            <button
+              onClick={handleLogoutClick}
+              className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
+              title="Keluar Akun"
+            >
               <LogOut size={18} />
             </button>
           </div>
@@ -420,23 +432,26 @@ export default function DashboardLayout({
               </div>
 
               {/* User Profile Mini Banner */}
-              <div className="p-4 bg-gray-50 dark:bg-[#262626] border-b border-black/10 dark:border-white/10">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm shadow-sm">
-                    {userProfile.initial}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate dark:text-white">
-                      {userProfile.full_name}
-                    </p>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-yellow-400 text-black border border-black/10 rounded shadow-sm">
-                        ★ {userProfile.plan}
-                      </span>
-                    </div>
+              <Link
+                href="/profil"
+                onClick={() => setIsMobileDrawerOpen(false)}
+                className="p-4 bg-gray-50 dark:bg-[#262626] border-b border-black/10 dark:border-white/10 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
+                title="Buka Profil Saya"
+              >
+                <div className="w-10 h-10 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
+                  {userProfile.initial}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate dark:text-white">
+                    {userProfile.full_name}
+                  </p>
+                  <div className="flex items-center gap-1.5 mt-0.5">
+                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-yellow-400 text-black border border-black/10 rounded shadow-sm">
+                      ★ {userProfile.plan}
+                    </span>
                   </div>
                 </div>
-              </div>
+              </Link>
 
               {/* Drawer Navigation Links */}
               <nav className="flex-1 px-4 py-5 space-y-5 overflow-y-auto">

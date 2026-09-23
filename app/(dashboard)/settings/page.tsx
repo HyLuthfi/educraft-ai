@@ -1,7 +1,22 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { User, Settings as SettingsIcon, CreditCard, Sparkles, LogOut, Loader2, CheckCircle, Cpu, Crown, Moon, Sun, Monitor, Palette } from "lucide-react";
+import {
+  User,
+  Settings as SettingsIcon,
+  CreditCard,
+  Sparkles,
+  LogOut,
+  Loader2,
+  CheckCircle,
+  Cpu,
+  Crown,
+  Moon,
+  Sun,
+  Monitor,
+  Palette,
+  Save,
+} from "lucide-react";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
@@ -13,6 +28,21 @@ export default function SettingsPage() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  // Form States
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [aiModel, setAiModel] = useState("auto");
+  const [outputLanguage, setOutputLanguage] = useState("id");
+  const [systemPrompt, setSystemPrompt] = useState(
+    "Selalu berikan penjelasan kunci jawaban secara komprehensif dan mudah dipahami siswa SMA."
+  );
+
+  // Loading States
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSavingProfile, setIsSavingProfile] = useState(false);
+  const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
     email: string;
@@ -24,9 +54,8 @@ export default function SettingsPage() {
     email: "Memuat...",
     plan: "EduCraft Pro",
     tokens_left: 50000,
-    initial: "-"
+    initial: "-",
   });
-  const [isLoading, setIsLoading] = useState(true);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -35,41 +64,159 @@ export default function SettingsPage() {
 
   useEffect(() => {
     setMounted(true);
-    async function fetchUser() {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-          
-        let name = "Pengguna";
-        if (profile?.full_name) {
-          name = profile.full_name;
-        } else if (user.user_metadata?.full_name) {
-          name = user.user_metadata.full_name;
-        } else if (user.email) {
-          name = user.email.split('@')[0];
-        }
 
-        let plan = "EduCraft Pro";
-        if (profile?.plan && profile.plan !== "Free Plan") {
-          plan = profile.plan;
-        }
-
-        setUserProfile({
-          full_name: name,
-          email: user.email || "",
-          plan: plan,
-          tokens_left: profile?.tokens_left ? Math.max(profile.tokens_left, 50000) : 50000,
-          initial: name.charAt(0).toUpperCase()
-        });
+    // Load cached preferences from localStorage if any
+    try {
+      const savedPrefs = localStorage.getItem("educraft_user_preferences");
+      if (savedPrefs) {
+        const parsed = JSON.parse(savedPrefs);
+        if (parsed.ai_model) setAiModel(parsed.ai_model);
+        if (parsed.output_language) setOutputLanguage(parsed.output_language);
+        if (parsed.system_prompt) setSystemPrompt(parsed.system_prompt);
       }
-      setIsLoading(false);
+    } catch (e) {}
+
+    async function fetchUser() {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (user) {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("*")
+            .eq("id", user.id)
+            .single();
+
+          let name = "Pengguna";
+          if (profile?.full_name) {
+            name = profile.full_name;
+          } else if (user.user_metadata?.full_name) {
+            name = user.user_metadata.full_name;
+          } else if (user.email) {
+            name = user.email.split("@")[0];
+          }
+
+          let plan = "EduCraft Pro";
+          if (profile?.plan && profile.plan !== "Free Plan") {
+            plan = profile.plan;
+          }
+
+          setFullName(name);
+          setEmail(user.email || "");
+
+          if (user.user_metadata?.ai_model) {
+            setAiModel(user.user_metadata.ai_model);
+          }
+          if (user.user_metadata?.output_language) {
+            setOutputLanguage(user.user_metadata.output_language);
+          }
+          if (user.user_metadata?.system_prompt) {
+            setSystemPrompt(user.user_metadata.system_prompt);
+          }
+
+          setUserProfile({
+            full_name: name,
+            email: user.email || "",
+            plan: plan,
+            tokens_left: profile?.tokens_left ? Math.max(profile.tokens_left, 50000) : 50000,
+            initial: name.charAt(0).toUpperCase(),
+          });
+        }
+      } catch (err) {
+        console.error("Gagal mengambil profil user:", err);
+      } finally {
+        setIsLoading(false);
+      }
     }
+
     fetchUser();
   }, [supabase]);
+
+  // Handler: Simpan Perubahan Profil (Nama)
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!fullName.trim()) {
+      toast.error("Nama lengkap tidak boleh kosong.");
+      return;
+    }
+
+    setIsSavingProfile(true);
+    const toastId = toast.loading("Menyimpan nama profil...");
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error("Sesi login berakhir. Silakan login kembali.");
+
+      // 1. Update tabel public.profiles
+      const { error: profileError } = await supabase
+        .from("profiles")
+        .update({ full_name: fullName.trim() })
+        .eq("id", user.id);
+
+      if (profileError) throw profileError;
+
+      // 2. Update metadata akun Auth
+      await supabase.auth.updateUser({
+        data: { full_name: fullName.trim() },
+      });
+
+      setUserProfile((prev) => ({
+        ...prev,
+        full_name: fullName.trim(),
+        initial: fullName.trim().charAt(0).toUpperCase(),
+      }));
+
+      toast.success("Profil guru berhasil diperbarui!", { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Gagal memperbarui profil: " + (err.message || "Error server"), {
+        id: toastId,
+      });
+    } finally {
+      setIsSavingProfile(false);
+    }
+  };
+
+  // Handler: Simpan Preferensi AI
+  const handleSavePreferences = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSavingPrefs(true);
+    const toastId = toast.loading("Menyimpan preferensi AI...");
+
+    try {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      const prefsPayload = {
+        ai_model: aiModel,
+        output_language: outputLanguage,
+        system_prompt: systemPrompt.trim(),
+      };
+
+      // Simpan ke metadata auth Supabase
+      if (user) {
+        await supabase.auth.updateUser({
+          data: prefsPayload,
+        });
+      }
+
+      // Simpan ke localStorage agar modul /create langsung memakai settingan ini
+      localStorage.setItem("educraft_user_preferences", JSON.stringify(prefsPayload));
+
+      toast.success("Preferensi sistem AI berhasil disimpan!", { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Gagal menyimpan preferensi: " + (err.message || "Error"), { id: toastId });
+    } finally {
+      setIsSavingPrefs(false);
+    }
+  };
 
   const handleLogoutClick = () => {
     setShowLogoutModal(true);
@@ -125,7 +272,7 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 sm:gap-8 items-start">
+            <form onSubmit={handleSaveProfile} className="flex flex-col sm:flex-row gap-4 sm:gap-8 items-start">
               <div className="w-12 h-12 sm:w-16 sm:h-16 bg-yellow-400 dark:bg-yellow-500 border-2 border-black dark:border-black flex items-center justify-center font-editorial font-bold text-xl sm:text-2xl shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] text-black shrink-0">
                 {userProfile.initial}
               </div>
@@ -135,31 +282,46 @@ export default function SettingsPage() {
                     <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 sm:mb-2 block">
                       Nama Lengkap
                     </label>
-                    <input 
-                      type="text" 
-                      defaultValue={userProfile.full_name}
-                      className="w-full p-2.5 sm:p-3 text-xs sm:text-sm bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-medium transition-colors dark:text-white"
+                    <input
+                      type="text"
+                      required
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Nama lengkap Bapak/Ibu Guru"
+                      className="w-full p-2.5 sm:p-3 text-xs sm:text-sm bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-bold transition-colors dark:text-white"
                     />
                   </div>
                   <div>
                     <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 mb-1.5 sm:mb-2 block">
                       Alamat Email
                     </label>
-                    <input 
-                      type="email" 
-                      defaultValue={userProfile.email}
+                    <input
+                      type="email"
+                      value={email}
                       disabled
                       className="w-full p-2.5 sm:p-3 text-xs sm:text-sm bg-gray-100 dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-600 border-2 border-black/10 dark:border-white/5 outline-none font-medium cursor-not-allowed"
                     />
                   </div>
                 </div>
                 <div className="flex gap-4 pt-3 sm:pt-4 border-t-2 border-black/10 dark:border-white/10">
-                  <button className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
-                    Simpan Perubahan
+                  <button
+                    type="submit"
+                    disabled={isSavingProfile}
+                    className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 active:translate-x-0.5 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {isSavingProfile ? (
+                      <>
+                        <Loader2 size={16} className="animate-spin" /> Menyimpan...
+                      </>
+                    ) : (
+                      <>
+                        <Save size={16} /> Simpan Perubahan
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
-            </div>
+            </form>
           </motion.div>
 
           {/* Kartu Preferensi AI */}
@@ -176,15 +338,19 @@ export default function SettingsPage() {
               </h2>
             </div>
 
-            <div className="space-y-4 sm:space-y-6">
+            <form onSubmit={handleSavePreferences} className="space-y-4 sm:space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
                 <div>
                   <label className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1.5 sm:mb-2">
                     Model AI Default
                   </label>
-                  <select className="w-full p-2.5 sm:p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-medium transition-colors bg-white dark:bg-[#2a2a2a] dark:text-white cursor-pointer">
-                    <option value="auto">🤖 AI: Otomatis (Rekomendasi)</option>
-                    <option value="gpt-4o">GPT-4o (OpenAI)</option>
+                  <select
+                    value={aiModel}
+                    onChange={(e) => setAiModel(e.target.value)}
+                    className="w-full p-2.5 sm:p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-medium transition-colors bg-white dark:bg-[#2a2a2a] dark:text-white cursor-pointer"
+                  >
+                    <option value="auto">🤖 AI: Otomatis (Gemini 3.8 Flash - Cepat &amp; Presisi)</option>
+                    <option value="gpt-4o">GPT-4o (OpenAI Compatible)</option>
                     <option value="gemini-1.5">Gemini 1.5 Pro</option>
                     <option value="claude">Claude 3.5 Sonnet</option>
                   </select>
@@ -193,9 +359,13 @@ export default function SettingsPage() {
                   <label className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider block mb-1.5 sm:mb-2">
                     Bahasa Output
                   </label>
-                  <select className="w-full p-2.5 sm:p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-medium transition-colors bg-white dark:bg-[#2a2a2a] dark:text-white cursor-pointer">
-                    <option value="id">Bahasa Indonesia</option>
-                    <option value="en">English</option>
+                  <select
+                    value={outputLanguage}
+                    onChange={(e) => setOutputLanguage(e.target.value)}
+                    className="w-full p-2.5 sm:p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-medium transition-colors bg-white dark:bg-[#2a2a2a] dark:text-white cursor-pointer"
+                  >
+                    <option value="id">Bahasa Indonesia (Standar)</option>
+                    <option value="en">English (Bilingual)</option>
                   </select>
                 </div>
               </div>
@@ -206,21 +376,34 @@ export default function SettingsPage() {
                 </label>
                 <textarea
                   rows={3}
+                  value={systemPrompt}
+                  onChange={(e) => setSystemPrompt(e.target.value)}
                   className="w-full p-2.5 sm:p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-medium transition-colors resize-none bg-white dark:bg-[#2a2a2a] dark:text-white"
                   placeholder="Contoh: Selalu gunakan kata ganti 'Bapak/Ibu Guru' saat memberikan panduan kunci jawaban..."
-                  defaultValue="Selalu berikan penjelasan kunci jawaban secara komprehensif dan mudah dipahami siswa SMA."
                 />
                 <p className="text-[10px] sm:text-xs text-gray-500 mt-1 sm:mt-2">
-                  Instruksi ini akan otomatis ditambahkan setiap kali AI men-generate soal untuk Anda.
+                  Instruksi ini akan otomatis menjadi pedoman setiap kali AI men-generate soal atau menyusun rubrik untuk Anda.
                 </p>
               </div>
 
-              <button className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none">
-                Simpan Preferensi
+              <button
+                type="submit"
+                disabled={isSavingPrefs}
+                className="w-full sm:w-auto px-4 sm:px-6 py-2.5 sm:py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] active:translate-y-0.5 active:translate-x-0.5 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                {isSavingPrefs ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" /> Menyimpan...
+                  </>
+                ) : (
+                  <>
+                    <Save size={16} /> Simpan Preferensi
+                  </>
+                )}
               </button>
-            </div>
+            </form>
           </motion.div>
-          
+
           {/* Kartu Tampilan (Appearance) */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -234,23 +417,35 @@ export default function SettingsPage() {
                 Tampilan (Tema)
               </h2>
             </div>
-            
+
             <div className="grid grid-cols-3 gap-2 sm:gap-4">
-              <button 
-                onClick={() => setTheme('light')}
-                className={`p-2.5 sm:p-4 border-2 flex flex-col items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none ${theme === 'light' ? 'bg-black text-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]' : 'bg-white dark:bg-[#2a2a2a] text-gray-500 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'}`}
+              <button
+                onClick={() => setTheme("light")}
+                className={`p-2.5 sm:p-4 border-2 flex flex-col items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none cursor-pointer ${
+                  theme === "light"
+                    ? "bg-black text-white border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)]"
+                    : "bg-white dark:bg-[#2a2a2a] text-gray-500 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white"
+                }`}
               >
                 <Sun size={20} className="sm:w-6 sm:h-6" /> Terang
               </button>
-              <button 
-                onClick={() => setTheme('dark')}
-                className={`p-2.5 sm:p-4 border-2 flex flex-col items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none ${theme === 'dark' ? 'bg-white text-black border-white shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]' : 'bg-white dark:bg-[#2a2a2a] text-gray-500 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'}`}
+              <button
+                onClick={() => setTheme("dark")}
+                className={`p-2.5 sm:p-4 border-2 flex flex-col items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none cursor-pointer ${
+                  theme === "dark"
+                    ? "bg-white text-black border-white shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)]"
+                    : "bg-white dark:bg-[#2a2a2a] text-gray-500 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white"
+                }`}
               >
                 <Moon size={20} className="sm:w-6 sm:h-6" /> Gelap
               </button>
-              <button 
-                onClick={() => setTheme('system')}
-                className={`p-2.5 sm:p-4 border-2 flex flex-col items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none ${theme === 'system' ? 'bg-blue-600 text-white border-blue-600 shadow-[2px_2px_0px_0px_rgba(37,99,235,0.3)] sm:shadow-[4px_4px_0px_0px_rgba(37,99,235,0.3)]' : 'bg-white dark:bg-[#2a2a2a] text-gray-500 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white'}`}
+              <button
+                onClick={() => setTheme("system")}
+                className={`p-2.5 sm:p-4 border-2 flex flex-col items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-xs sm:text-sm transition-all shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none cursor-pointer ${
+                  theme === "system"
+                    ? "bg-blue-600 text-white border-blue-600 shadow-[2px_2px_0px_0px_rgba(37,99,235,0.3)] sm:shadow-[4px_4px_0px_0px_rgba(37,99,235,0.3)]"
+                    : "bg-white dark:bg-[#2a2a2a] text-gray-500 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white"
+                }`}
               >
                 <Monitor size={20} className="sm:w-6 sm:h-6" /> Sistem
               </button>
@@ -314,7 +509,7 @@ export default function SettingsPage() {
                   </div>
                 </div>
                 <div className="w-full h-2.5 sm:h-3 bg-gray-800 rounded-full overflow-hidden border border-gray-700">
-                  <motion.div 
+                  <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: "100%" }}
                     transition={{ duration: 1, ease: "easeOut" }}
@@ -333,8 +528,13 @@ export default function SettingsPage() {
                   <span>Langganan Pro Aktif</span>
                 </div>
                 <button
-                  onClick={() => toast.success("Paket Pro aktif hingga September 2027. Faktur dan perpanjangan otomatis telah terkonfirmasi.")}
-                  className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-gray-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 active:translate-y-0.5"
+                  type="button"
+                  onClick={() =>
+                    toast.success(
+                      "Paket Pro aktif hingga September 2027. Faktur dan perpanjangan otomatis telah terkonfirmasi."
+                    )
+                  }
+                  className="w-full py-2 bg-white/10 hover:bg-white/20 border border-white/20 text-gray-300 hover:text-white font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 active:translate-y-0.5 cursor-pointer"
                 >
                   <CreditCard size={14} /> Kelola Langganan &amp; Faktur
                 </button>
@@ -345,7 +545,7 @@ export default function SettingsPage() {
                   <CheckCircle size={14} className="text-emerald-400 shrink-0" /> Token AI Tak Terbatas (Unlimited Generations)
                 </li>
                 <li className="flex items-center gap-2 text-xs sm:text-sm text-gray-200">
-                  <CheckCircle size={14} className="text-emerald-400 shrink-0" /> Akses Prioritas GPT-4o, Claude 3.5 &amp; Gemini 1.5
+                  <CheckCircle size={14} className="text-emerald-400 shrink-0" /> Akses Prioritas GPT-4o, Claude 3.5 &amp; Gemini
                 </li>
                 <li className="flex items-center gap-2 text-xs sm:text-sm text-gray-200">
                   <CheckCircle size={14} className="text-emerald-400 shrink-0" /> Hapus Watermark &amp; Bebas Ekspor Dokumen
@@ -364,8 +564,11 @@ export default function SettingsPage() {
             transition={{ delay: 0.2 }}
             className="bg-white dark:bg-[#1e1e1e] border-2 border-red-200 dark:border-red-900/30 p-4 sm:p-6 shadow-[3px_3px_0px_0px_rgba(254,226,226,1)] sm:shadow-[4px_4px_0px_0px_rgba(254,226,226,1)] dark:shadow-[3px_3px_0px_0px_rgba(127,29,29,0.3)] sm:dark:shadow-[4px_4px_0px_0px_rgba(127,29,29,0.3)] transition-colors"
           >
-            <button onClick={handleLogoutClick} className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-[#2a2a2a] text-red-600 border-2 border-red-200 dark:border-red-900/50 font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-600 dark:hover:border-red-500 transition-colors flex items-center gap-2 w-full justify-center shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none">
-              <LogOut size={16} /> Keluar
+            <button
+              onClick={handleLogoutClick}
+              className="px-4 sm:px-6 py-2.5 sm:py-3 bg-white dark:bg-[#2a2a2a] text-red-600 border-2 border-red-200 dark:border-red-900/50 font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-red-50 dark:hover:bg-red-950/20 hover:border-red-600 dark:hover:border-red-500 transition-colors flex items-center gap-2 w-full justify-center shadow-sm active:translate-y-1 active:translate-x-1 active:shadow-none cursor-pointer"
+            >
+              <LogOut size={16} /> Keluar dari Akun
             </button>
           </motion.div>
         </div>
@@ -374,18 +577,22 @@ export default function SettingsPage() {
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm">
           <div className="bg-white dark:bg-[#1e1e1e] border-2 sm:border-4 border-black dark:border-white/20 p-5 sm:p-8 max-w-sm w-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] sm:dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.1)]">
-            <h3 className="text-lg sm:text-xl font-black uppercase tracking-wider mb-1.5 sm:mb-2 dark:text-white">Konfirmasi Keluar</h3>
-            <p className="font-medium text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">Apakah Anda yakin ingin keluar dari akun EduCraft AI?</p>
+            <h3 className="text-lg sm:text-xl font-black uppercase tracking-wider mb-1.5 sm:mb-2 dark:text-white">
+              Konfirmasi Keluar
+            </h3>
+            <p className="font-medium text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
+              Apakah Anda yakin ingin keluar dari akun EduCraft AI?
+            </p>
             <div className="flex gap-3 sm:gap-4">
               <button
                 onClick={cancelLogout}
-                className="flex-1 py-2.5 sm:py-3 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-gray-50 dark:hover:bg-[#333] transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
+                className="flex-1 py-2.5 sm:py-3 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-gray-50 dark:hover:bg-[#333] transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none cursor-pointer"
               >
                 Batal
               </button>
               <button
                 onClick={confirmLogout}
-                className="flex-1 py-2.5 sm:py-3 bg-red-500 border-2 border-black dark:border-red-600 text-white font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-red-600 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
+                className="flex-1 py-2.5 sm:py-3 bg-red-500 border-2 border-black dark:border-red-600 text-white font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-red-600 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none cursor-pointer"
               >
                 Ya, Keluar
               </button>

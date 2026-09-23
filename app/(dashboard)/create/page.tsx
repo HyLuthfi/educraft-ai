@@ -234,6 +234,15 @@ export default function CreateQuestionWizard() {
         if (parsed.instruksiKhusus !== undefined) setInstruksiKhusus(parsed.instruksiKhusus);
         if (parsed.generatedQuestions) setGeneratedQuestions(parsed.generatedQuestions);
       } catch (e) {}
+    } else {
+      // Default instruksi khusus dari preferensi settings jika draft kosong
+      try {
+        const savedPrefs = localStorage.getItem("educraft_user_preferences");
+        if (savedPrefs) {
+          const parsed = JSON.parse(savedPrefs);
+          if (parsed.system_prompt) setInstruksiKhusus(parsed.system_prompt);
+        }
+      } catch (e) {}
     }
   }, []);
 
