@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import {
@@ -128,6 +128,16 @@ export default function PerencanaPembelajaranPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const selected = typeof window !== "undefined" ? sessionStorage.getItem("educraft_selected_materi") : null;
+    if (selected) {
+      setRawMateri(selected);
+      setMetodeInput("text");
+      sessionStorage.removeItem("educraft_selected_materi");
+      toast.success("Materi ajar berhasil dimuat dari Bank Materi!");
+    }
+  }, []);
 
   const handleFilePicked = (
     e: React.ChangeEvent<HTMLInputElement>,

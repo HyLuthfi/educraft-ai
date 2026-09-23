@@ -41,7 +41,8 @@ export default function LoginPage() {
       setErrorMsg(error.message);
       setSedangProses(false);
     } else {
-      router.push("/create");
+      const nextDest = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("next") || "/create") : "/create";
+      router.push(nextDest);
     }
   }
 
@@ -51,10 +52,11 @@ export default function LoginPage() {
       return;
     }
     
+    const nextDest = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("next") || "/create") : "/create";
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
+        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextDest)}`,
       },
     });
   }

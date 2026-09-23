@@ -4,6 +4,10 @@ import { buatSupabaseServer } from "@/lib/supabase/server";
 export async function POST(req: Request) {
   try {
     const body = await req.json();
+
+    if (!body.konten_materi || typeof body.konten_materi !== "string" || !body.konten_materi.trim()) {
+      body.konten_materi = "Materi Pembelajaran Umum";
+    }
     
     const supabase = await buatSupabaseServer();
     const { data: { user } } = await supabase.auth.getUser();
@@ -45,8 +49,24 @@ export async function POST(req: Request) {
     if (!res.ok) {
       const errorText = await res.text();
       console.error("Backend Error:", errorText);
+      let pesanError = "Gagal menghasilkan soal dari AI";
+      try {
+        const parsed = JSON.parse(errorText);
+        if (parsed.detail && Array.isArray(parsed.detail)) {
+          const firstErr = parsed.detail[0];
+          if (firstErr.type === "string_too_short") {
+            pesanError = `Materi pembelajaran terlalu pendek (minimal ${firstErr.ctx?.min_length || 5} karakter). Silakan tambahkan materi lebih lengkap.`;
+          } else {
+            pesanError = firstErr.msg || pesanError;
+          }
+        } else if (typeof parsed.detail === "string") {
+          pesanError = parsed.detail;
+        }
+      } catch {
+        pesanError = errorText || pesanError;
+      }
       return NextResponse.json(
-        { error: `Backend Python Gagal: ${res.status} - ${errorText}` },
+        { error: pesanError },
         { status: res.status }
       );
     }

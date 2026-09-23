@@ -27,7 +27,7 @@ class ConfigSoal(BaseModel):
 
 
 class RequestGenerate(BaseModel):
-    konten_materi: str = Field(min_length=5)
+    konten_materi: str = Field(default="Materi Pembelajaran", min_length=1)
     config: ConfigSoal
 
 

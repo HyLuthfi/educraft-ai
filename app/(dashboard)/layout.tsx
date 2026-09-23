@@ -8,6 +8,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
   FileText,
+  BookOpen,
   Settings,
   LogOut,
   LayoutDashboard,
@@ -138,7 +139,10 @@ export default function DashboardLayout({
     },
     {
       label: "Materi",
-      items: [{ name: "Bank Soal", href: "/library", icon: FileText }],
+      items: [
+        { name: "Bank Soal", href: "/library", icon: FileText },
+        { name: "Bank Materi", href: "/bank-materi", icon: BookOpen },
+      ],
     },
   ];
 

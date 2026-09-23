@@ -4,6 +4,7 @@ from dotenv import load_dotenv
 load_dotenv(dotenv_path="../.env.local")
 
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
@@ -14,6 +15,20 @@ app = FastAPI(
     description="AI service untuk generate soal, parsing dokumen, dan export",
     version="0.1.0",
 )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    errors = exc.errors()
+    pesan = "Data input tidak valid."
+    if errors:
+        err = errors[0]
+        field = err.get("loc", [""])[-1]
+        if err.get("type") == "string_too_short":
+            min_len = err.get("ctx", {}).get("min_length", 1)
+            pesan = f"Input '{field}' terlalu pendek (minimal {min_len} karakter)."
+        else:
+            pesan = f"Input '{field}' tidak valid: {err.get('msg')}"
+    return JSONResponse(status_code=422, content={"detail": pesan})
 
 app.add_middleware(
     CORSMiddleware,

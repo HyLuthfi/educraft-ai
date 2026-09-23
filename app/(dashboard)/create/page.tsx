@@ -54,6 +54,45 @@ export default function CreateQuestionWizard() {
   const [saveBankFolder, setSaveBankFolder] = useState("Umum");
   const [instruksiKhusus, setInstruksiKhusus] = useState("");
   const [isMounted, setIsMounted] = useState(false);
+  const [generatingSeconds, setGeneratingSeconds] = useState(0);
+  const [generatingStageIdx, setGeneratingStageIdx] = useState(0);
+
+  const TAHAP_PENYUSUNAN = [
+    "Membaca & mengekstrak konsep kunci dari materi...",
+    "Membedah taksonomi Bloom (LOTS / HOTS) sesuai racikan...",
+    "Merumuskan butir-butir pertanyaan & pilihan pengecoh...",
+    "Menyusun kunci jawaban dan rubrik pembahasan detail...",
+    "Memverifikasi struktur dan format akhir dokumen...",
+  ];
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    let stageTimer: NodeJS.Timeout;
+
+    if (isGenerating) {
+      setGeneratingSeconds(0);
+      setGeneratingStageIdx(0);
+
+      timer = setInterval(() => {
+        setGeneratingSeconds((prev) => prev + 1);
+      }, 1000);
+
+      stageTimer = setInterval(() => {
+        setGeneratingStageIdx((prev) => (prev + 1) % 5);
+      }, 3500);
+    }
+
+    return () => {
+      clearInterval(timer);
+      clearInterval(stageTimer);
+    };
+  }, [isGenerating]);
+
+  const formatTimer = (sec: number) => {
+    const mins = Math.floor(sec / 60);
+    const remainingSecs = sec % 60;
+    return `${mins.toString().padStart(2, "0")}:${remainingSecs.toString().padStart(2, "0")}`;
+  };
 
   const fetchHistory = async () => {
     setIsHistoryLoading(true);
@@ -173,6 +212,16 @@ export default function CreateQuestionWizard() {
 
   useEffect(() => {
     setIsMounted(true);
+    const selectedMateri = typeof window !== "undefined" ? sessionStorage.getItem("educraft_selected_materi") : null;
+    if (selectedMateri) {
+      setInputText(selectedMateri);
+      setInputTypes(["text"]);
+      setStep(1);
+      sessionStorage.removeItem("educraft_selected_materi");
+      toast.success("Materi ajar berhasil dimuat dari Bank Materi!");
+      return;
+    }
+
     const savedData = localStorage.getItem("educraft_create_draft");
     if (savedData) {
       try {
@@ -202,7 +251,16 @@ export default function CreateQuestionWizard() {
     localStorage.setItem("educraft_create_draft", JSON.stringify(draft));
   }, [step, inputTypes, inputText, topicText, configBlocks, instruksiKhusus, generatedQuestions, isMounted]);
 
-  const handleNext = () => setStep((s) => Math.min(s + 1, 3));
+  const handleNext = () => {
+    if (step === 1) {
+      const materi = (inputText || topicText || "").trim();
+      if (!materi || materi.length < 5) {
+        toast.error("Materi pembelajaran terlalu pendek! Masukkan minimal 5 karakter teks materi agar AI dapat meracik soal.");
+        return;
+      }
+    }
+    setStep((s) => Math.min(s + 1, 3));
+  };
   const handlePrev = () => setStep((s) => Math.max(s - 1, 1));
 
   const handleExport = async (format: "pdf" | "docx", sertakan_jawaban: boolean, sertakan_pembahasan: boolean) => {
@@ -339,6 +397,13 @@ export default function CreateQuestionWizard() {
   };
 
   const handleGenerate = async () => {
+    const materi = (inputText || topicText || "").trim();
+    if (!materi || materi.length < 5) {
+      toast.error("Materi pembelajaran terlalu pendek! Masukkan minimal 5 karakter teks materi.");
+      setStep(1);
+      return;
+    }
+
     setIsGenerating(true);
 
     const controller = new AbortController();
@@ -357,7 +422,7 @@ export default function CreateQuestionWizard() {
         headers: { "Content-Type": "application/json" },
         signal: controller.signal,
         body: JSON.stringify({
-          konten_materi: inputText || topicText || "Materi Umum",
+          konten_materi: materi,
           config: {
             blocks: blocks_payload,
             level_bloom: "campuran",
@@ -370,8 +435,14 @@ export default function CreateQuestionWizard() {
       });
 
       if (!res.ok) {
-        const errData = await res.text();
-        throw new Error("Gagal generate: " + errData);
+        let errMessage = "Gagal generate soal.";
+        try {
+          const errData = await res.json();
+          errMessage = errData.error || errData.detail || errMessage;
+        } catch {
+          errMessage = await res.text();
+        }
+        throw new Error(errMessage);
       }
       
       const data = await res.json();
@@ -382,7 +453,7 @@ export default function CreateQuestionWizard() {
         toast.error("Generate timeout (lebih dari 4 menit). Coba kurangi jumlah soal atau materi.");
       } else {
         console.error(err);
-        toast.error("Gagal generate soal: " + err.message);
+        toast.error(err.message || "Gagal generate soal.");
       }
     } finally {
       clearTimeout(timeoutId);
@@ -752,210 +823,215 @@ export default function CreateQuestionWizard() {
               animate="center"
               exit="exit"
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
-              className="space-y-4 sm:space-y-8"
+              className="space-y-4 sm:space-y-6"
             >
-              <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-3">
+              {/* Header Step 2 */}
+              <div className="flex flex-row items-center justify-between gap-3 pb-3 border-b-2 border-black/10 dark:border-white/10">
                 <div>
-                  <h2 className="text-xl sm:text-2xl font-bold mb-1 sm:mb-2">Parameter Soal</h2>
-                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                    Racik tipe, tingkat kesulitan, dan jumlah soal secara
-                    spesifik.
+                  <h2 className="text-base sm:text-2xl font-bold dark:text-white">Parameter Soal</h2>
+                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
+                    Atur tipe, tingkat kesulitan, dan jumlah butir soal.
                   </p>
                 </div>
-                <div className="self-start sm:self-auto bg-black text-white px-3.5 py-1.5 sm:px-6 sm:py-3 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.2)] flex items-center gap-2">
-                  <span className="text-xs sm:text-sm font-semibold uppercase tracking-wider opacity-80">
-                    Total Soal:
+                <div className="bg-black text-white dark:bg-white dark:text-black px-3 py-1.5 sm:px-5 sm:py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] flex items-center gap-1.5 shrink-0">
+                  <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider opacity-80">
+                    Total:
                   </span>
-                  <span className="text-lg sm:text-2xl font-bold">{totalQuestions}</span>
+                  <span className="text-sm sm:text-lg font-black">{totalQuestions} Soal</span>
                 </div>
               </div>
 
+              {/* Racikan Blocks List */}
               <div className="space-y-3 sm:space-y-4">
                 <AnimatePresence>
                   {configBlocks.map((block, index) => (
                     <motion.div
                       key={block.id}
-                      initial={{ opacity: 0, y: -20, height: 0 }}
-                      animate={{ opacity: 1, y: 0, height: "auto" }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a] p-3.5 sm:p-6 flex flex-col md:flex-row gap-3 sm:gap-6 items-stretch md:items-center relative"
+                      initial={{ opacity: 0, y: -10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      className="border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#222222] p-3.5 sm:p-5 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.06)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] space-y-3.5 sm:space-y-4"
                     >
-                      <div className="font-bold text-gray-300 text-2xl hidden md:block">
-                        {(index + 1).toString().padStart(2, "0")}
-                      </div>
-
-                      {/* Header bar for mobile showing index and delete button */}
-                      <div className="flex items-center justify-between md:hidden pb-2 border-b border-black/10 dark:border-white/10">
-                        <span className="font-bold text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                          Racikan #{index + 1}
-                        </span>
+                      {/* Card Header */}
+                      <div className="flex items-center justify-between pb-2.5 border-b border-black/10 dark:border-white/10">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-2 py-0.5 uppercase tracking-wider">
+                            Racikan #{index + 1}
+                          </span>
+                          <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                            {block.type} • {block.count} Soal
+                          </span>
+                        </div>
                         {configBlocks.length > 1 && (
                           <button
                             onClick={() => removeBlock(block.id)}
-                            className="text-red-500 hover:text-red-600 p-1 flex items-center gap-1 text-xs font-semibold"
+                            className="text-red-500 hover:text-red-600 px-2 py-1 text-xs font-bold flex items-center gap-1 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
                             title="Hapus racikan ini"
                           >
-                            <Trash2 size={14} /> Hapus
+                            <Trash2 size={13} /> <span>Hapus</span>
                           </button>
                         )}
                       </div>
 
-                      <div className="flex-1 w-full flex flex-col gap-3 sm:gap-4">
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
-                          <div className="space-y-1 sm:space-y-2">
-                            <label className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                              Tipe Soal
-                            </label>
-                            <select
-                              value={block.type}
-                              onChange={(e) =>
-                                updateBlock(block.id, "type", e.target.value)
-                              }
-                              className="w-full p-2 sm:p-3 text-xs sm:text-sm bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 focus:border-black dark:border-white/20 outline-none font-medium cursor-pointer"
+                      {/* 1. Tipe Soal (Responsive Pill Buttons) */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+                          Tipe Soal
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                          {[
+                            { id: "Pilihan Ganda", label: "Pilihan Ganda" },
+                            { id: "Isian Singkat", label: "Isian Singkat" },
+                            { id: "Essay", label: "Essay / Uraian" },
+                            { id: "Benar/Salah", label: "Benar / Salah" },
+                          ].map((t) => (
+                            <button
+                              key={t.id}
+                              type="button"
+                              onClick={() => updateBlock(block.id, "type", t.id)}
+                              className={`py-2 px-2 text-xs font-bold transition-all text-center border cursor-pointer ${
+                                block.type === t.id
+                                  ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
+                                  : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                              }`}
                             >
-                              <option value="Pilihan Ganda">Pilihan Ganda</option>
-                              <option value="Essay">Essay</option>
-                              <option value="Isian Singkat">Isian Singkat</option>
-                              <option value="Benar/Salah">Benar / Salah</option>
-                            </select>
-                          </div>
+                              {t.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                          <div className="space-y-1 sm:space-y-2">
-                            <label className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                              Level (Taksonomi)
-                            </label>
-                            <div className="flex">
-                              <button
-                                onClick={() =>
-                                  updateBlock(block.id, "level", "LOTS")
-                                }
-                                className={`flex-1 py-1.5 sm:py-3 px-2 border border-r-0 text-center text-xs sm:text-sm font-bold transition-all ${block.level === "LOTS" ? "bg-black text-white border-black dark:border-white/20" : "bg-white dark:bg-[#1e1e1e] border-black/20 dark:border-white/20 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:bg-[#2a2a2a]"}`}
-                              >
-                                LOTS (C1-C3)
-                              </button>
-                              <button
-                                onClick={() =>
-                                  updateBlock(block.id, "level", "HOTS")
-                                }
-                                className={`flex-1 py-1.5 sm:py-3 px-2 border text-center text-xs sm:text-sm font-bold transition-all ${block.level === "HOTS" ? "bg-black text-white border-black dark:border-white/20" : "bg-white dark:bg-[#1e1e1e] border-black/20 dark:border-white/20 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:bg-[#2a2a2a]"}`}
-                              >
-                                HOTS (C4-C6)
-                              </button>
-                            </div>
-                          </div>
+                      {/* 2. Level Taksonomi Bloom */}
+                      <div className="space-y-1.5">
+                        <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+                          Level Taksonomi Bloom
+                        </label>
+                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-1.5">
+                          {[
+                            { id: "LOTS", label: "LOTS (C1-C3)", desc: "Mengingat, Memahami, Menerapkan" },
+                            { id: "HOTS", label: "HOTS (C4-C6)", desc: "Menganalisis, Mengevaluasi, Mengkreasi" },
+                          ].map((lvl) => (
+                            <button
+                              key={lvl.id}
+                              type="button"
+                              onClick={() => updateBlock(block.id, "level", lvl.id)}
+                              className={`py-2 px-2 border text-center transition-all cursor-pointer ${
+                                block.level === lvl.id
+                                  ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
+                                  : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                              }`}
+                            >
+                              <div className="text-xs font-bold leading-tight">{lvl.label}</div>
+                              <div className="text-[9px] opacity-75 mt-0.5 line-clamp-1">{lvl.desc}</div>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
-                          <div className="space-y-1 sm:space-y-2">
-                            <div className="flex justify-between items-center">
-                              <label className="text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                                Jumlah Soal
-                              </label>
-                              <span className="font-bold text-xs sm:text-sm">{block.count}</span>
+                      {/* 3. Jumlah Soal (Touch-Friendly Stepper + Sliders + Quick Chips) */}
+                      <div className="space-y-2.5 bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 border border-black/10 dark:border-white/10">
+                        <div className="flex items-center justify-between">
+                          <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                            Jumlah Butir Soal
+                          </label>
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => updateBlock(block.id, "count", Math.max(1, block.count - 1))}
+                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer"
+                              aria-label="Kurangi 1 soal"
+                            >
+                              -
+                            </button>
+                            <div className="w-10 text-center font-black text-base dark:text-white">
+                              {block.count}
                             </div>
-                            <input
-                              type="range"
-                              min="1"
-                              max="50"
-                              value={block.count}
-                              onChange={(e) =>
-                                updateBlock(
-                                  block.id,
-                                  "count",
-                                  parseInt(e.target.value),
-                                )
-                              }
-                              className="w-full accent-black h-1.5 sm:h-2 bg-gray-200 rounded-none appearance-none mt-1 sm:mt-2"
-                            />
+                            <button
+                              type="button"
+                              onClick={() => updateBlock(block.id, "count", Math.min(50, block.count + 1))}
+                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer"
+                              aria-label="Tambah 1 soal"
+                            >
+                              +
+                            </button>
                           </div>
                         </div>
 
-                        {false && (
-                          <div className="space-y-2 pt-4 border-t border-black/10 dark:border-white/10">
-                            <label className="text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-                              Add-On Gambar Ilustrasi
-                            </label>
-                            <div className="p-3 bg-gray-50 dark:bg-[#2a2a2a]/50 border border-black/10 dark:border-white/10 flex flex-col sm:flex-row items-center gap-4 justify-between">
-                              <div>
-                                <h4 className="font-bold text-sm">Sertakan Gambar</h4>
-                                <p className="text-[10px] text-gray-500 dark:text-gray-400">Pilih jumlah soal untuk diberi ilustrasi acak di racikan ini.</p>
-                              </div>
-                              <div className="flex items-center gap-2">
-                                <button 
-                                  onClick={() => updateBlock(block.id, "imageCount", Math.max(0, (block.imageCount || 0) - 1))}
-                                  className="w-8 h-8 flex items-center justify-center bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 hover:border-black dark:border-white/20 font-bold"
-                                >-</button>
-                                <input 
-                                  type="number"
-                                  value={block.imageCount || 0}
-                                  onChange={(e) => updateBlock(block.id, "imageCount", Math.min(block.count, Math.max(0, parseInt(e.target.value) || 0)))}
-                                  className="w-12 h-8 text-center border border-black/20 dark:border-white/20 focus:border-black dark:border-white/20 font-bold outline-none text-sm"
-                                />
-                                <button 
-                                  onClick={() => updateBlock(block.id, "imageCount", Math.min(block.count, (block.imageCount || 0) + 1))}
-                                  className="w-8 h-8 flex items-center justify-center bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 hover:border-black dark:border-white/20 font-bold"
-                                >+</button>
-                              </div>
-                            </div>
+                        {/* Slider bar */}
+                        <div className="space-y-1">
+                          <input
+                            type="range"
+                            min="1"
+                            max="50"
+                            value={block.count}
+                            onChange={(e) =>
+                              updateBlock(
+                                block.id,
+                                "count",
+                                parseInt(e.target.value) || 1
+                              )
+                            }
+                            className="w-full accent-black dark:accent-white h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
+                          />
+                          <div className="flex justify-between text-[10px] font-semibold text-gray-400">
+                            <span>1 Soal</span>
+                            <span>25 Soal</span>
+                            <span>50 Soal</span>
                           </div>
-                        )}
+                        </div>
                       </div>
-
-                      {configBlocks.length > 1 && (
-                        <button
-                          onClick={() => removeBlock(block.id)}
-                          className="hidden md:flex p-3 text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors"
-                          title="Hapus baris ini"
-                        >
-                          <Trash2 size={20} />
-                        </button>
-                      )}
                     </motion.div>
                   ))}
                 </AnimatePresence>
 
+                {/* Tambah Racikan Lainnya */}
                 <button
+                  type="button"
                   onClick={addBlock}
-                  className="w-full py-2.5 sm:py-4 border-2 border-dashed border-black/20 dark:border-white/20 text-gray-500 dark:text-gray-400 font-semibold text-xs sm:text-sm hover:border-black dark:border-white/20 hover:text-black dark:text-white hover:bg-gray-50 dark:bg-[#2a2a2a] transition-colors flex items-center justify-center gap-2"
+                  className="w-full py-2.5 sm:py-3.5 border-2 border-dashed border-black/20 dark:border-white/20 text-gray-600 dark:text-gray-400 font-bold text-xs sm:text-sm hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-all flex items-center justify-center gap-2 cursor-pointer active:translate-y-0.5"
                 >
-                  <Plus size={16} className="sm:w-5 sm:h-5" /> Tambah Racikan Lainnya
+                  <Plus size={16} /> + Tambah Racikan Lainnya
                 </button>
               </div>
 
-              <div className="space-y-1.5 sm:space-y-2 pt-2 sm:pt-4">
-                <label className="text-xs sm:text-sm font-semibold uppercase tracking-wider text-gray-700 dark:text-gray-300">
-                  Instruksi Khusus (Opsional)
+              {/* Instruksi Khusus (Opsional) */}
+              <div className="space-y-1.5 pt-2 sm:pt-3">
+                <label className="text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+                  <Sparkles size={14} className="text-yellow-500" />
+                  <span>Instruksi Khusus untuk AI (Opsional)</span>
                 </label>
                 <div className="relative">
-                  <Sparkles
-                    className="absolute left-3 top-3 sm:left-4 sm:top-4 text-gray-400 dark:text-gray-500"
-                    size={16}
-                  />
                   <textarea
                     id="instruksi-khusus"
-                    rows={2}
+                    rows={3}
                     value={instruksiKhusus}
                     onChange={(e) => setInstruksiKhusus(e.target.value)}
-                    className="w-full pl-9 pr-3 py-2.5 sm:pl-12 sm:pr-4 sm:py-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none transition-all resize-none text-xs sm:text-sm"
-                    placeholder="Contoh: Fokuskan pertanyaan hanya pada definisi dan tokoh penemu, jangan masukkan tahun kejadian."
+                    className="w-full p-3 sm:p-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none transition-colors text-xs sm:text-sm min-h-[85px] leading-relaxed resize-y dark:text-white"
+                    placeholder="Contoh: Fokuskan pertanyaan pada pemahaman konsep dan studi kasus lingkungan, hindari pertanyaan hafalan tahun kejadian."
                   />
                 </div>
+                <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                  Bantu AI memahami fokus khusus atau aturan penulisan yang Anda inginkan.
+                </p>
               </div>
 
-              <div className="flex items-center justify-between pt-4 sm:pt-6 border-t border-black/10 dark:border-white/10 gap-2">
+              {/* Action Buttons */}
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pt-4 sm:pt-6 border-t border-black/10 dark:border-white/10 gap-2.5">
                 <button
+                  type="button"
                   onClick={handlePrev}
-                  className="px-3 sm:px-6 py-2 sm:py-3 font-medium text-xs sm:text-base text-gray-500 dark:text-gray-400 hover:text-black dark:text-white flex items-center gap-1 sm:gap-2 transition-colors"
+                  className="order-2 sm:order-1 px-4 py-2.5 sm:py-3 font-bold text-xs sm:text-sm text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white flex items-center justify-center gap-1.5 border border-black/15 dark:border-white/15 sm:border-0 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors cursor-pointer"
                 >
-                  <ChevronLeft size={16} className="sm:w-[18px] sm:h-[18px]" /> Kembali
+                  <ChevronLeft size={16} /> Kembali
                 </button>
-                <div className="flex flex-col sm:flex-row items-center gap-2 sm:gap-4">
-                  <button
-                    onClick={handleGenerate}
-                    className="btn-primary px-4 sm:px-8 py-2.5 sm:py-3 text-xs sm:text-base flex items-center gap-1.5 sm:gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] hover:translate-y-[2px] hover:translate-x-[2px] transition-all bg-[#0a0a0a] !text-white w-full sm:w-auto justify-center"
-                  >
-                    <Sparkles size={16} className="text-current sm:w-[18px] sm:h-[18px]" /> Generate{" "}
-                    {totalQuestions} Soal
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={handleGenerate}
+                  className="order-1 sm:order-2 btn-primary px-6 sm:px-8 py-3 sm:py-3.5 text-xs sm:text-sm uppercase tracking-wider font-bold flex items-center justify-center gap-2 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] bg-black text-white hover:bg-gray-800 transition-all cursor-pointer active:translate-y-0.5"
+                >
+                  <Sparkles size={16} className="text-yellow-400" />
+                  <span>Generate {totalQuestions} Soal Sekarang</span>
+                </button>
               </div>
             </motion.div>
           )}
@@ -966,51 +1042,81 @@ export default function CreateQuestionWizard() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0 }}
-              className="flex flex-col items-center justify-center py-20"
+              className="flex flex-col items-center justify-center py-10 sm:py-16 px-3 sm:px-4 text-center max-w-lg mx-auto"
             >
-              <div className="relative w-24 h-24 mb-8">
-                <svg
-                  className="animate-spin w-full h-full text-black dark:text-white/10"
-                  viewBox="0 0 24 24"
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    fill="none"
-                  />
-                </svg>
-                <svg
-                  className="animate-spin w-full h-full text-black dark:text-white absolute top-0 left-0"
-                  viewBox="0 0 24 24"
-                  style={{
-                    animationDirection: "reverse",
-                    animationDuration: "2s",
-                  }}
-                >
-                  <circle
-                    cx="12"
-                    cy="12"
-                    r="10"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    fill="none"
-                    strokeDasharray="15 45"
-                  />
-                </svg>
-                <Sparkles
-                  className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-black dark:text-white animate-pulse"
-                  size={32}
-                />
+              {/* Dual Spinning Orbit Rings with Sparkle Core */}
+              <div className="relative w-20 h-20 sm:w-24 sm:h-24 mb-6">
+                <div className="absolute inset-0 rounded-full border-4 border-dashed border-black/30 dark:border-white/30 animate-spin [animation-duration:8s]" />
+                <div className="absolute inset-1.5 sm:inset-2 rounded-full border-4 border-t-yellow-400 border-r-black border-b-transparent border-l-black dark:border-r-white dark:border-l-white animate-spin [animation-duration:1.5s] [animation-direction:reverse]" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <motion.div
+                    animate={{ scale: [1, 1.2, 1] }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
+                  >
+                    <Sparkles size={28} className="text-yellow-500 fill-yellow-400/30 sm:w-8 sm:h-8" />
+                  </motion.div>
+                </div>
               </div>
-              <h2 className="text-2xl font-bold mb-2">
+
+              {/* Title & Description */}
+              <h2 className="text-xl sm:text-2xl md:text-3xl font-editorial font-bold mb-2 text-black dark:text-white">
                 Meracik Soal Kelas Dunia...
               </h2>
-              <p className="text-gray-500 dark:text-gray-400 text-center max-w-sm">
-                AI sedang mengekstrak materi Anda dan menyusun {totalQuestions}{" "}
-                soal sesuai parameter blok yang diminta.
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 max-w-sm mb-5 leading-relaxed">
+                AI sedang mengekstrak materi Anda dan menyusun <strong>{totalQuestions} butir soal</strong> lengkap dengan kunci dan pembahasan.
+              </p>
+
+              {/* Animated Shimmer Progress Bar */}
+              <div className="w-full bg-gray-200 dark:bg-gray-700 h-2.5 rounded-full overflow-hidden mb-4 border border-black/10 dark:border-white/10 relative">
+                <motion.div
+                  className="h-full bg-black dark:bg-white relative overflow-hidden"
+                  initial={{ width: "8%" }}
+                  animate={{ width: ["8%", "30%", "58%", "82%", "94%"] }}
+                  transition={{ duration: 25, ease: "easeOut" }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 dark:via-black/30 to-transparent"
+                    animate={{ x: ["-100%", "200%"] }}
+                    transition={{ repeat: Infinity, duration: 1.5, ease: "linear" }}
+                  />
+                </motion.div>
+              </div>
+
+              {/* Live Status Card with Ticking Timer */}
+              <div className="bg-gray-50 dark:bg-[#252525] border-2 border-black/15 dark:border-white/15 p-3.5 sm:p-4 w-full text-left shadow-[3px_3px_0px_0px_rgba(0,0,0,0.06)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]">
+                <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 pb-2 border-b border-black/10 dark:border-white/10 mb-2.5">
+                  <span className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-black">
+                    <span className="relative flex h-2 w-2">
+                      <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                    </span>
+                    Proses Aktif
+                  </span>
+                  <span className="font-mono text-gray-700 dark:text-gray-300 font-bold bg-white dark:bg-[#1e1e1e] px-2 py-0.5 border border-black/10 dark:border-white/10 text-[10px]">
+                    ⏱ {formatTimer(generatingSeconds)}
+                  </span>
+                </div>
+
+                <div className="flex items-start gap-2 text-xs sm:text-sm font-semibold text-gray-800 dark:text-gray-200 min-h-[32px]">
+                  <Loader2 size={15} className="animate-spin text-black dark:text-white shrink-0 mt-0.5" />
+                  <AnimatePresence mode="wait">
+                    <motion.span
+                      key={generatingStageIdx}
+                      initial={{ opacity: 0, y: 4 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -4 }}
+                      transition={{ duration: 0.25 }}
+                      className="leading-snug"
+                    >
+                      {TAHAP_PENYUSUNAN[generatingStageIdx]}
+                    </motion.span>
+                  </AnimatePresence>
+                </div>
+              </div>
+
+              {/* Helpful Hint */}
+              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-3.5">
+                Estimasi waktu sekitar 10–25 detik. Layar akan otomatis berpindah ke hasil kuis.
               </p>
             </motion.div>
           )}

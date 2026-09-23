@@ -40,20 +40,49 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const isDashboardRoute = request.nextUrl.pathname.startsWith('/create') || 
-                           request.nextUrl.pathname.startsWith('/library') || 
-                           request.nextUrl.pathname.startsWith('/settings');
+  const dashboardRoutes = [
+    '/create',
+    '/library',
+    '/settings',
+    '/dashboard',
+    '/absensi',
+    '/bank-materi',
+    '/kelompok',
+    '/koreksi',
+    '/perencana',
+    '/play',
+    '/profil',
+    '/ranking',
+    '/rapor',
+    '/roda-undian',
+  ]
+
+  const isDashboardRoute = dashboardRoutes.some(
+    (route) => request.nextUrl.pathname === route || request.nextUrl.pathname.startsWith(`${route}/`)
+  )
 
   if (!user && isDashboardRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
+    url.searchParams.set('next', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 
-  const isAuthRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register';
+  // Lindungi endpoint internal /api/* dari pemanggilan tanpa otentikasi
+  const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
+  if (!user && isApiRoute) {
+    return NextResponse.json(
+      { error: 'Sesi login tidak valid atau telah kedaluwarsa. Silakan login terlebih dahulu.' },
+      { status: 401 }
+    )
+  }
+
+  const isAuthRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register'
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone()
-    url.pathname = '/create'
+    const nextDestination = request.nextUrl.searchParams.get('next') || '/create'
+    url.pathname = nextDestination
+    url.search = ''
     return NextResponse.redirect(url)
   }
 
