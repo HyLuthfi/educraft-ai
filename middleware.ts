@@ -71,10 +71,14 @@ export async function middleware(request: NextRequest) {
   // Lindungi endpoint internal /api/* dari pemanggilan tanpa otentikasi
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
   if (!user && isApiRoute) {
-    return NextResponse.json(
-      { error: 'Sesi login tidak valid atau telah kedaluwarsa. Silakan login terlebih dahulu.' },
-      { status: 401 }
-    )
+    const apiKey = request.headers.get('x-api-key') || ''
+    const validKey = process.env.AI_ENGINE_API_KEY || 'dev-key-educraft'
+    if (apiKey !== validKey) {
+      return NextResponse.json(
+        { error: 'Sesi login tidak valid atau telah kedaluwarsa. Silakan login terlebih dahulu.' },
+        { status: 401 }
+      )
+    }
   }
 
   const isAuthRoute = request.nextUrl.pathname === '/login' || request.nextUrl.pathname === '/register'
