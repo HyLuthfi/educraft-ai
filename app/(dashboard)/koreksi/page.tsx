@@ -26,7 +26,10 @@ import {
   ChevronRight,
   Save,
   Pencil,
+  FileSpreadsheet,
+  Share2,
 } from "lucide-react";
+import * as XLSX from "xlsx";
 import KoreksiCharts from "@/app/components/KoreksiCharts";
 import { buatSupabaseClient } from "@/lib/supabase/client";
 
@@ -620,6 +623,77 @@ export default function AutoKoreksiPage() {
     }
   };
 
+  const handleExportKoreksiExcel = () => {
+    if (!koreksiResult || !koreksiResult.hasil || koreksiResult.hasil.length === 0) {
+      toast.error("Belum ada data hasil koreksi untuk diekspor.");
+      return;
+    }
+
+    const rows: any[] = [];
+    rows.push(["LAPORAN HASIL KOREKSI UJIAN SISWA"]);
+    rows.push(["TANGGAL KOREKSI", new Date().toLocaleDateString("id-ID")]);
+    rows.push(["TOTAL SISWA", koreksiResult.hasil.length]);
+    rows.push(["SKALA PENILAIAN", scoringConfig.skala]);
+    rows.push(["KKM", scoringConfig.kkm]);
+    if (koreksiResult.analitik_kelas) {
+      rows.push(["ANALITIK KELAS", koreksiResult.analitik_kelas]);
+    }
+    rows.push([]);
+
+    rows.push(["No", "Nama Siswa", "Nilai Akhir", "Status Kelulusan", "Catatan & Rekomendasi"]);
+
+    koreksiResult.hasil.forEach((s, idx) => {
+      rows.push([
+        idx + 1,
+        s.nama_siswa,
+        s.nilai_akhir,
+        s.status_kelulusan === "tuntas" ? "TUNTAS" : "REMEDIAL",
+        s.rekomendasi || "-",
+      ]);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    worksheet["!cols"] = [
+      { wch: 6 },
+      { wch: 30 },
+      { wch: 14 },
+      { wch: 18 },
+      { wch: 50 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Hasil_Koreksi");
+
+    const fileName = `Hasil_Koreksi_${new Date().toISOString().slice(0, 10)}.xlsx`;
+    XLSX.writeFile(workbook, fileName);
+    toast.success("Hasil koreksi berhasil diunduh ke format Excel!");
+  };
+
+  const handleShareKoreksiWhatsApp = () => {
+    if (!koreksiResult || !koreksiResult.hasil || koreksiResult.hasil.length === 0) return;
+
+    const total = koreksiResult.hasil.length;
+    const tuntas = koreksiResult.hasil.filter((s) => s.status_kelulusan === "tuntas").length;
+    const persentase = total > 0 ? ((tuntas / total) * 100).toFixed(0) : "0";
+
+    let text = `*LAPORAN HASIL KOREKSI UJIAN*\n`;
+    text += `*Tanggal:* ${new Date().toLocaleDateString("id-ID")}\n`;
+    text += `*Total Siswa:* ${total} | *Ketuntasan:* ${persentase}% (${tuntas}/${total} Tuntas)\n\n`;
+
+    text += `*DAFTAR NILAI SISWA:*\n`;
+    koreksiResult.hasil.forEach((s, i) => {
+      const statusBadge = s.status_kelulusan === "tuntas" ? "✓" : "✗";
+      text += `${i + 1}. ${s.nama_siswa} — Nilai: *${s.nilai_akhir}* [${statusBadge}]\n`;
+    });
+
+    if (koreksiResult.analitik_kelas) {
+      text += `\n*ANALISIS KELAS:*\n${koreksiResult.analitik_kelas}\n`;
+    }
+
+    navigator.clipboard.writeText(text);
+    toast.success("Ringkasan nilai format WhatsApp berhasil disalin ke clipboard!");
+  };
+
   // ── Tabs rendering helper ──
   const InputMethodTabs = ({
     active,
@@ -716,32 +790,46 @@ export default function AutoKoreksiPage() {
               <span className="text-xs font-bold uppercase tracking-widest text-black dark:text-white">Hasil Analisis AI</span>
               <h1 className="text-2xl sm:text-3xl font-editorial font-bold text-black dark:text-white mt-1">Laporan Auto-Koreksi</h1>
             </div>
-            <div className="grid grid-cols-3 gap-2 w-full md:w-auto md:flex md:items-center">
+            <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
               <button
                 onClick={() => setKoreksiResult(null)}
-                className="py-2.5 px-2 sm:px-4 md:px-5 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-all bg-white dark:bg-[#1e1e1e] dark:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] active:translate-y-0.5"
+                className="py-2.5 px-3 sm:px-4 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-all bg-white dark:bg-[#1e1e1e] dark:text-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] active:translate-y-0.5 cursor-pointer"
               >
                 <RotateCcw size={14} className="shrink-0" />
-                <span className="truncate">Edit Data</span>
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={handleExportKoreksiExcel}
+                className="py-2.5 px-3 sm:px-4 border-2 border-black font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all bg-emerald-400 hover:bg-emerald-300 text-black shadow-[2px_2px_0px_0px_#000] active:translate-y-0.5 cursor-pointer"
+              >
+                <FileSpreadsheet size={14} className="shrink-0" />
+                <span>Excel</span>
+              </button>
+              <button
+                onClick={handleShareKoreksiWhatsApp}
+                className="py-2.5 px-3 sm:px-4 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all bg-white dark:bg-[#1e1e1e] dark:text-white hover:bg-gray-50 dark:hover:bg-[#2a2a2a] shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] active:translate-y-0.5 cursor-pointer"
+              >
+                <Share2 size={14} className="shrink-0 text-emerald-600" />
+                <span>Salin WA</span>
               </button>
               <button
                 onClick={handleSaveSesi}
                 disabled={isSaving || isSaved}
-                className={`py-2.5 px-2 sm:px-4 md:px-5 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] disabled:opacity-60 disabled:cursor-not-allowed active:translate-y-0.5 ${
+                className={`py-2.5 px-3 sm:px-4 border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] disabled:opacity-60 disabled:cursor-not-allowed active:translate-y-0.5 cursor-pointer ${
                   isSaved
                     ? "bg-green-500 text-white border-green-600"
                     : "bg-white dark:bg-[#1e1e1e] dark:text-white hover:bg-gray-50 dark:hover:bg-[#2a2a2a]"
                 }`}
               >
                 {isSaved ? <CheckCircle size={14} className="shrink-0" /> : <Save size={14} className="shrink-0" />}
-                <span className="truncate">{isSaving ? "Menyimpan..." : isSaved ? "Tersimpan" : "Simpan Sesi"}</span>
+                <span>{isSaving ? "Menyimpan..." : isSaved ? "Tersimpan" : "Simpan"}</span>
               </button>
               <button
                 onClick={() => window.print()}
-                className="py-2.5 px-2 sm:px-4 md:px-5 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-y-0.5"
+                className="py-2.5 px-3 sm:px-4 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm flex items-center justify-center gap-1 sm:gap-2 hover:bg-gray-800 dark:hover:bg-gray-200 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-y-0.5 cursor-pointer"
               >
                 <Printer size={14} className="shrink-0" />
-                <span className="truncate">Cetak</span>
+                <span>Cetak</span>
               </button>
             </div>
           </div>

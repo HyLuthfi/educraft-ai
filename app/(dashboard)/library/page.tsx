@@ -6,6 +6,8 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { buatSupabaseClient } from "@/lib/supabase/client";
 import { MathText } from "@/app/components/MathText";
+import GoogleFormExportButton from "@/app/components/GoogleFormExportButton";
+import QuizizzExportButton from "@/app/components/QuizizzExportButton";
 import {
   Folder,
   FileText,
@@ -1003,6 +1005,17 @@ export default function LibraryPage() {
                       </>
                     )}
                   </button>
+                </div>
+
+                {/* Ekspor Platform Digital */}
+                <div className="pt-3 border-t border-black/10 dark:border-white/10 space-y-2">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 block">
+                    Atau Ekspor Langsung ke Platform Kuis
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <GoogleFormExportButton soalData={activeDoc.content} />
+                    <QuizizzExportButton soalData={activeDoc.content} />
+                  </div>
                 </div>
               </div>
             </motion.div>
