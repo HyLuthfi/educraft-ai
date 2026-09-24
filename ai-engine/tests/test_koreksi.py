@@ -1,34 +1,32 @@
 import pytest
+import json
 from unittest.mock import patch
 
 def test_endpoint_koreksi_sukses(client):
-    mock_response = """
+    mock_student_response = """
     {
-        "hasil": [
-            {
-                "nama_siswa": "Budi",
-                "nilai_akhir": "100",
-                "status_kelulusan": "tuntas",
-                "detail_koreksi": [
-                    {
-                        "nomor": 1,
-                        "pertanyaan": "Siapa presiden pertama Indonesia?",
-                        "jawaban_siswa": "Soekarno",
-                        "kunci_jawaban": "Soekarno",
-                        "status": "benar",
-                        "nilai": 1.0,
-                        "catatan": "Jawaban benar"
-                    }
-                ],
-                "rekomendasi": "Pertahankan prestasi"
-            }
-        ],
-        "analitik_kelas": "Rata-rata kelas sangat baik."
+        "hasil": {
+            "nama_siswa": "Budi",
+            "nilai_akhir": "100",
+            "status_kelulusan": "tuntas",
+            "detail_koreksi": [
+                {
+                    "nomor": 1,
+                    "pertanyaan": "Siapa presiden pertama Indonesia?",
+                    "jawaban_siswa": "Soekarno",
+                    "kunci_jawaban": "Soekarno",
+                    "status": "benar",
+                    "nilai": 1.0,
+                    "catatan": "Jawaban benar"
+                }
+            ],
+            "rekomendasi": "Pertahankan prestasi"
+        }
     }
     """
     
     # Mock panggilan Gemini di router.koreksi
-    with patch("router.koreksi.panggil_ai", return_value=mock_response):
+    with patch("router.koreksi.panggil_ai", side_effect=[mock_student_response, "Rata-rata kelas sangat baik."]):
         payload = {
             "soalText": "1. Siapa presiden pertama Indonesia? Kunci: Soekarno",
             "students": [
@@ -49,12 +47,23 @@ def test_endpoint_koreksi_sukses(client):
         response = client.post("/api/correct", json=payload)
         
         assert response.status_code == 200
-        data = response.json()
-        assert "hasil" in data
-        assert len(data["hasil"]) == 1
-        assert data["hasil"][0]["nama_siswa"] == "Budi"
-        assert data["hasil"][0]["nilai_akhir"] == "100"
-        assert data["analitik_kelas"] == "Rata-rata kelas sangat baik."
+        assert "text/event-stream" in response.headers.get("content-type", "")
+
+        events = []
+        for line in response.text.split("\n"):
+            line = line.strip()
+            if line.startswith("data: "):
+                events.append(json.loads(line[6:]))
+
+        event_types = [e.get("type") for e in events]
+        assert "status" in event_types
+        assert "hasil" in event_types
+        assert "analitik" in event_types
+        assert "done" in event_types
+
+        hasil_event = next(e for e in events if e.get("type") == "hasil")
+        assert hasil_event["data"]["nama_siswa"] == "Budi"
+        assert hasil_event["data"]["nilai_akhir"] == "100"
 
 def test_endpoint_koreksi_error_validasi(client):
     # Kirim payload kosong untuk memicu error 422

@@ -69,7 +69,10 @@ def _koreksi_satu_siswa(sys_prompt: str, soal_text: str, siswa: dict) -> dict:
     clean = raw.replace("```json", "").replace("```", "").strip()
     data = json.loads(clean)
     # Schema single-student membungkus hasil di key "hasil".
-    return data.get("hasil", data)
+    hasil = data.get("hasil", data)
+    if isinstance(hasil, list) and len(hasil) > 0:
+        hasil = hasil[0]
+    return hasil
 
 
 @router.post("/correct")
