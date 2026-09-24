@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { ImportAbsensiModal } from "@/app/components/ImportAbsensiModal";
 import {
   Users,
   Type,
@@ -91,6 +92,7 @@ export default function BuatKelompokPage() {
   const [result, setResult] = useState<ResponseKelompok | null>(null);
   const [view, setView] = useState<"input" | "result">("input");
   const [hideDeskripsi, setHideDeskripsi] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -233,10 +235,20 @@ export default function BuatKelompokPage() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* ── Input Card ── */}
         <div className="bg-white dark:bg-[#1e1e1e] border-2 sm:border-4 border-black dark:border-white/20 p-3.5 sm:p-6 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)]">
-          <h2 className="text-base sm:text-lg font-black uppercase tracking-wider mb-3 sm:mb-4 dark:text-white flex items-center gap-2">
-            <span className="bg-yellow-300 border-2 border-black w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-xs sm:text-sm">1</span>
-            Daftar Siswa
-          </h2>
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-4">
+            <h2 className="text-base sm:text-lg font-black uppercase tracking-wider dark:text-white flex items-center gap-2">
+              <span className="bg-yellow-300 border-2 border-black w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center text-xs sm:text-sm">1</span>
+              Daftar Siswa
+            </h2>
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black font-black uppercase text-[10px] sm:text-xs tracking-wider shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+            >
+              <Users size={13} className="sm:w-3.5 sm:h-3.5" />
+              <span>Impor dari Absensi</span>
+            </button>
+          </div>
 
           {/* Tabs */}
           <div className="flex gap-1.5 sm:gap-2 mb-3 sm:mb-4">
@@ -559,6 +571,15 @@ export default function BuatKelompokPage() {
           }
         }
       `}</style>
+
+      <ImportAbsensiModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={(names) => {
+          setInputMethod("text");
+          setRawStudents(names.map((n, i) => `${i + 1}. ${n}`).join("\n"));
+        }}
+      />
     </div>
   );
 }

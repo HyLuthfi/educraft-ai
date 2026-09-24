@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { ImportAbsensiModal } from "@/app/components/ImportAbsensiModal";
 import {
   Dice5,
   Play,
@@ -14,6 +15,7 @@ import {
   Sparkles,
   Type,
   ChevronDown,
+  Users,
 } from "lucide-react";
 
 const CARD_COLORS = [
@@ -42,6 +44,7 @@ export default function RodaUndianPage() {
   const [noRepeat, setNoRepeat] = useState(true);
   const [pickedNames, setPickedNames] = useState<string[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
 
   // The long strip of names used for the reel animation, and the offset to land on
   const [reelItems, setReelItems] = useState<{ name: string; color: string }[]>([]);
@@ -210,13 +213,23 @@ export default function RodaUndianPage() {
               rows={5}
               className="w-full p-2.5 sm:p-3 text-xs sm:text-sm border-2 border-black dark:border-white/20 bg-[#f9f9f9] dark:bg-[#121212] dark:text-white font-medium resize-none focus:outline-none focus:ring-0 focus:border-black"
             />
-            <button
-              onClick={handleClearNames}
-              className="mt-2.5 sm:mt-3 w-full flex items-center justify-center gap-2 py-2 sm:py-2.5 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 font-bold uppercase text-xs sm:text-sm tracking-wider hover:bg-red-50 dark:hover:bg-[#333] transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] sm:dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] active:translate-y-1 active:translate-x-1 active:shadow-none"
-            >
-              <Trash2 size={14} />
-              Bersihkan
-            </button>
+            <div className="mt-2.5 sm:mt-3 grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setIsImportModalOpen(true)}
+                className="flex items-center justify-center gap-1.5 py-2 sm:py-2.5 bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black font-black uppercase text-[11px] sm:text-xs tracking-wider shadow-[2px_2px_0px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer"
+              >
+                <Users size={14} />
+                Impor Absensi
+              </button>
+              <button
+                onClick={handleClearNames}
+                className="flex items-center justify-center gap-1.5 py-2 sm:py-2.5 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 font-bold uppercase text-[11px] sm:text-xs tracking-wider hover:bg-red-50 dark:hover:bg-[#333] transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none"
+              >
+                <Trash2 size={14} />
+                Bersihkan
+              </button>
+            </div>
           </div>
 
           {/* Options */}
@@ -397,6 +410,15 @@ export default function RodaUndianPage() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <ImportAbsensiModal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        onImport={(names) => {
+          setRawStudents(names.join("\n"));
+          setPickedNames([]);
+        }}
+      />
     </div>
   );
 }
