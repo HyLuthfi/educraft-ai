@@ -21,9 +21,14 @@ import {
   ClipboardList,
   Trophy,
   ArrowUpRight,
+  FileSpreadsheet,
+  Settings,
 } from "lucide-react";
+import { toast } from "sonner";
+import * as XLSX from "xlsx";
 import { buatSupabaseClient } from "@/lib/supabase/client";
 import { TrenLineChart, TrenBadge, RataRataBar, type TitikTren } from "@/app/components/RaporCharts";
+import { ManageSesiKoreksiModal } from "@/app/components/ManageSesiKoreksiModal";
 
 // ── Bentuk data dari kolom JSONB `hasil` ──
 interface HasilSiswa {
@@ -66,6 +71,7 @@ export default function RaporPage() {
   const [sesiList, setSesiList] = useState<SesiRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
+  const [isManageModalOpen, setIsManageModalOpen] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -143,6 +149,49 @@ export default function RaporPage() {
 
   const numericSesiCount = sesiList.filter((s) => s.skala !== "huruf").length;
 
+  const handleExportRaporExcel = () => {
+    if (siswaTrenList.length === 0) {
+      toast.error("Belum ada data rapor untuk diekspor.");
+      return;
+    }
+
+    const rows: any[] = [];
+    rows.push(["RAPOR & TREN NILAI SISWA"]);
+    rows.push(["TANGGAL EKSPOR", new Date().toLocaleDateString("id-ID")]);
+    rows.push(["TOTAL SISWA", totalSiswa]);
+    rows.push(["RATA-RATA KELAS", rataKelas]);
+    rows.push([]);
+
+    rows.push(["Peringkat", "Nama Siswa", "Rata-Rata Nilai", "Total Sesi Diikuti", "Sesi Tuntas", "Riwayat Nilai"]);
+
+    siswaTrenList.forEach((s, idx) => {
+      const historyStr = s.data.map((d) => `${d.label}: ${d.nilai}`).join(", ");
+      rows.push([
+        idx + 1,
+        s.nama,
+        s.rataRata,
+        s.totalSesi,
+        s.tuntasCount,
+        historyStr,
+      ]);
+    });
+
+    const worksheet = XLSX.utils.aoa_to_sheet(rows);
+    worksheet["!cols"] = [
+      { wch: 10 },
+      { wch: 30 },
+      { wch: 16 },
+      { wch: 18 },
+      { wch: 14 },
+      { wch: 45 },
+    ];
+
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Rapor_Siswa");
+    XLSX.writeFile(workbook, `Rapor_Siswa_${new Date().toISOString().slice(0, 10)}.xlsx`);
+    toast.success("Rapor siswa berhasil diunduh ke format Excel!");
+  };
+
   // ── Loading ──
   if (loading) {
     return (
@@ -161,17 +210,41 @@ export default function RaporPage() {
     <div className="min-h-screen bg-[#f9f9f9] dark:bg-[#121212] p-3.5 sm:p-6 md:p-10 pb-24">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <header className="mb-4 sm:mb-8">
-          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-4">
-            <TrendingUp size={12} className="sm:w-3.5 sm:h-3.5" /> Analitik Longitudinal
+        <header className="mb-4 sm:mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
+          <div>
+            <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:px-3 sm:py-1 bg-black dark:bg-white text-white dark:text-black text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-2 sm:mb-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+              <TrendingUp size={12} className="sm:w-3.5 sm:h-3.5" /> Analitik Longitudinal
+            </div>
+            <h1 className="text-2xl sm:text-4xl md:text-5xl font-editorial font-bold tracking-tight text-black dark:text-white mb-1 sm:mb-2">
+              Rapor Siswa
+            </h1>
+            <p className="text-gray-600 dark:text-gray-400 font-medium text-xs sm:text-base max-w-2xl">
+              Pantau tren nilai tiap siswa lintas sesi koreksi. Data ditarik otomatis dari sesi
+              yang Anda simpan pada halaman Koreksi.
+            </p>
           </div>
-          <h1 className="text-2xl sm:text-4xl md:text-5xl font-editorial font-bold tracking-tight text-black dark:text-white mb-1 sm:mb-2">
-            Rapor Siswa
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400 font-medium text-xs sm:text-base max-w-2xl">
-            Pantau tren nilai tiap siswa lintas sesi koreksi. Data ditarik otomatis dari sesi
-            yang Anda simpan pada halaman Koreksi.
-          </p>
+
+          <div className="flex flex-wrap items-center gap-2 self-start md:self-auto shrink-0">
+            {siswaTrenList.length > 0 && (
+              <button
+                type="button"
+                onClick={handleExportRaporExcel}
+                className="px-3.5 sm:px-4 py-2 bg-emerald-400 hover:bg-emerald-300 text-black border-2 border-black font-bold uppercase text-xs tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+              >
+                <FileSpreadsheet size={14} />
+                <span>Unduh Excel</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={() => setIsManageModalOpen(true)}
+              className="px-3.5 sm:px-4 py-2 bg-white dark:bg-[#1e1e1e] text-black dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+            >
+              <Settings size={14} />
+              <span>Kelola Sesi ({sesiList.length})</span>
+            </button>
+          </div>
         </header>
 
         {/* Error */}
@@ -306,6 +379,14 @@ export default function RaporPage() {
             </div>
           </>
         )}
+
+        <ManageSesiKoreksiModal
+          isOpen={isManageModalOpen}
+          onClose={() => setIsManageModalOpen(false)}
+          onSesiDeleted={(deletedId) => {
+            setSesiList((prev) => prev.filter((s) => s.id !== deletedId));
+          }}
+        />
       </div>
     </div>
   );
