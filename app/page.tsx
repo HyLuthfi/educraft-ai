@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
+import { InstallAppButton } from "@/app/components/InstallAppButton";
 import {
   ANIMASI_FADE_UP,
   ANIMASI_STAGGER_CONTAINER,
@@ -120,7 +121,8 @@ export default function LandingPage() {
           </div>
 
           {/* Right Action Buttons */}
-          <div className="flex items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <InstallAppButton variant="navbar" className="hidden sm:flex" />
             <Link
               href="/login"
               className="text-xs sm:text-sm font-bold text-gray-800 hover:text-black transition-colors px-2 py-1.5 hidden md:block"
@@ -222,6 +224,7 @@ export default function LandingPage() {
                 </Link>
 
                 <div className="pt-3 border-t border-black/10 flex flex-col gap-2">
+                  <InstallAppButton variant="button" className="w-full text-xs" />
                   <Link
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}

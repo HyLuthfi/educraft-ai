@@ -25,6 +25,7 @@ import {
   X,
   ChevronRight,
 } from "lucide-react";
+import { InstallAppButton } from "@/app/components/InstallAppButton";
 
 export default function DashboardLayout({
   children,
@@ -204,7 +205,8 @@ export default function DashboardLayout({
           ))}
         </nav>
 
-        <div className="px-4 pb-2">
+        <div className="px-4 pb-2 space-y-2">
+          <InstallAppButton variant="sidebar" />
           <Link
             href="/settings"
             className={`flex items-center gap-3 px-4 py-3 rounded-none font-medium transition-all ${
@@ -492,7 +494,8 @@ export default function DashboardLayout({
               </nav>
 
               {/* Drawer Footer Actions */}
-              <div className="p-4 border-t border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] space-y-1.5">
+              <div className="p-4 border-t border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] space-y-2">
+                <InstallAppButton variant="button" className="w-full text-xs" />
                 <Link
                   href="/settings"
                   onClick={() => setIsMobileDrawerOpen(false)}
