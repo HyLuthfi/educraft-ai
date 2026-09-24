@@ -13,6 +13,7 @@ import {
   LogOut,
   LayoutDashboard,
   Gamepad2,
+  FileQuestion,
   ClipboardCheck,
   UserCheck,
   TrendingUp,
@@ -117,7 +118,7 @@ export default function DashboardLayout({
       label: "Soal & Penilaian",
       items: [
         { name: "Buat Soal", href: "/create", icon: Sparkles },
-        { name: "Jawab Soal", href: "/play", icon: Gamepad2 },
+        { name: "Bedah & Kunci Soal", href: "/play", icon: FileQuestion },
         { name: "Koreksi Jawaban", href: "/koreksi", icon: ClipboardCheck },
       ],
     },

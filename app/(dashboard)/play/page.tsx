@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
+import { SelectBankSoalModal } from "@/app/components/SelectBankSoalModal";
 import {
   ChevronRight,
   ChevronLeft,
@@ -70,6 +71,7 @@ export default function SolveQuestionWizard() {
 
   const [solvedQuestions, setSolvedQuestions] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
+  const [isSelectBankSoalOpen, setIsSelectBankSoalOpen] = useState(false);
 
   // Autosave draft (teks saja; File tak bisa diserialisasi ke localStorage).
   useEffect(() => {
@@ -241,16 +243,25 @@ export default function SolveQuestionWizard() {
 
               <div className="space-y-4 sm:space-y-8">
                 <div className="border-2 border-black dark:border-white/20 p-3 sm:p-6 bg-white dark:bg-[#1e1e1e]">
-                  <div className="flex justify-between items-start mb-3 sm:mb-4">
+                  <div className="flex flex-wrap justify-between items-start gap-2 mb-3 sm:mb-4">
                     <div>
                       <h2 className="text-base sm:text-xl font-bold mb-0.5 sm:mb-1">Bahan Baku Soal Mentah</h2>
                       <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">Pilih satu atau beberapa jenis input untuk memasukkan soal berantakan Anda.</p>
                     </div>
-                    {(rawQuestions || rawFiles.length > 0) && (
-                      <button onClick={() => { setRawQuestions(""); setRawFiles([]); }} className="px-2.5 sm:px-3 py-1 sm:py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-1">
-                        <Trash2 size={13} /> Reset
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsSelectBankSoalOpen(true)}
+                        className="px-2.5 sm:px-3 py-1 sm:py-1.5 bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black font-black uppercase text-xs flex items-center gap-1.5 shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                      >
+                        <FileQuestion size={13} /> Pilih dari Bank Soal
                       </button>
-                    )}
+                      {(rawQuestions || rawFiles.length > 0) && (
+                        <button onClick={() => { setRawQuestions(""); setRawFiles([]); }} className="px-2.5 sm:px-3 py-1 sm:py-1.5 border border-red-500 text-red-500 font-bold hover:bg-red-50 transition-colors text-xs flex items-center gap-1">
+                          <Trash2 size={13} /> Reset
+                        </button>
+                      )}
+                    </div>
                   </div>
                   
                   <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6">
@@ -668,6 +679,18 @@ export default function SolveQuestionWizard() {
           )}
         </AnimatePresence>
       </div>
+
+      <SelectBankSoalModal
+        isOpen={isSelectBankSoalOpen}
+        onClose={() => setIsSelectBankSoalOpen(false)}
+        onSelect={(item) => {
+          if (!rawInputTypes.includes("text")) {
+            setRawInputTypes((prev) => [...prev, "text"]);
+          }
+          setRawQuestions(item.questionsText);
+          toast.success(`Paket "${item.title}" (${item.questionsCount} soal) siap dibedah!`);
+        }}
+      />
     </div>
   );
 }

@@ -32,7 +32,13 @@ import {
   FolderKanban,
   Plus,
   Minus,
+  BookmarkPlus,
+  Copy,
+  Check,
+  Loader2,
 } from "lucide-react";
+import { buatSupabaseClient } from "@/lib/supabase/client";
+import { SelectBankMateriModal } from "@/app/components/SelectBankMateriModal";
 
 type MetodeInput = "text" | "file" | "image";
 
@@ -125,6 +131,10 @@ export default function PerencanaPembelajaranPage() {
   const [result, setResult] = useState<RencanaPembelajaran | null>(null);
   const [view, setView] = useState<"input" | "result">("input");
   const [pertemuanAktif, setPertemuanAktif] = useState(0);
+
+  const [isSaving, setIsSaving] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [isSelectMateriOpen, setIsSelectMateriOpen] = useState(false);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
@@ -229,6 +239,91 @@ export default function PerencanaPembelajaranPage() {
 
   const handlePrint = () => window.print();
 
+  const formatFullRencanaMarkdown = (rencana: RencanaPembelajaran): string => {
+    const parts: string[] = [];
+    parts.push(`# ${rencana.judul_rencana}`);
+    parts.push(`*Rencana Pembelajaran (${rencana.total_pertemuan} Pertemuan)*\n`);
+    parts.push(`## Ringkasan Modul\n${rencana.ringkasan}\n`);
+
+    rencana.daftar_pertemuan.forEach((p) => {
+      parts.push(`---\n### Pertemuan ${p.pertemuan_ke}: ${p.judul_pertemuan}`);
+      parts.push(`- **Topik:** ${p.topik}`);
+      parts.push(`- **Metode Pembelajaran:** ${p.metode}`);
+      parts.push(`- **Bentuk Penilaian:** ${p.penilaian}`);
+
+      if (p.tujuan_pembelajaran && p.tujuan_pembelajaran.length > 0) {
+        parts.push(`\n**Tujuan Pembelajaran:**`);
+        p.tujuan_pembelajaran.forEach((t) => parts.push(`• ${t}`));
+      }
+
+      if (p.materi_pokok && p.materi_pokok.length > 0) {
+        parts.push(`\n**Materi Pokok:**`);
+        p.materi_pokok.forEach((m) => parts.push(`• ${m}`));
+      }
+
+      if (p.aktivitas && p.aktivitas.length > 0) {
+        parts.push(`\n**Aktivitas Pembelajaran:**`);
+        p.aktivitas.forEach((a, i) => {
+          parts.push(`${i + 1}. [${a.tipe.toUpperCase()}] **${a.judul}** (${a.durasi_menit} menit)\n   ${a.deskripsi}`);
+        });
+      }
+
+      if (p.catatan_guru) {
+        parts.push(`\n*Catatan Guru:* ${p.catatan_guru}`);
+      }
+      parts.push("");
+    });
+
+    if (rencana.saran_asesmen) {
+      parts.push(`---\n## Saran Asesmen Akhir\n${rencana.saran_asesmen}`);
+    }
+
+    return parts.join("\n");
+  };
+
+  const handleSaveToBankMateri = async () => {
+    if (!result || isSaving) return;
+    setIsSaving(true);
+    const toastId = toast.loading("Menyimpan ke Bank Materi...");
+    try {
+      const supabase = buatSupabaseClient();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) {
+        toast.error("Silakan login terlebih dahulu untuk menyimpan.", { id: toastId });
+        return;
+      }
+
+      const formatted = formatFullRencanaMarkdown(result);
+
+      const { error } = await supabase.from("bank_materi").insert({
+        user_id: user.id,
+        judul: result.judul_rencana || "Rencana Pembelajaran",
+        jenis_sumber: "rencana_ajar",
+        konten_mentah: formatted,
+      });
+
+      if (error) throw error;
+
+      setIsSaved(true);
+      toast.success("Rencana pembelajaran berhasil disimpan ke Bank Materi!", { id: toastId });
+    } catch (err: any) {
+      console.error(err);
+      toast.error("Gagal menyimpan ke Bank Materi: " + (err.message || "Error"), { id: toastId });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleCopyFullPlan = () => {
+    if (!result) return;
+    const text = formatFullRencanaMarkdown(result);
+    navigator.clipboard.writeText(text);
+    toast.success("Rencana pembelajaran lengkap berhasil disalin ke clipboard!");
+  };
+
   return (
     <div className="p-3.5 sm:p-6 md:p-10 max-w-7xl mx-auto space-y-4 sm:space-y-10 pb-24">
       {view === "input" && (
@@ -253,10 +348,20 @@ export default function PerencanaPembelajaranPage() {
             {/* ── Materi Card ── */}
             <div className="bg-white dark:bg-[#1e1e1e] border-2 sm:border-4 border-black dark:border-white/20 p-3.5 sm:p-6 md:p-10 shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.1)] flex flex-col justify-between h-full space-y-4 sm:space-y-6">
               <div>
-                <h2 className="text-base sm:text-xl font-black uppercase tracking-wider mb-3 sm:mb-6 dark:text-white flex items-center gap-2 sm:gap-3">
-                  <span className="bg-yellow-300 border-2 border-black w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]">1</span>
-                  Materi Pembelajaran
-                </h2>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 sm:mb-6">
+                  <h2 className="text-base sm:text-xl font-black uppercase tracking-wider dark:text-white flex items-center gap-2 sm:gap-3">
+                    <span className="bg-yellow-300 border-2 border-black w-6 h-6 sm:w-8 sm:h-8 flex items-center justify-center text-xs sm:text-sm shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)]">1</span>
+                    Materi Pembelajaran
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectMateriOpen(true)}
+                    className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 bg-yellow-300 hover:bg-yellow-400 text-black border-2 border-black font-black uppercase text-[10px] sm:text-xs tracking-wider shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                  >
+                    <BookOpen size={13} className="sm:w-3.5 sm:h-3.5" />
+                    <span>Pilih dari Bank Materi</span>
+                  </button>
+                </div>
 
                 {/* Tabs */}
                 <div className="flex gap-1.5 sm:gap-3 mb-3 sm:mb-6">
@@ -552,8 +657,24 @@ export default function PerencanaPembelajaranPage() {
           setPertemuanAktif={setPertemuanAktif}
           onBack={handleBack}
           onPrint={handlePrint}
+          onSave={handleSaveToBankMateri}
+          onCopy={handleCopyFullPlan}
+          isSaving={isSaving}
+          isSaved={isSaved}
         />
       )}
+
+      <SelectBankMateriModal
+        isOpen={isSelectMateriOpen}
+        onClose={() => setIsSelectMateriOpen(false)}
+        onSelect={(item) => {
+          setMetodeInput("text");
+          setRawMateri(item.konten);
+          if (!mataPelajaran && item.judul) {
+            setMataPelajaran(item.judul.split("-")[0].trim());
+          }
+        }}
+      />
 
       <style jsx global>{`
         @media print {
@@ -577,6 +698,10 @@ interface RencanaResultProps {
   setPertemuanAktif: (i: number) => void;
   onBack: () => void;
   onPrint: () => void;
+  onSave: () => void;
+  onCopy: () => void;
+  isSaving: boolean;
+  isSaved: boolean;
 }
 
 function RencanaResult({
@@ -585,6 +710,10 @@ function RencanaResult({
   setPertemuanAktif,
   onBack,
   onPrint,
+  onSave,
+  onCopy,
+  isSaving,
+  isSaved,
 }: RencanaResultProps) {
   const aktif = result.daftar_pertemuan[pertemuanAktif];
 
@@ -594,16 +723,45 @@ function RencanaResult({
       <div className="no-print flex flex-wrap items-center justify-between gap-2.5 sm:gap-4 mb-4 sm:mb-8">
         <button
           onClick={onBack}
-          className="inline-flex items-center gap-1.5 sm:gap-2.5 px-3.5 sm:px-5 py-2 sm:py-3 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all"
+          className="inline-flex items-center gap-1.5 sm:gap-2.5 px-3.5 sm:px-5 py-2 sm:py-3 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.15)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
         >
           <ArrowLeft size={16} className="sm:w-[18px] sm:h-[18px]" /> Kembali ke Input
         </button>
-        <button
-          onClick={onPrint}
-          className="flex items-center gap-1.5 sm:gap-2.5 px-3.5 sm:px-5 py-2 sm:py-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white/20 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all"
-        >
-          <Printer size={16} className="sm:w-[18px] sm:h-[18px]" /> Cetak Rencana
-        </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={onCopy}
+            className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-3 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[2px_2px_0px_0px_#000] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
+          >
+            <Copy size={15} /> Salin Teks
+          </button>
+
+          <button
+            onClick={onSave}
+            disabled={isSaving || isSaved}
+            className={`flex items-center gap-1.5 sm:gap-2 px-3.5 sm:px-5 py-2 sm:py-3 border-2 border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[2px_2px_0px_0px_#000] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer ${
+              isSaved
+                ? "bg-emerald-300 text-black border-emerald-600 cursor-default"
+                : "bg-yellow-300 hover:bg-yellow-400 text-black"
+            }`}
+          >
+            {isSaving ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : isSaved ? (
+              <Check size={16} />
+            ) : (
+              <BookmarkPlus size={16} />
+            )}
+            <span>{isSaving ? "Menyimpan..." : isSaved ? "Tersimpan di Materi" : "Simpan ke Bank Materi"}</span>
+          </button>
+
+          <button
+            onClick={onPrint}
+            className="flex items-center gap-1.5 sm:gap-2.5 px-3.5 sm:px-5 py-2 sm:py-3 bg-black dark:bg-white text-white dark:text-black border-2 border-black dark:border-white/20 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[2px_2px_0px_0px_rgba(0,0,0,0.3)] active:translate-y-1 active:translate-x-1 active:shadow-none transition-all cursor-pointer"
+          >
+            <Printer size={16} className="sm:w-[18px] sm:h-[18px]" /> Cetak Rencana
+          </button>
+        </div>
       </div>
 
       {/* Result header */}
