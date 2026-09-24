@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { buatSupabaseClient } from "@/lib/supabase/client";
+import { MathText } from "@/app/components/MathText";
 import {
   Folder,
   FileText,
@@ -697,9 +698,9 @@ export default function LibraryPage() {
                         className="w-full p-2.5 text-xs sm:text-sm font-bold border-2 border-black/20 dark:border-white/20 outline-none focus:border-black bg-white dark:bg-[#2a2a2a] dark:text-white"
                       />
                     ) : (
-                      <p className="font-bold text-xs sm:text-sm text-black dark:text-white leading-relaxed">
-                        {q.teks}
-                      </p>
+                      <div className="font-bold text-xs sm:text-sm text-black dark:text-white leading-relaxed">
+                        <MathText content={q.teks} />
+                      </div>
                     )}
 
                     {/* Options (Pilihan Ganda) */}
@@ -741,7 +742,9 @@ export default function LibraryPage() {
                                   className="w-full bg-white dark:bg-[#1e1e1e] p-1 border outline-none font-normal"
                                 />
                               ) : (
-                                <span className="flex-1 leading-snug">{op.teks}</span>
+                                <span className="flex-1 leading-snug">
+                                  <MathText content={op.teks} inline />
+                                </span>
                               )}
                             </div>
                           );
@@ -769,14 +772,14 @@ export default function LibraryPage() {
                             />
                           ) : (
                             <span className="font-black text-black dark:text-white bg-emerald-100 dark:bg-emerald-950 px-2 py-0.5 rounded border border-emerald-300 dark:border-emerald-800">
-                              {q.kunci_jawaban || "Tidak ada rujukan"}
+                              <MathText content={q.kunci_jawaban || "Tidak ada rujukan"} inline />
                             </span>
                           )}
                         </div>
 
                         {q.pembahasan && (
                           <div className="bg-yellow-50 dark:bg-yellow-950/20 border-l-2 border-yellow-400 p-2.5 text-[11px] text-gray-700 dark:text-gray-300 leading-relaxed font-sans">
-                            <strong>Pembahasan:</strong> {q.pembahasan}
+                            <strong>Pembahasan:</strong> <MathText content={q.pembahasan} />
                           </div>
                         )}
                       </div>

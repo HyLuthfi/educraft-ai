@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import { SelectBankSoalModal } from "@/app/components/SelectBankSoalModal";
+import { MathText } from "@/app/components/MathText";
 import {
   ChevronRight,
   ChevronLeft,
@@ -641,7 +642,9 @@ export default function SolveQuestionWizard() {
                             {q.tipe.toUpperCase()}
                           </span>
                         </div>
-                        <p className="font-semibold text-sm sm:text-lg mb-3 sm:mb-4 whitespace-pre-wrap break-words">{q.teks}</p>
+                        <div className="font-semibold text-sm sm:text-lg mb-3 sm:mb-4 leading-relaxed">
+                          <MathText content={q.teks} />
+                        </div>
                         
                         {q.tipe === "pg" && q.opsi && (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-2 sm:gap-3 mb-4 sm:mb-6">
@@ -655,7 +658,9 @@ export default function SolveQuestionWizard() {
                                 }`}
                               >
                                 <span className={`font-bold ${opt.benar ? "text-green-700" : "text-gray-400 dark:text-gray-500"}`}>{opt.label}.</span>
-                                <span className="break-words">{opt.teks}</span>
+                                <span className="break-words">
+                                  <MathText content={opt.teks} inline />
+                                </span>
                               </div>
                             ))}
                           </div>
@@ -665,9 +670,13 @@ export default function SolveQuestionWizard() {
                           <h4 className="font-bold text-blue-800 text-[11px] sm:text-xs uppercase tracking-wider mb-1.5 sm:mb-2 flex items-center gap-1.5">
                             <Sparkles size={13} /> Kunci Jawaban & Pembahasan
                           </h4>
-                          <p className="font-bold text-black dark:text-white text-xs sm:text-sm mb-1.5">Jawaban: {q.kunci_jawaban}</p>
+                          <div className="font-bold text-black dark:text-white text-xs sm:text-sm mb-1.5">
+                            Jawaban: <MathText content={q.kunci_jawaban || "-"} inline />
+                          </div>
                           {q.pembahasan && (
-                            <p className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm whitespace-pre-wrap break-words">{q.pembahasan}</p>
+                            <div className="text-gray-700 dark:text-gray-300 text-xs sm:text-sm leading-relaxed">
+                              <MathText content={q.pembahasan} />
+                            </div>
                           )}
                         </div>
                       </div>

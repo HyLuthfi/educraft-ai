@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 import GoogleFormExportButton from "@/app/components/GoogleFormExportButton";
 import QuizizzExportButton from "@/app/components/QuizizzExportButton";
+import { MathText } from "@/app/components/MathText";
 import {
   UploadCloud,
   FileText,
@@ -1203,7 +1204,9 @@ export default function CreateQuestionWizard() {
                           : "Revisi dengan AI"}
                       </button>
                     </div>
-                    <p className="font-medium text-sm sm:text-lg mb-3 sm:mb-4 leading-relaxed">{q.teks}</p>
+                    <div className="font-medium text-sm sm:text-lg mb-3 sm:mb-4 leading-relaxed">
+                      <MathText content={q.teks} />
+                    </div>
 
                     {false && q.image_prompt && (
                       <div className="mb-4 border border-black/10 dark:border-white/10 relative overflow-hidden bg-gray-100 dark:bg-[#2a2a2a]">
@@ -1232,7 +1235,7 @@ export default function CreateQuestionWizard() {
                           >
                             <span className="flex-1 leading-snug">
                               <span className="font-bold mr-1.5 text-black dark:text-white">{opt.label}.</span>
-                              {opt.teks}
+                              <MathText content={opt.teks} inline />
                             </span>
                             {opt.benar && (
                               <span className="text-[9px] sm:text-[10px] font-bold bg-green-600 text-white px-1.5 py-0.5 uppercase tracking-wider shrink-0">
@@ -1246,7 +1249,7 @@ export default function CreateQuestionWizard() {
 
                     {(q.kunci_jawaban || q.pembahasan) && q.tipe !== "pg" && (
                       <div className="p-2.5 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 mt-2 text-xs text-yellow-900 dark:text-yellow-200">
-                        <span className="font-bold">Kunci Jawaban:</span> {q.kunci_jawaban}
+                        <span className="font-bold">Kunci Jawaban:</span> <MathText content={q.kunci_jawaban} inline />
                       </div>
                     )}
 
@@ -1256,7 +1259,7 @@ export default function CreateQuestionWizard() {
                           <span>💡 Lihat Pembahasan & Analisis</span>
                         </summary>
                         <div className="mt-1 p-2.5 bg-blue-50/80 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-900/30 text-blue-900 dark:text-blue-200 leading-relaxed text-xs">
-                          {q.pembahasan}
+                          <MathText content={q.pembahasan} />
                         </div>
                       </details>
                     )}
