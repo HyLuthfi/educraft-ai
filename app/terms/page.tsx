@@ -63,7 +63,7 @@ export default function TermsPage() {
               </h2>
             </div>
             <p className="text-gray-700 dark:text-gray-300">
-              Selamat datang di EduCraft AI. Dengan mengakses atau menggunakan aplikasi web kami di <strong>https://educraft.mahya.uno</strong>, Anda menyatakan bahwa Anda telah membaca, memahami, dan menyetujui untuk terikat oleh Syarat dan Ketentuan ini. Jika Anda tidak menyetujui ketentuan ini, Anda tidak diperkenankan menggunakan layanan kami.
+              Selamat datang di EduCraft AI. Dengan mengakses atau menggunakan aplikasi web kami di <strong>https://educraft.saitech.uno</strong>, Anda menyatakan bahwa Anda telah membaca, memahami, dan menyetujui untuk terikat oleh Syarat dan Ketentuan ini. Jika Anda tidak menyetujui ketentuan ini, Anda tidak diperkenankan menggunakan layanan kami.
             </p>
           </section>
 

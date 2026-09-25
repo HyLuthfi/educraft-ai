@@ -1,7 +1,7 @@
 import { MetadataRoute } from 'next'
 
 export default function sitemap(): MetadataRoute.Sitemap {
-  const baseUrl = 'https://educraft.mahya.uno'
+  const baseUrl = 'https://educraft.saitech.uno'
   const lastModified = new Date()
 
   return [
