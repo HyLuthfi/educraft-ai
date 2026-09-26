@@ -63,7 +63,7 @@ export default function ContactPage() {
                 Untuk pertanyaan seputar autentikasi Google, permintaan data, atau kerjasama institusi sekolah:
               </p>
               <div className="p-3 bg-gray-50 dark:bg-[#2a2a2a] border border-black/10 dark:border-white/10 font-mono text-sm font-bold text-black dark:text-white">
-                support@saitech.uno
+                support@saitech.co.id
               </div>
             </div>
 
@@ -86,7 +86,7 @@ export default function ContactPage() {
             <h2 className="text-lg font-bold uppercase tracking-wide text-black dark:text-white mb-4">
               Kirim Pesan Langsung
             </h2>
-            <form action="mailto:support@saitech.uno" method="GET" className="space-y-4 text-xs sm:text-sm">
+            <form action="mailto:support@saitech.co.id" method="GET" className="space-y-4 text-xs sm:text-sm">
               <div>
                 <label className="block font-bold text-gray-700 dark:text-gray-300 uppercase tracking-wider text-[11px] mb-1">
                   Nama Lengkap

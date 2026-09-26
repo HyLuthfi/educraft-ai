@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'EduCraft AI',
   webDir: 'public',
   server: {
-    url: 'https://educraft.saitech.uno',
+    url: 'https://educraft.saitech.co.id',
     cleartext: true,
     errorPath: 'offline.html',
   },

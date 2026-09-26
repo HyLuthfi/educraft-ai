@@ -174,8 +174,8 @@ export default function PrivacyPage() {
             </ul>
             <p className="text-gray-700 dark:text-gray-300">
               Untuk mengajukan penghapusan akun atau pertanyaan terkait privasi, hubungi kami di:{" "}
-              <a href="mailto:support@saitech.uno" className="font-bold underline text-blue-600 dark:text-blue-400">
-                support@saitech.uno
+              <a href="mailto:support@saitech.co.id" className="font-bold underline text-blue-600 dark:text-blue-400">
+                support@saitech.co.id
               </a>
             </p>
           </section>
