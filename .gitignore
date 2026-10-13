@@ -20,31 +20,44 @@
 # production
 /build
 
-# misc
-.DS_Store
+# Credentials, Keys & Certificates
+.env*
+!.env.example
 *.pem
+*.key
+*.keystore
+*.jks
+*.p12
+*.pfx
 
 # debug
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+.pnpm-debug.log*
 
-# Python
+# Python & Virtual Environments
 ai-engine/__pycache__/
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
 env/
 venv/
+.venv/
+ai-engine/.venv/
+.pytest_cache/
+
+# Exported Documents & Binary Cache
 *.pdf
 *.docx
 !ai-engine/template/template_ujian.docx
-.pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
-!.env.example
+# Databases & Local Dumps
+*.sqlite3
+*.dump
+*.db
 
 # OS generated files
 .DS_Store
@@ -54,6 +67,7 @@ venv/
 .Trashes
 ehthumbs.db
 Thumbs.db
+desktop.ini
 
 # vercel
 .vercel
@@ -62,14 +76,10 @@ Thumbs.db
 *.tsbuildinfo
 next-env.d.ts
 
-# python
-__pycache__/
-*.pyc
-.pytest_cache/
-
 # IDEs
 .idea/
 *.swp
+*.code-workspace
 
 # supabase temp
 supabase/.temp/
