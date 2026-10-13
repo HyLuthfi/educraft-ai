@@ -1,0 +1,303 @@
+direction: right
+
+title: {
+  label: "EduCraft AI Platform — Full-Stack Architecture"
+  near: top-center
+  shape: text
+  style: {
+    font-size: 24
+    bold: true
+    font-color: "#f8fafc"
+  }
+}
+
+# ─────────────────────────────────────────
+# CLIENT & MULTI-PLATFORM INGRESS
+# ─────────────────────────────────────────
+client_layer: Multi-Platform Client Surface {
+  style: {
+    fill: "#030712"
+    stroke: "#38bdf8"
+    border-radius: 12
+    font-color: "#7dd3fc"
+    bold: true
+  }
+
+  web_pwa: "Next.js 14 App Router\nTailwind CSS · Framer Motion\nKaTeX Math · Lenis Scroll" {
+    shape: rectangle
+    style: {
+      fill: "#0b1329"
+      stroke: "#0284c7"
+      font-color: "#e0f2fe"
+    }
+  }
+
+  mobile_shell: "Capacitor Mobile Shell\nAndroid Native APK\ncom.educraft.ai" {
+    shape: rectangle
+    style: {
+      fill: "#0b1329"
+      stroke: "#0369a1"
+      font-color: "#bae6fd"
+    }
+  }
+
+  domain_portal: "Domain Gateway\neducraft.saitech.co.id\nPort 20180 (Production)" {
+    shape: hexagon
+    style: {
+      fill: "#082f49"
+      stroke: "#38bdf8"
+      font-color: "#f0f9ff"
+    }
+  }
+
+  web_pwa -> domain_portal: renders
+  mobile_shell -> domain_portal: wraps
+}
+
+# ─────────────────────────────────────────
+# GATEWAY & PERIMETER DEFENSE
+# ─────────────────────────────────────────
+gateway_layer: Gateway & Perimeter Defense {
+  style: {
+    fill: "#051814"
+    stroke: "#10b981"
+    border-radius: 12
+    font-color: "#6ee7b7"
+    bold: true
+  }
+
+  middleware: "Edge Middleware\nRoute Guard · Auth Interceptor\nSession Verification" {
+    shape: rectangle
+    style: {
+      fill: "#062e24"
+      stroke: "#059669"
+      font-color: "#a7f3d0"
+    }
+  }
+
+  pm2_mgr: "PM2 Process Manager\neducraft-web (:20180)\neducraft-backend (:8002)" {
+    shape: rectangle
+    style: {
+      fill: "#062e24"
+      stroke: "#047857"
+      font-color: "#6ee7b7"
+    }
+  }
+
+  api_guard: "Internal Security Handshake\nX-API-Key Interceptor\nCORS Whitelist" {
+    shape: rectangle
+    style: {
+      fill: "#062e24"
+      stroke: "#10b981"
+      font-color: "#d1fae5"
+    }
+  }
+
+  middleware -> api_guard: verifies
+  pm2_mgr -> middleware: orchestrates
+}
+
+# ─────────────────────────────────────────
+# BACKEND AI ENGINE SERVICE
+# ─────────────────────────────────────────
+backend_layer: Backend AI Engine (FastAPI) {
+  style: {
+    fill: "#0f172a"
+    stroke: "#818cf8"
+    border-radius: 12
+    font-color: "#c7d2fe"
+    bold: true
+  }
+
+  fastapi_core: "FastAPI Core (:8002)\nPython 3.11 Runtime\nUvicorn Async Worker" {
+    shape: rectangle
+    style: {
+      fill: "#1e1b4b"
+      stroke: "#6366f1"
+      font-color: "#e0e7ff"
+    }
+  }
+
+  routers: "Microservice Routers\n/api/generate · /api/parse-file\n/api/solve · /api/koreksi\n/api/perencana · /api/absensi" {
+    shape: rectangle
+    style: {
+      fill: "#1e1b4b"
+      stroke: "#4f46e5"
+      font-color: "#c7d2fe"
+    }
+  }
+
+  fastapi_core -> routers: dispatches
+}
+
+# ─────────────────────────────────────────
+# MULTIMODAL PROCESSING CORE
+# ─────────────────────────────────────────
+ai_core: Multimodal AI Processing Core {
+  style: {
+    fill: "#1e0e29"
+    stroke: "#c084fc"
+    border-radius: 12
+    font-color: "#e9d5ff"
+    bold: true
+  }
+
+  gemini_engine: "Google Gemini 1.5 AI\nFlash & Pro Reasoning\nStructured JSON Outputs" {
+    shape: hexagon
+    style: {
+      fill: "#3b0764"
+      stroke: "#a855f7"
+      font-color: "#f3e8ff"
+    }
+  }
+
+  doc_extractor: "Document Parser Engine\nPyMuPDF (PDF) · python-docx\npython-pptx · Tesseract OCR" {
+    shape: rectangle
+    style: {
+      fill: "#2e1065"
+      stroke: "#9333ea"
+      font-color: "#e9d5ff"
+    }
+  }
+
+  bloom_engine: "Taksonomi Bloom Engine\nC1-C6 Cognitive Levels\nHOTS / LOTS Pedagogical Logic\nRubrik Penilaian & Pembahasan" {
+    shape: rectangle
+    style: {
+      fill: "#2e1065"
+      stroke: "#7e22ce"
+      font-color: "#d8b4fe"
+    }
+  }
+
+  doc_extractor -> gemini_engine: context injection
+  gemini_engine -> bloom_engine: pedagogical alignment
+}
+
+# ─────────────────────────────────────────
+# OMNI-CHANNEL EXPORT ENGINE
+# ─────────────────────────────────────────
+export_engine: Omni-Channel Export & Classroom Tools {
+  style: {
+    fill: "#191100"
+    stroke: "#f59e0b"
+    border-radius: 12
+    font-color: "#fde68a"
+    bold: true
+  }
+
+  docx_builder: "MS Word Formatter\ndocxtpl Template Engine\ntemplate_ujian.docx (Kop Sekolah)" {
+    shape: rectangle
+    style: {
+      fill: "#451a03"
+      stroke: "#d97706"
+      font-color: "#fef3c7"
+    }
+  }
+
+  pdf_builder: "PDF Generator\nfpdf2 Dynamic Engine\nHeader, Subheader, Layout Cetak" {
+    shape: rectangle
+    style: {
+      fill: "#451a03"
+      stroke: "#b45309"
+      font-color: "#fde68a"
+    }
+  }
+
+  classroom_tools: "Smart Classroom Suite\nLive Quiz Arena (Play Mode)\nModul Ajar / RPP Kurikulum Merdeka\nKoreksi Jawaban & Rapor Siswa" {
+    shape: rectangle
+    style: {
+      fill: "#451a03"
+      stroke: "#f59e0b"
+      font-color: "#fef3c7"
+    }
+  }
+
+  docx_builder -> classroom_tools: shares
+  pdf_builder -> classroom_tools: shares
+}
+
+# ─────────────────────────────────────────
+# PERSISTENCE & DATA LAYER
+# ─────────────────────────────────────────
+data_layer: Persistence & State Layer (Supabase) {
+  style: {
+    fill: "#09121d"
+    stroke: "#0284c7"
+    border-radius: 12
+    font-color: "#bae6fd"
+    bold: true
+  }
+
+  postgres_db: "Supabase PostgreSQL\nRow Level Security (RLS)\nEncrypted JWT Session" {
+    shape: cylinder
+    style: {
+      fill: "#0c2340"
+      stroke: "#0369a1"
+      font-color: "#e0f2fe"
+    }
+  }
+
+  db_tables: "Relational Schemas\nprofiles · bank_materi\nset_soal · bank_soal\nsesi_koreksi · sesi_absensi" {
+    shape: rectangle
+    style: {
+      fill: "#0c2340"
+      stroke: "#0284c7"
+      font-color: "#bae6fd"
+    }
+  }
+
+  storage_bucket: "Supabase Storage\nassets/ Bucket\nDokumen & Bukti Absensi" {
+    shape: cylinder
+    style: {
+      fill: "#0c2340"
+      stroke: "#0369a1"
+      font-color: "#7dd3fc"
+    }
+  }
+
+  postgres_db -> db_tables: schemas
+  postgres_db -> storage_bucket: metadata
+}
+
+# ─────────────────────────────────────────
+# INTER-SERVICE DATA FLOW & CONNECTIONS
+# ─────────────────────────────────────────
+
+client_layer.domain_portal -> gateway_layer.middleware: HTTP / HTTPS Ingress {
+  style.stroke: "#38bdf8"
+  style.stroke-width: 2
+}
+
+gateway_layer.api_guard -> backend_layer.fastapi_core: "Authenticated Relay\n(X-API-Key Handshake)" {
+  style.stroke: "#10b981"
+  style.stroke-width: 2
+}
+
+backend_layer.routers -> ai_core.doc_extractor: "Multipart File Upload\n(PDF, DOCX, PPTX)" {
+  style.stroke: "#a855f7"
+  style.stroke-width: 2
+}
+
+backend_layer.routers -> ai_core.gemini_engine: "Generate & Solve Prompt\n(HOTS / LOTS)" {
+  style.stroke: "#c084fc"
+  style.stroke-width: 2
+}
+
+ai_core.bloom_engine -> export_engine.docx_builder: "Structured Items\n(PG, Isian, Essay)" {
+  style.stroke: "#f59e0b"
+  style.stroke-width: 2
+}
+
+ai_core.bloom_engine -> export_engine.pdf_builder: "Formatted Questions\n(Kunci & Pembahasan)" {
+  style.stroke: "#d97706"
+}
+
+client_layer.web_pwa -> data_layer.postgres_db: "Client Queries (Supabase SSR)\nRLS Isolation" {
+  style.stroke: "#0284c7"
+  style.stroke-width: 2
+}
+
+backend_layer.routers -> data_layer.postgres_db: "Sync Set Soal & Materi\n(Service Role)" {
+  style.stroke: "#0369a1"
+  style.stroke-dash: 3
+}
