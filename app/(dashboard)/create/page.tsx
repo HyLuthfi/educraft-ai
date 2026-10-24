@@ -54,6 +54,7 @@ export default function CreateQuestionWizard() {
   const [saveBankTitle, setSaveBankTitle] = useState("");
   const [saveBankFolder, setSaveBankFolder] = useState("Umum");
   const [instruksiKhusus, setInstruksiKhusus] = useState("");
+  const [showInstruksiKhusus, setShowInstruksiKhusus] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
   const [generatingSeconds, setGeneratingSeconds] = useState(0);
   const [generatingStageIdx, setGeneratingStageIdx] = useState(0);
@@ -232,7 +233,10 @@ export default function CreateQuestionWizard() {
         if (parsed.inputText !== undefined) setInputText(parsed.inputText);
         if (parsed.topicText !== undefined) setTopicText(parsed.topicText);
         if (parsed.configBlocks) setConfigBlocks(parsed.configBlocks);
-        if (parsed.instruksiKhusus !== undefined) setInstruksiKhusus(parsed.instruksiKhusus);
+        if (parsed.instruksiKhusus !== undefined) {
+          setInstruksiKhusus(parsed.instruksiKhusus);
+          if (parsed.instruksiKhusus.trim()) setShowInstruksiKhusus(true);
+        }
         if (parsed.generatedQuestions) setGeneratedQuestions(parsed.generatedQuestions);
       } catch (e) {}
     } else {
@@ -869,7 +873,7 @@ export default function CreateQuestionWizard() {
                       <div className="flex items-center justify-between pb-2.5 border-b border-black/10 dark:border-white/10">
                         <div className="flex items-center gap-2">
                           <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-2 py-0.5 uppercase tracking-wider">
-                            Racikan #{index + 1}
+                            Format #{index + 1}
                           </span>
                           <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
                             {block.type} • {block.count} Soal
@@ -879,7 +883,7 @@ export default function CreateQuestionWizard() {
                           <button
                             onClick={() => removeBlock(block.id)}
                             className="text-red-500 hover:text-red-600 px-2 py-1 text-xs font-bold flex items-center gap-1 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Hapus racikan ini"
+                            title="Hapus format soal ini"
                           >
                             <Trash2 size={13} /> <span>Hapus</span>
                           </button>
@@ -914,55 +918,56 @@ export default function CreateQuestionWizard() {
                         </div>
                       </div>
 
-                      {/* 2. Level Taksonomi Bloom */}
+                      {/* 2. Tingkat Berpikir & Kesulitan */}
                       <div className="space-y-1.5">
                         <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
-                          Level Taksonomi Bloom
+                          Tingkat Berpikir & Kesulitan
                         </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-2 gap-1.5">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
                           {[
-                            { id: "LOTS", label: "LOTS (C1-C3)", desc: "Mengingat, Memahami, Menerapkan" },
-                            { id: "HOTS", label: "HOTS (C4-C6)", desc: "Menganalisis, Mengevaluasi, Mengkreasi" },
+                            { id: "LOTS", label: "Dasar (LOTS)", desc: "Mengingat & memahami konsep (C1-C3)" },
+                            { id: "Campuran", label: "Seimbang (Campuran)", desc: "Kombinasi teori & penalaran (C1-C6)" },
+                            { id: "HOTS", label: "Penalaran (HOTS)", desc: "Analisis & studi kasus (C4-C6)" },
                           ].map((lvl) => (
                             <button
                               key={lvl.id}
                               type="button"
                               onClick={() => updateBlock(block.id, "level", lvl.id)}
-                              className={`py-2 px-2 border text-center transition-all cursor-pointer ${
+                              className={`py-2 px-2.5 border text-left sm:text-center transition-all cursor-pointer ${
                                 block.level === lvl.id
                                   ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
                                   : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
                               }`}
                             >
                               <div className="text-xs font-bold leading-tight">{lvl.label}</div>
-                              <div className="text-[9px] opacity-75 mt-0.5 line-clamp-1">{lvl.desc}</div>
+                              <div className="text-[10px] opacity-75 mt-0.5 line-clamp-1">{lvl.desc}</div>
                             </button>
                           ))}
                         </div>
                       </div>
 
-                      {/* 3. Jumlah Soal (Touch-Friendly Stepper + Sliders + Quick Chips) */}
+                      {/* 3. Jumlah Soal (Touch-Friendly Stepper + Quick Chips) */}
                       <div className="space-y-2.5 bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 border border-black/10 dark:border-white/10">
                         <div className="flex items-center justify-between">
                           <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
                             Jumlah Butir Soal
                           </label>
-                          <div className="flex items-center gap-2">
+                          <div className="flex items-center gap-1.5 sm:gap-2">
                             <button
                               type="button"
                               onClick={() => updateBlock(block.id, "count", Math.max(1, block.count - 1))}
-                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer"
+                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
                               aria-label="Kurangi 1 soal"
                             >
                               -
                             </button>
-                            <div className="w-10 text-center font-black text-base dark:text-white">
+                            <div className="w-12 text-center font-black text-base dark:text-white bg-white dark:bg-[#1e1e1e] py-1 border border-black/10 dark:border-white/10">
                               {block.count}
                             </div>
                             <button
                               type="button"
                               onClick={() => updateBlock(block.id, "count", Math.min(50, block.count + 1))}
-                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer"
+                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
                               aria-label="Tambah 1 soal"
                             >
                               +
@@ -970,62 +975,90 @@ export default function CreateQuestionWizard() {
                           </div>
                         </div>
 
-                        {/* Slider bar */}
-                        <div className="space-y-1">
-                          <input
-                            type="range"
-                            min="1"
-                            max="50"
-                            value={block.count}
-                            onChange={(e) =>
-                              updateBlock(
-                                block.id,
-                                "count",
-                                parseInt(e.target.value) || 1
-                              )
-                            }
-                            className="w-full accent-black dark:accent-white h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer"
-                          />
-                          <div className="flex justify-between text-[10px] font-semibold text-gray-400">
-                            <span>1 Soal</span>
-                            <span>25 Soal</span>
-                            <span>50 Soal</span>
-                          </div>
+                        {/* Quick Chips */}
+                        <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-black/5 dark:border-white/5">
+                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                            Pilihan Cepat:
+                          </span>
+                          {[5, 10, 15, 20, 25, 30, 50].map((val) => (
+                            <button
+                              key={val}
+                              type="button"
+                              onClick={() => updateBlock(block.id, "count", val)}
+                              className={`px-2.5 py-1 text-xs font-bold border transition-all cursor-pointer ${
+                                block.count === val
+                                  ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[1px_1px_0px_#000]"
+                                  : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black"
+                              }`}
+                            >
+                              {val} Soal
+                            </button>
+                          ))}
                         </div>
                       </div>
                     </motion.div>
                   ))}
                 </AnimatePresence>
 
-                {/* Tambah Racikan Lainnya */}
+                {/* Tambah Format Soal Lainnya */}
                 <button
                   type="button"
                   onClick={addBlock}
                   className="w-full py-2.5 sm:py-3.5 border-2 border-dashed border-black/20 dark:border-white/20 text-gray-600 dark:text-gray-400 font-bold text-xs sm:text-sm hover:border-black dark:hover:border-white hover:text-black dark:hover:text-white hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-all flex items-center justify-center gap-2 cursor-pointer active:translate-y-0.5"
                 >
-                  <Plus size={16} /> + Tambah Racikan Lainnya
+                  <Plus size={16} /> + Tambah Format Soal Lainnya (misal: PG + Essay)
                 </button>
               </div>
 
-              {/* Instruksi Khusus (Opsional) */}
-              <div className="space-y-1.5 pt-2 sm:pt-3">
-                <label className="text-xs sm:text-sm font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-                  <Sparkles size={14} className="text-yellow-500" />
-                  <span>Instruksi Khusus untuk AI (Opsional)</span>
-                </label>
-                <div className="relative">
-                  <textarea
-                    id="instruksi-khusus"
-                    rows={3}
-                    value={instruksiKhusus}
-                    onChange={(e) => setInstruksiKhusus(e.target.value)}
-                    className="w-full p-3 sm:p-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none transition-colors text-xs sm:text-sm min-h-[85px] leading-relaxed resize-y dark:text-white"
-                    placeholder="Contoh: Fokuskan pertanyaan pada pemahaman konsep dan studi kasus lingkungan, hindari pertanyaan hafalan tahun kejadian."
+              {/* Instruksi Khusus (Opsional - Collapsible Accordion) */}
+              <div className="border-2 border-black/10 dark:border-white/10 bg-white dark:bg-[#222222] transition-all">
+                <button
+                  type="button"
+                  onClick={() => setShowInstruksiKhusus(!showInstruksiKhusus)}
+                  className="w-full p-3 sm:p-4 flex items-center justify-between text-left cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
+                >
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-yellow-500" />
+                    <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200">
+                      Instruksi Khusus untuk AI (Opsional)
+                    </span>
+                    {instruksiKhusus.trim() && (
+                      <span className="text-[10px] font-black bg-yellow-300 text-black px-1.5 py-0.5 uppercase tracking-wide border border-black/20">
+                        Aktif
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={`text-gray-500 transition-transform duration-200 ${
+                      showInstruksiKhusus ? "rotate-180" : ""
+                    }`}
                   />
-                </div>
-                <p className="text-[11px] text-gray-400 dark:text-gray-500">
-                  Bantu AI memahami fokus khusus atau aturan penulisan yang Anda inginkan.
-                </p>
+                </button>
+
+                <AnimatePresence>
+                  {showInstruksiKhusus && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-3 sm:p-4 pt-0 border-t border-black/10 dark:border-white/10 space-y-2 overflow-hidden"
+                    >
+                      <textarea
+                        id="instruksi-khusus"
+                        rows={3}
+                        value={instruksiKhusus}
+                        onChange={(e) => setInstruksiKhusus(e.target.value)}
+                        className="w-full p-3 bg-gray-50 dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none transition-colors text-xs sm:text-sm leading-relaxed resize-y dark:text-white mt-3"
+                        placeholder="Contoh: Fokuskan pertanyaan pada pemahaman konsep dan studi kasus lingkungan, hindari pertanyaan hafalan tahun kejadian."
+                      />
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                        Bantu AI memahami fokus khusus atau aturan penulisan yang Anda inginkan.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Action Buttons */}
