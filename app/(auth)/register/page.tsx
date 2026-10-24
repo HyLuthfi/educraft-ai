@@ -60,12 +60,19 @@ export default function RegisterPage() {
       return;
     }
     
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`,
-      },
-    });
+    try {
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback`,
+        },
+      });
+      if (error) {
+        setErrorMsg(`Gagal menghubungkan ke Google OAuth: ${error.message}`);
+      }
+    } catch (err: any) {
+      setErrorMsg(`Koneksi Supabase bermasalah: ${err?.message || "Periksa apakah project Supabase sedang aktif."}`);
+    }
   }
 
   return (

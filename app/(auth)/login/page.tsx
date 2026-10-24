@@ -52,13 +52,20 @@ export default function LoginPage() {
       return;
     }
     
-    const nextDest = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("next") || "/create") : "/create";
-    await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextDest)}`,
-      },
-    });
+    try {
+      const nextDest = typeof window !== "undefined" ? (new URLSearchParams(window.location.search).get("next") || "/create") : "/create";
+      const { data, error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(nextDest)}`,
+        },
+      });
+      if (error) {
+        setErrorMsg(`Gagal menghubungkan ke Google OAuth: ${error.message}`);
+      }
+    } catch (err: any) {
+      setErrorMsg(`Koneksi Supabase bermasalah: ${err?.message || "Periksa apakah project Supabase sedang aktif."}`);
+    }
   }
 
   return (
