@@ -662,13 +662,13 @@ export default function CreateQuestionWizard() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-colors"
+                    className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-4 sm:p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
                   >
-                    <UploadCloud size={40} className="text-gray-400 dark:text-gray-500 dark:text-gray-400 mb-4" />
-                    <p className="font-semibold text-black dark:text-white mb-1">
+                    <UploadCloud className="w-8 h-8 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500 mb-1.5 sm:mb-3" />
+                    <p className="font-bold text-xs sm:text-base text-black dark:text-white mb-0.5 sm:mb-1">
                       Pilih file materi Anda
                     </p>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <p className="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">
                       Mendukung format .PDF, .DOCX, atau .PPTX (Max 20MB)
                     </p>
                     <input 
@@ -681,7 +681,7 @@ export default function CreateQuestionWizard() {
                     <button 
                       onClick={() => fileInputRef.current?.click()}
                       disabled={isParsing}
-                      className="mt-6 px-6 py-2 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 text-sm font-medium hover:border-black dark:border-white/20 transition-colors disabled:opacity-50"
+                      className="mt-3 sm:mt-5 px-4 sm:px-6 py-1.5 sm:py-2 bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 text-xs sm:text-sm font-bold hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-0.5 transition-all disabled:opacity-50 cursor-pointer"
                     >
                       {isParsing ? "Sedang menyedot teks..." : "Pilih File"}
                     </button>
@@ -692,15 +692,15 @@ export default function CreateQuestionWizard() {
                   <motion.div
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: "auto" }}
-                    className="border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a] p-6 flex flex-col gap-4"
+                    className="border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a] p-3.5 sm:p-6 flex flex-col gap-3 sm:gap-4"
                   >
-                    <div className="flex items-center gap-2 mb-2">
-                      <Camera size={20} className="text-gray-700 dark:text-gray-300" />
-                      <label className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    <div className="flex items-center gap-2 mb-1 sm:mb-2">
+                      <Camera size={18} className="text-gray-700 dark:text-gray-300" />
+                      <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
                         Foto Materi (Buku/Papan Tulis)
                       </label>
                     </div>
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-4">
                       <input 
                         type="file" 
                         ref={imageInputRef} 
@@ -711,21 +711,24 @@ export default function CreateQuestionWizard() {
                       <button 
                         onClick={() => imageInputRef.current?.click()}
                         disabled={isOcrLoading}
-                        className="flex-1 py-8 flex flex-col items-center justify-center gap-3 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 hover:border-black dark:border-white/20 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-all text-gray-600 dark:text-gray-400 hover:text-black dark:text-white disabled:opacity-50"
+                        className="py-3.5 sm:py-6 px-3 flex flex-col items-center justify-center gap-1.5 sm:gap-2.5 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white/40 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-all text-gray-600 dark:text-gray-400 hover:text-black dark:text-white disabled:opacity-50 cursor-pointer active:translate-y-0.5"
                       >
-                        <UploadCloud size={24} />
-                        <span className="font-medium text-sm">
+                        <UploadCloud size={20} className="sm:w-6 sm:h-6" />
+                        <span className="font-bold text-xs sm:text-sm">
                           {isOcrLoading ? "Sedang Membaca..." : "Upload Foto (JPG/PNG)"}
                         </span>
                       </button>
-                      <button className="flex-1 py-8 flex flex-col items-center justify-center gap-3 bg-black text-white hover:bg-gray-800 transition-all shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]">
-                        <Camera size={24} className="text-yellow-300" />
-                        <span className="font-medium text-sm">
+                      <button 
+                        onClick={() => imageInputRef.current?.click()}
+                        className="py-3.5 sm:py-6 px-3 flex flex-col items-center justify-center gap-1.5 sm:gap-2.5 bg-black text-white hover:bg-gray-800 transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer"
+                      >
+                        <Camera size={20} className="sm:w-6 sm:h-6 text-yellow-300" />
+                        <span className="font-bold text-xs sm:text-sm">
                           Ambil Foto dengan Kamera
                         </span>
                       </button>
                     </div>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                    <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 text-center mt-0.5 sm:mt-1">
                       AI akan secara otomatis membaca teks dari gambar
                       menggunakan teknologi OCR.
                     </p>

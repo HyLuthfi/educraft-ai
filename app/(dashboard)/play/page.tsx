@@ -425,14 +425,14 @@ export default function SolveQuestionWizard() {
                       <motion.div
                         initial={{ opacity: 0, height: 0 }}
                         animate={{ opacity: 1, height: "auto" }}
-                        className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-8 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 dark:bg-[#2a2a2a] transition-colors"
+                        className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-4 sm:p-7 flex flex-col items-center justify-center text-center hover:border-black/50 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
                       >
-                        <UploadCloud size={40} className="text-gray-400 dark:text-gray-500 dark:text-gray-400 mb-4" />
-                        <p className="font-semibold text-black dark:text-white mb-1">Pilih file referensi Anda</p>
-                        <p className="text-sm text-gray-500 dark:text-gray-400">Mendukung format .PDF (Max 100MB)</p>
+                        <UploadCloud className="w-7 h-7 sm:w-10 sm:h-10 text-gray-400 dark:text-gray-500 mb-1.5 sm:mb-3" />
+                        <p className="font-bold text-black dark:text-white text-xs sm:text-sm mb-0.5 sm:mb-1">Pilih file referensi Anda</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">Mendukung format .PDF (Max 100MB)</p>
                         <button
                           onClick={() => refPdfRef.current?.click()}
-                          className="mt-6 px-6 py-2 bg-white dark:bg-[#1e1e1e] border border-black/20 dark:border-white/20 text-sm font-medium hover:border-black dark:border-white/20 transition-colors"
+                          className="mt-3 sm:mt-5 px-4 sm:px-6 py-1.5 sm:py-2 bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 text-xs sm:text-sm font-bold hover:border-black dark:hover:border-white transition-colors cursor-pointer active:translate-y-0.5"
                         >
                           Pilih File
                         </button>

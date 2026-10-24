@@ -1126,20 +1126,20 @@ export default function AutoKoreksiPage() {
                     )}
 
                     {soalInputMethod === "file" && (
-                      <div className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-8 flex flex-col items-center text-center hover:border-black/50 dark:hover:border-white/50 transition-colors">
-                        <UploadCloud size={36} className="text-gray-400 mb-3" />
-                        <p className="font-semibold text-black dark:text-white text-sm mb-1">Upload file soal / kunci jawaban</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">PDF, DOCX (Max 20MB)</p>
+                      <div className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-4 sm:p-7 flex flex-col items-center text-center hover:border-black/50 dark:hover:border-white/50 transition-colors">
+                        <UploadCloud className="w-7 h-7 sm:w-9 sm:h-9 text-gray-400 mb-1.5 sm:mb-2.5" />
+                        <p className="font-bold text-black dark:text-white text-xs sm:text-sm mb-0.5 sm:mb-1">Upload file soal / kunci jawaban</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">PDF, DOCX (Max 20MB)</p>
                         <input type="file" ref={soalFileRef} className="hidden" accept=".pdf,.docx" onChange={handleSoalFile} />
                         <button
                           onClick={() => soalFileRef.current?.click()}
                           disabled={isSoalParsing}
-                          className="mt-4 px-5 py-2 bg-white dark:bg-[#333] border border-black/20 dark:border-white/20 text-sm font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 dark:text-white"
+                          className="mt-2.5 sm:mt-4 px-4 sm:px-5 py-1.5 sm:py-2 bg-white dark:bg-[#333] border border-black/20 dark:border-white/20 text-xs sm:text-sm font-bold hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 dark:text-white cursor-pointer active:translate-y-0.5"
                         >
                           {isSoalParsing ? "Sedang membaca..." : "Pilih File"}
                         </button>
                         {soalFileName && (
-                          <div className="mt-3 flex items-center gap-2 text-sm text-green-600 dark:text-green-400">
+                          <div className="mt-2 sm:mt-3 flex items-center gap-2 text-xs sm:text-sm text-green-600 dark:text-green-400">
                             <CheckCircle size={14} /> {soalFileName}
                           </div>
                         )}
@@ -1147,15 +1147,15 @@ export default function AutoKoreksiPage() {
                     )}
 
                     {soalInputMethod === "image" && (
-                      <div className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-8 flex flex-col items-center text-center hover:border-black/50 dark:hover:border-white/50 transition-colors">
-                        <Camera size={36} className="text-gray-400 mb-3" />
-                        <p className="font-semibold text-black dark:text-white text-sm mb-1">Foto lembar soal / kunci jawaban</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">JPG, PNG, WebP</p>
+                      <div className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-4 sm:p-7 flex flex-col items-center text-center hover:border-black/50 dark:hover:border-white/50 transition-colors">
+                        <Camera className="w-7 h-7 sm:w-9 sm:h-9 text-gray-400 mb-1.5 sm:mb-2.5" />
+                        <p className="font-bold text-black dark:text-white text-xs sm:text-sm mb-0.5 sm:mb-1">Foto lembar soal / kunci jawaban</p>
+                        <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">JPG, PNG, WebP</p>
                         <input type="file" ref={soalImgRef} className="hidden" accept="image/jpeg,image/png,image/webp" onChange={handleSoalImage} />
                         <button
                           onClick={() => soalImgRef.current?.click()}
                           disabled={isSoalParsing}
-                          className="mt-4 px-5 py-2 bg-white dark:bg-[#333] border border-black/20 dark:border-white/20 text-sm font-medium hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 dark:text-white"
+                          className="mt-2.5 sm:mt-4 px-4 sm:px-5 py-1.5 sm:py-2 bg-white dark:bg-[#333] border border-black/20 dark:border-white/20 text-xs sm:text-sm font-bold hover:border-black dark:hover:border-white transition-colors disabled:opacity-50 dark:text-white cursor-pointer active:translate-y-0.5"
                         >
                           {isSoalParsing ? "Sedang membaca..." : "Upload Foto"}
                         </button>
