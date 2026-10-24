@@ -858,149 +858,174 @@ export default function CreateQuestionWizard() {
               {/* Racikan Blocks List */}
               <div className="space-y-3 sm:space-y-4">
                 <AnimatePresence>
-                  {configBlocks.map((block, index) => (
-                    <motion.div
-                      key={block.id}
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, scale: 0.95 }}
-                      className="border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#222222] p-3.5 sm:p-5 shadow-[3px_3px_0px_0px_rgba(0,0,0,0.06)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)] space-y-3.5 sm:space-y-4"
-                    >
-                      {/* Card Header */}
-                      <div className="flex items-center justify-between pb-2.5 border-b border-black/10 dark:border-white/10">
-                        <div className="flex items-center gap-2">
-                          <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-2 py-0.5 uppercase tracking-wider">
-                            Format #{index + 1}
-                          </span>
-                          <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
-                            {block.type} • {block.count} Soal
-                          </span>
-                        </div>
-                        {configBlocks.length > 1 && (
-                          <button
-                            onClick={() => removeBlock(block.id)}
-                            className="text-red-500 hover:text-red-600 px-2 py-1 text-xs font-bold flex items-center gap-1 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
-                            title="Hapus format soal ini"
-                          >
-                            <Trash2 size={13} /> <span>Hapus</span>
-                          </button>
-                        )}
-                      </div>
-
-                      {/* 1. Tipe Soal (Responsive Pill Buttons) */}
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
-                          Tipe Soal
-                        </label>
-                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
-                          {[
-                            { id: "Pilihan Ganda", label: "Pilihan Ganda" },
-                            { id: "Isian Singkat", label: "Isian Singkat" },
-                            { id: "Essay", label: "Essay / Uraian" },
-                            { id: "Benar/Salah", label: "Benar / Salah" },
-                          ].map((t) => (
-                            <button
-                              key={t.id}
-                              type="button"
-                              onClick={() => updateBlock(block.id, "type", t.id)}
-                              className={`py-2 px-2 text-xs font-bold transition-all text-center border cursor-pointer ${
-                                block.type === t.id
-                                  ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
-                                  : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                  {configBlocks.map((block, index) => {
+                    const isGenap = (index + 1) % 2 === 0;
+                    return (
+                      <motion.div
+                        key={block.id}
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.95 }}
+                        className={`p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 transition-colors ${
+                          isGenap
+                            ? "border-2 border-amber-500/30 dark:border-yellow-400/25 border-l-4 sm:border-l-6 border-l-yellow-400 dark:border-l-yellow-400 bg-[#fffdf0] dark:bg-[#232017] shadow-[3px_3px_0px_0px_rgba(234,179,8,0.12)] dark:shadow-[3px_3px_0px_0px_rgba(234,179,8,0.06)]"
+                            : "border-2 border-black/15 dark:border-white/15 border-l-4 sm:border-l-6 border-l-black dark:border-l-white bg-white dark:bg-[#202020] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.06)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]"
+                        }`}
+                      >
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between pb-2.5 border-b border-black/10 dark:border-white/10">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-wider ${
+                                isGenap
+                                  ? "bg-yellow-300 text-black dark:bg-yellow-400 dark:text-black border border-black/20"
+                                  : "bg-black text-white dark:bg-white dark:text-black"
                               }`}
                             >
-                              {t.label}
+                              Format #{index + 1}
+                            </span>
+                            <span className="text-xs font-bold text-gray-600 dark:text-gray-300">
+                              {block.type} • {block.count} Soal
+                            </span>
+                          </div>
+                          {configBlocks.length > 1 && (
+                            <button
+                              onClick={() => removeBlock(block.id)}
+                              className="text-red-500 hover:text-red-600 px-2 py-1 text-xs font-bold flex items-center gap-1 hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer"
+                              title="Hapus format soal ini"
+                            >
+                              <Trash2 size={13} /> <span>Hapus</span>
                             </button>
-                          ))}
+                          )}
                         </div>
-                      </div>
 
-                      {/* 2. Tingkat Kesulitan */}
-                      <div className="space-y-1.5">
-                        <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
-                          Tingkat Kesulitan
-                        </label>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {[
-                            { id: "Mudah", label: "Mudah" },
-                            { id: "Sedang", label: "Sedang" },
-                            { id: "Sulit", label: "Sulit" },
-                          ].map((lvl) => {
-                            const isSelected =
-                              block.level === lvl.id ||
-                              (lvl.id === "Mudah" && block.level === "LOTS") ||
-                              (lvl.id === "Sedang" && (block.level === "Campuran" || !block.level)) ||
-                              (lvl.id === "Sulit" && block.level === "HOTS");
-                            return (
+                        {/* 1. Tipe Soal (Responsive Pill Buttons) */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+                            Tipe Soal
+                          </label>
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+                            {[
+                              { id: "Pilihan Ganda", label: "Pilihan Ganda" },
+                              { id: "Isian Singkat", label: "Isian Singkat" },
+                              { id: "Essay", label: "Essay / Uraian" },
+                              { id: "Benar/Salah", label: "Benar / Salah" },
+                            ].map((t) => (
                               <button
-                                key={lvl.id}
+                                key={t.id}
                                 type="button"
-                                onClick={() => updateBlock(block.id, "level", lvl.id)}
+                                onClick={() => updateBlock(block.id, "type", t.id)}
                                 className={`py-2 px-2 text-xs font-bold transition-all text-center border cursor-pointer ${
-                                  isSelected
+                                  block.type === t.id
                                     ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
+                                    : isGenap
+                                    ? "bg-white dark:bg-[#2b271d] text-gray-700 dark:text-gray-300 border-amber-900/15 dark:border-yellow-500/20 hover:border-black dark:hover:border-white"
                                     : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
                                 }`}
                               >
-                                {lvl.label}
+                                {t.label}
                               </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-
-                      {/* 3. Jumlah Soal (Touch-Friendly Stepper + Quick Chips) */}
-                      <div className="space-y-2.5 bg-gray-50 dark:bg-[#282828] p-3 sm:p-4 border border-black/10 dark:border-white/10">
-                        <div className="flex items-center justify-between">
-                          <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
-                            Jumlah Butir Soal
-                          </label>
-                          <div className="flex items-center gap-1.5 sm:gap-2">
-                            <button
-                              type="button"
-                              onClick={() => updateBlock(block.id, "count", Math.max(1, block.count - 1))}
-                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
-                              aria-label="Kurangi 1 soal"
-                            >
-                              -
-                            </button>
-                            <div className="w-12 text-center font-black text-base dark:text-white bg-white dark:bg-[#1e1e1e] py-1 border border-black/10 dark:border-white/10">
-                              {block.count}
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => updateBlock(block.id, "count", Math.min(50, block.count + 1))}
-                              className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
-                              aria-label="Tambah 1 soal"
-                            >
-                              +
-                            </button>
+                            ))}
                           </div>
                         </div>
 
-                        {/* Quick Chips */}
-                        <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-black/5 dark:border-white/5">
-                          <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1">
-                            Pilihan Cepat:
-                          </span>
-                          {[5, 10, 15, 20, 25, 30, 50].map((val) => (
-                            <button
-                              key={val}
-                              type="button"
-                              onClick={() => updateBlock(block.id, "count", val)}
-                              className={`px-2.5 py-1 text-xs font-bold border transition-all cursor-pointer ${
-                                block.count === val
-                                  ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[1px_1px_0px_#000]"
-                                  : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black"
-                              }`}
-                            >
-                              {val} Soal
-                            </button>
-                          ))}
+                        {/* 2. Tingkat Kesulitan */}
+                        <div className="space-y-1.5">
+                          <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
+                            Tingkat Kesulitan
+                          </label>
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {[
+                              { id: "Mudah", label: "Mudah" },
+                              { id: "Sedang", label: "Sedang" },
+                              { id: "Sulit", label: "Sulit" },
+                            ].map((lvl) => {
+                              const isSelected =
+                                block.level === lvl.id ||
+                                (lvl.id === "Mudah" && block.level === "LOTS") ||
+                                (lvl.id === "Sedang" && (block.level === "Campuran" || !block.level)) ||
+                                (lvl.id === "Sulit" && block.level === "HOTS");
+                              return (
+                                <button
+                                  key={lvl.id}
+                                  type="button"
+                                  onClick={() => updateBlock(block.id, "level", lvl.id)}
+                                  className={`py-2 px-2 text-xs font-bold transition-all text-center border cursor-pointer ${
+                                    isSelected
+                                      ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
+                                      : isGenap
+                                      ? "bg-white dark:bg-[#2b271d] text-gray-700 dark:text-gray-300 border-amber-900/15 dark:border-yellow-500/20 hover:border-black dark:hover:border-white"
+                                      : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                                  }`}
+                                >
+                                  {lvl.label}
+                                </button>
+                              );
+                            })}
+                          </div>
                         </div>
-                      </div>
-                    </motion.div>
-                  ))}
+
+                        {/* 3. Jumlah Soal (Touch-Friendly Stepper + Quick Chips) */}
+                        <div
+                          className={`space-y-2.5 p-3 sm:p-4 border ${
+                            isGenap
+                              ? "bg-yellow-100/35 dark:bg-[#2b271d] border-amber-300/30 dark:border-yellow-400/15"
+                              : "bg-gray-50 dark:bg-[#282828] border-black/10 dark:border-white/10"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-300">
+                              Jumlah Butir Soal
+                            </label>
+                            <div className="flex items-center gap-1.5 sm:gap-2">
+                              <button
+                                type="button"
+                                onClick={() => updateBlock(block.id, "count", Math.max(1, block.count - 1))}
+                                className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
+                                aria-label="Kurangi 1 soal"
+                              >
+                                -
+                              </button>
+                              <div className="w-12 text-center font-black text-base dark:text-white bg-white dark:bg-[#1e1e1e] py-1 border border-black/10 dark:border-white/10">
+                                {block.count}
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => updateBlock(block.id, "count", Math.min(50, block.count + 1))}
+                                className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
+                                aria-label="Tambah 1 soal"
+                              >
+                                +
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Quick Chips */}
+                          <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-black/5 dark:border-white/5">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400 mr-1">
+                              Pilihan Cepat:
+                            </span>
+                            {[5, 10, 15, 20, 25, 30, 50].map((val) => (
+                              <button
+                                key={val}
+                                type="button"
+                                onClick={() => updateBlock(block.id, "count", val)}
+                                className={`px-2.5 py-1 text-xs font-bold border transition-all cursor-pointer ${
+                                  block.count === val
+                                    ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[1px_1px_0px_#000]"
+                                    : isGenap
+                                    ? "bg-white dark:bg-[#242017] text-gray-700 dark:text-gray-300 border-amber-900/15 dark:border-yellow-500/20 hover:border-black"
+                                    : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black"
+                                }`}
+                              >
+                                {val} Soal
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
                 </AnimatePresence>
 
                 {/* Tambah Format Soal Lainnya */}
