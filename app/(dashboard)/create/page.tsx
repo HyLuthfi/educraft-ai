@@ -90,6 +90,44 @@ export default function CreateQuestionWizard() {
     };
   }, [isGenerating]);
 
+  // Proteksi reload / tab close saat AI sedang meracik soal
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isGenerating) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    if (isGenerating) {
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      window.dispatchEvent(
+        new CustomEvent("educraft_ai_busy", {
+          detail: {
+            isBusy: true,
+            message: "AI sedang merumuskan butir soal, kunci jawaban & pembahasan...",
+          },
+        })
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("educraft_ai_busy", {
+          detail: { isBusy: false },
+        })
+      );
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.dispatchEvent(
+        new CustomEvent("educraft_ai_busy", {
+          detail: { isBusy: false },
+        })
+      );
+    };
+  }, [isGenerating]);
+
   const formatTimer = (sec: number) => {
     const mins = Math.floor(sec / 60);
     const remainingSecs = sec % 60;
@@ -1201,9 +1239,15 @@ export default function CreateQuestionWizard() {
               </div>
 
               {/* Helpful Hint */}
-              <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-3.5">
-                Estimasi waktu sekitar 10–25 detik. Layar akan otomatis berpindah ke hasil kuis.
-              </p>
+              <div className="mt-4 space-y-1.5 text-center max-w-sm mx-auto">
+                <p className="text-[11px] font-medium text-gray-500 dark:text-gray-400">
+                  Estimasi waktu sekitar 10–25 detik. Layar akan otomatis berpindah ke hasil kuis.
+                </p>
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-gray-100 dark:bg-[#282828] border border-black/10 dark:border-white/10 text-[10px] text-gray-600 dark:text-gray-300 font-semibold rounded-full">
+                  <span>💡</span>
+                  <span>Boleh buka aplikasi lain (WhatsApp, dll), proses tetap berjalan di latar belakang.</span>
+                </div>
+              </div>
             </motion.div>
           )}
 

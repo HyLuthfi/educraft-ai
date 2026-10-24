@@ -24,6 +24,7 @@ import {
   Menu,
   X,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { InstallAppButton } from "@/app/components/InstallAppButton";
 
@@ -37,6 +38,30 @@ export default function DashboardLayout({
   
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [isMobileDrawerOpen, setIsMobileDrawerOpen] = useState(false);
+  const [isAiBusy, setIsAiBusy] = useState(false);
+  const [aiBusyMessage, setAiBusyMessage] = useState("");
+  const [pendingNavigation, setPendingNavigation] = useState<string | null>(null);
+  const [showLeaveConfirmModal, setShowLeaveConfirmModal] = useState(false);
+
+  // Pantau status proses berat AI (meracik soal, koreksi ujian, dll)
+  useEffect(() => {
+    const handleAiBusy = (e: any) => {
+      setIsAiBusy(!!e.detail?.isBusy);
+      if (e.detail?.message) setAiBusyMessage(e.detail.message);
+    };
+    window.addEventListener("educraft_ai_busy", handleAiBusy);
+    return () => {
+      window.removeEventListener("educraft_ai_busy", handleAiBusy);
+    };
+  }, []);
+
+  const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
+    if (isAiBusy && pathname !== href) {
+      e.preventDefault();
+      setPendingNavigation(href);
+      setShowLeaveConfirmModal(true);
+    }
+  };
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
     plan: string;
@@ -190,6 +215,7 @@ export default function DashboardLayout({
                   <Link
                     key={item.href}
                     href={item.href}
+                    onClick={(e) => handleNavClick(e, item.href)}
                     className={`flex items-center gap-3 px-4 py-3 rounded-none font-medium transition-all ${
                       isActive
                         ? "bg-black dark:bg-white text-white dark:text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] -translate-y-[2px] -translate-x-[2px]"
@@ -209,6 +235,7 @@ export default function DashboardLayout({
           <InstallAppButton variant="sidebar" />
           <Link
             href="/settings"
+            onClick={(e) => handleNavClick(e, "/settings")}
             className={`flex items-center gap-3 px-4 py-3 rounded-none font-medium transition-all ${
               pathname === "/settings"
                 ? "bg-black dark:bg-white text-white dark:text-black shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] -translate-y-[2px] -translate-x-[2px]"
@@ -224,6 +251,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-3 p-2">
             <Link
               href="/profil"
+              onClick={(e) => handleNavClick(e, "/profil")}
               className="flex items-center gap-3 flex-1 min-w-0 group hover:opacity-90 transition-opacity"
               title="Lihat Profil Saya"
             >
@@ -255,7 +283,11 @@ export default function DashboardLayout({
       <main className="flex-1 flex flex-col min-h-screen relative overflow-x-hidden">
         {/* Mobile Sticky Header */}
         <header className="h-16 bg-white/90 dark:bg-[#1e1e1e]/90 backdrop-blur-md border-b border-black/10 dark:border-white/10 flex items-center justify-between px-4 sm:px-6 md:hidden sticky top-0 z-30 transition-colors">
-          <Link href="/create" className="flex items-center gap-2.5">
+          <Link
+            href="/create"
+            onClick={(e) => handleNavClick(e, "/create")}
+            className="flex items-center gap-2.5"
+          >
             <img
               src="/logo-light.png"
               alt="EduCraft Logo"
@@ -278,6 +310,7 @@ export default function DashboardLayout({
           <div className="flex items-center gap-2">
             <Link
               href="/create"
+              onClick={(e) => handleNavClick(e, "/create")}
               className="py-1.5 px-3 rounded-lg bg-black text-white dark:bg-white dark:text-black hover:opacity-90 transition-opacity flex items-center gap-1.5 text-xs font-bold shadow-sm"
             >
               <Sparkles size={14} className="text-yellow-400 dark:text-black" />
@@ -303,6 +336,7 @@ export default function DashboardLayout({
           {/* Bank Soal */}
           <Link
             href="/library"
+            onClick={(e) => handleNavClick(e, "/library")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-xs font-medium transition-colors ${
               pathname === "/library"
                 ? "text-black dark:text-white font-bold"
@@ -318,6 +352,7 @@ export default function DashboardLayout({
           {/* Koreksi */}
           <Link
             href="/koreksi"
+            onClick={(e) => handleNavClick(e, "/koreksi")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-xs font-medium transition-colors ${
               pathname === "/koreksi"
                 ? "text-black dark:text-white font-bold"
@@ -333,6 +368,7 @@ export default function DashboardLayout({
           {/* Center Elevated Action: Buat Soal */}
           <Link
             href="/create"
+            onClick={(e) => handleNavClick(e, "/create")}
             className="flex flex-col items-center justify-center group -mt-5"
           >
             <div className={`w-12 h-12 rounded-full flex items-center justify-center shadow-lg transition-transform active:scale-95 ${
@@ -340,14 +376,17 @@ export default function DashboardLayout({
                 ? "bg-black text-white dark:bg-white dark:text-black shadow-black/25 ring-4 ring-black/10 dark:ring-white/20"
                 : "bg-black text-white dark:bg-white dark:text-black shadow-black/20 hover:scale-105"
             }`}>
-              <Sparkles size={20} className="animate-pulse" />
+              <Sparkles size={20} className={isAiBusy ? "animate-spin text-yellow-300" : "animate-pulse"} />
             </div>
-            <span className="text-[10px] font-bold text-black dark:text-white mt-1">Buat Soal</span>
+            <span className="text-[10px] font-bold text-black dark:text-white mt-1">
+              {isAiBusy && pathname?.startsWith("/create") ? "Meracik..." : "Buat Soal"}
+            </span>
           </Link>
 
           {/* Absensi */}
           <Link
             href="/absensi"
+            onClick={(e) => handleNavClick(e, "/absensi")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-xs font-medium transition-colors ${
               pathname === "/absensi"
                 ? "text-black dark:text-white font-bold"
@@ -474,7 +513,10 @@ export default function DashboardLayout({
                         <Link
                           key={item.href}
                           href={item.href}
-                          onClick={() => setIsMobileDrawerOpen(false)}
+                          onClick={(e) => {
+                            setIsMobileDrawerOpen(false);
+                            handleNavClick(e, item.href);
+                          }}
                           className={`flex items-center justify-between px-3.5 py-2.5 rounded-xl font-medium text-sm transition-all ${
                             isActive
                               ? "bg-black dark:bg-white text-white dark:text-black font-bold shadow-sm"
@@ -498,7 +540,10 @@ export default function DashboardLayout({
                 <InstallAppButton variant="button" className="w-full text-xs" />
                 <Link
                   href="/settings"
-                  onClick={() => setIsMobileDrawerOpen(false)}
+                  onClick={(e) => {
+                    setIsMobileDrawerOpen(false);
+                    handleNavClick(e, "/settings");
+                  }}
                   className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl font-medium text-sm transition-colors ${
                     pathname === "/settings"
                       ? "bg-black dark:bg-white text-white dark:text-black font-bold"
@@ -523,6 +568,56 @@ export default function DashboardLayout({
           </div>
         )}
       </AnimatePresence>
+
+      {/* Modal Peringatan Navigasi Saat AI Sedang Memproses */}
+      {showLeaveConfirmModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#1e1e1e] border-4 border-black dark:border-white p-5 sm:p-7 max-w-sm w-full shadow-[8px_8px_0px_0px_#000] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.2)] space-y-4">
+            <div className="flex items-center gap-3 pb-3 border-b-2 border-black/10 dark:border-white/10">
+              <div className="w-9 h-9 rounded bg-yellow-300 border-2 border-black flex items-center justify-center text-black font-black shrink-0 shadow-[2px_2px_0px_#000]">
+                <AlertTriangle size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm sm:text-base font-black uppercase tracking-tight text-black dark:text-white leading-tight">
+                  Proses AI Sedang Berjalan
+                </h3>
+                <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">
+                  Harap tunggu beberapa detik
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-gray-600 dark:text-gray-300 leading-relaxed font-medium">
+              {aiBusyMessage || "AI sedang merumuskan data Anda."}{" "}
+              Jika Anda berpindah halaman sekarang, proses ini akan <strong>terhenti/dibatalkan</strong> dan harus diulang.
+            </p>
+
+            <div className="pt-2 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => setShowLeaveConfirmModal(false)}
+                className="w-full py-2.5 bg-black dark:bg-white text-white dark:text-black font-black uppercase text-xs tracking-wider border-2 border-black dark:border-white shadow-[2px_2px_0px_0px_#000] active:translate-y-0.5 cursor-pointer"
+              >
+                Tetap di Sini &amp; Tunggu (Rekomendasi)
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowLeaveConfirmModal(false);
+                  setIsAiBusy(false);
+                  if (pendingNavigation) {
+                    router.push(pendingNavigation);
+                    setPendingNavigation(null);
+                  }
+                }}
+                className="w-full py-2 text-xs font-bold text-red-600 dark:text-red-400 hover:underline cursor-pointer"
+              >
+                Batalkan Proses &amp; Pindah Halaman
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showLogoutModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm">

@@ -288,6 +288,44 @@ export default function AutoKoreksiPage() {
     }
   }, [koreksiResult]);
 
+  // Proteksi reload / tab close saat AI sedang mengoreksi jawaban
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      if (isKoreksiLoading) {
+        e.preventDefault();
+        e.returnValue = "";
+        return "";
+      }
+    };
+
+    if (isKoreksiLoading) {
+      window.addEventListener("beforeunload", handleBeforeUnload);
+      window.dispatchEvent(
+        new CustomEvent("educraft_ai_busy", {
+          detail: {
+            isBusy: true,
+            message: "AI sedang memeriksa dan mengoreksi lembar jawaban ujian...",
+          },
+        })
+      );
+    } else {
+      window.dispatchEvent(
+        new CustomEvent("educraft_ai_busy", {
+          detail: { isBusy: false },
+        })
+      );
+    }
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+      window.dispatchEvent(
+        new CustomEvent("educraft_ai_busy", {
+          detail: { isBusy: false },
+        })
+      );
+    };
+  }, [isKoreksiLoading]);
+
   useEffect(() => {
     try {
       if (activeStudentDetail !== null) {
