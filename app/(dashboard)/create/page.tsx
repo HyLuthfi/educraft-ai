@@ -183,13 +183,13 @@ export default function CreateQuestionWizard() {
     imageCount: number;
   };
   const [configBlocks, setConfigBlocks] = useState<ConfigBlock[]>([
-    { id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10, imageCount: 0 },
+    { id: "initial-1", type: "Pilihan Ganda", level: "Sedang", count: 10, imageCount: 0 },
   ]);
 
   const addBlock = () => {
     setConfigBlocks([
       ...configBlocks,
-      { id: Math.random().toString(), type: "Essay", level: "LOTS", count: 5, imageCount: 0 },
+      { id: Math.random().toString(), type: "Essay", level: "Sedang", count: 5, imageCount: 0 },
     ]);
   };
 
@@ -579,7 +579,7 @@ export default function CreateQuestionWizard() {
                     setInputText("");
                     setTopicText("");
                     setInputTypes(["text"]);
-                    setConfigBlocks([{ id: "initial-1", type: "Pilihan Ganda", level: "HOTS", count: 10, imageCount: 0 }]);
+                    setConfigBlocks([{ id: "initial-1", type: "Pilihan Ganda", level: "Sedang", count: 10, imageCount: 0 }]);
                     setInstruksiKhusus("");
                     setGeneratedQuestions([]);
                     toast.success("Formulir berhasil di-reset");
@@ -915,31 +915,37 @@ export default function CreateQuestionWizard() {
                         </div>
                       </div>
 
-                      {/* 2. Tingkat Berpikir & Kesulitan */}
+                      {/* 2. Tingkat Kesulitan */}
                       <div className="space-y-1.5">
                         <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block">
-                          Tingkat Berpikir & Kesulitan
+                          Tingkat Kesulitan
                         </label>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5">
+                        <div className="grid grid-cols-3 gap-1.5">
                           {[
-                            { id: "LOTS", label: "Dasar (LOTS)", desc: "Mengingat & memahami konsep (C1-C3)" },
-                            { id: "Campuran", label: "Seimbang (Campuran)", desc: "Kombinasi teori & penalaran (C1-C6)" },
-                            { id: "HOTS", label: "Penalaran (HOTS)", desc: "Analisis & studi kasus (C4-C6)" },
-                          ].map((lvl) => (
-                            <button
-                              key={lvl.id}
-                              type="button"
-                              onClick={() => updateBlock(block.id, "level", lvl.id)}
-                              className={`py-2 px-2.5 border text-left sm:text-center transition-all cursor-pointer ${
-                                block.level === lvl.id
-                                  ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
-                                  : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
-                              }`}
-                            >
-                              <div className="text-xs font-bold leading-tight">{lvl.label}</div>
-                              <div className="text-[10px] opacity-75 mt-0.5 line-clamp-1">{lvl.desc}</div>
-                            </button>
-                          ))}
+                            { id: "Mudah", label: "Mudah" },
+                            { id: "Sedang", label: "Sedang" },
+                            { id: "Sulit", label: "Sulit" },
+                          ].map((lvl) => {
+                            const isSelected =
+                              block.level === lvl.id ||
+                              (lvl.id === "Mudah" && block.level === "LOTS") ||
+                              (lvl.id === "Sedang" && (block.level === "Campuran" || !block.level)) ||
+                              (lvl.id === "Sulit" && block.level === "HOTS");
+                            return (
+                              <button
+                                key={lvl.id}
+                                type="button"
+                                onClick={() => updateBlock(block.id, "level", lvl.id)}
+                                className={`py-2 px-2 text-xs font-bold transition-all text-center border cursor-pointer ${
+                                  isSelected
+                                    ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
+                                    : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                                }`}
+                              >
+                                {lvl.label}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
 
