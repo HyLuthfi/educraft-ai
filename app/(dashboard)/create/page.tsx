@@ -846,9 +846,6 @@ export default function CreateQuestionWizard() {
               <div className="flex flex-row items-center justify-between gap-3 pb-3 border-b-2 border-black/10 dark:border-white/10">
                 <div>
                   <h2 className="text-base sm:text-2xl font-bold dark:text-white">Parameter Soal</h2>
-                  <p className="text-[11px] sm:text-xs text-gray-500 dark:text-gray-400">
-                    Atur tipe, tingkat kesulitan, dan jumlah butir soal.
-                  </p>
                 </div>
                 <div className="bg-black text-white dark:bg-white dark:text-black px-3 py-1.5 sm:px-5 sm:py-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] flex items-center gap-1.5 shrink-0">
                   <span className="text-[10px] sm:text-xs font-bold uppercase tracking-wider opacity-80">
