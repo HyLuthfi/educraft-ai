@@ -41,8 +41,14 @@ self.addEventListener('fetch', (event) => {
 
   const url = new URL(event.request.url);
 
-  // Jangan cache panggilan API backend
-  if (url.pathname.startsWith('/api/')) return;
+  // Jangan intercept panggilan API backend atau chunk internal Next.js
+  if (
+    url.pathname.startsWith('/api/') ||
+    url.pathname.startsWith('/_next/') ||
+    url.searchParams.has('_rsc')
+  ) {
+    return;
+  }
 
   event.respondWith(
     fetch(event.request)

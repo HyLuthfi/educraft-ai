@@ -123,18 +123,18 @@ export default function LandingPage() {
           {/* Right Action Buttons */}
           <div className="flex items-center gap-2 sm:gap-3">
             <InstallAppButton variant="navbar" className="hidden sm:flex" />
-            <Link
+            <a
               href="/login"
               className="text-xs sm:text-sm font-bold text-gray-800 hover:text-black transition-colors px-2 py-1.5 hidden md:block"
             >
               Masuk
-            </Link>
-            <Link
+            </a>
+            <a
               href="/register"
               className="btn-primary py-2 px-3 sm:py-2.5 sm:px-6 text-xs sm:text-sm shadow-md shadow-black/5 rounded-none font-bold whitespace-nowrap"
             >
               Mulai Gratis
-            </Link>
+            </a>
             {/* Mobile Hamburger Button */}
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
@@ -225,20 +225,20 @@ export default function LandingPage() {
 
                 <div className="pt-3 border-t border-black/10 flex flex-col gap-2">
                   <InstallAppButton variant="button" className="w-full text-xs" />
-                  <Link
+                  <a
                     href="/login"
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full text-center py-2.5 border-2 border-black font-bold text-xs uppercase tracking-wider hover:bg-gray-50 transition-colors"
                   >
                     Masuk ke Akun
-                  </Link>
-                  <Link
+                  </a>
+                  <a
                     href="/register"
                     onClick={() => setMobileMenuOpen(false)}
                     className="w-full text-center py-2.5 bg-black text-white font-bold text-xs uppercase tracking-wider hover:bg-gray-800 transition-colors shadow-sm"
                   >
                     Daftar Sekarang
-                  </Link>
+                  </a>
                 </div>
               </div>
             </motion.div>
@@ -288,13 +288,13 @@ export default function LandingPage() {
                 variants={ANIMASI_FADE_UP}
                 className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4 w-full sm:w-auto"
               >
-                <Link
+                <a
                   href="/register"
                   className="btn-primary px-6 sm:px-8 py-3.5 sm:py-4 w-full sm:w-auto flex items-center justify-center gap-2.5 rounded-none bg-black hover:bg-gray-800 text-white font-bold text-xs sm:text-sm uppercase tracking-wider shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 transition-all text-center"
                 >
                   <span>Mulai Gratis Sekarang</span>
                   <ArrowRight className="w-4 h-4 shrink-0" />
-                </Link>
+                </a>
                 <div className="flex items-center justify-center sm:justify-start gap-2.5 text-xs sm:text-sm text-gray-500 py-1.5 sm:py-0">
                   <div className="flex -space-x-1.5 shrink-0">
                     <div className="w-7 h-7 rounded-full bg-gradient-to-br from-gray-700 to-black border-2 border-white"></div>
@@ -632,12 +632,12 @@ export default function LandingPage() {
               <p className="text-gray-400 text-xs sm:text-sm leading-relaxed mb-4 sm:mb-5">
                 Fitur baru dirilis rutin untuk meringankan tugas Anda.
               </p>
-              <Link
+              <a
                 href="/register"
                 className="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold hover:gap-3 transition-all text-white"
               >
                 Coba semuanya gratis <ArrowRight className="w-4 h-4" />
-              </Link>
+              </a>
             </div>
           </div>
         </div>
@@ -659,13 +659,13 @@ export default function LandingPage() {
               Bergabunglah dengan ribuan pendidik yang telah mengubah cara
               mereka bekerja. Bebaskan diri Anda dari tugas administratif sekarang.
             </p>
-            <Link
+            <a
               href="/register"
               className="inline-flex items-center justify-center gap-2.5 bg-white text-black w-full sm:w-auto px-8 sm:px-12 py-4 sm:py-5 rounded-none font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-100 transition-all shadow-[4px_4px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-0.5"
             >
               <span>Mulai Secara Gratis</span>
               <ArrowRight className="w-4 h-4 shrink-0" />
-            </Link>
+            </a>
           </motion.div>
         </div>
       </section>
