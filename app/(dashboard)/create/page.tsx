@@ -868,8 +868,8 @@ export default function CreateQuestionWizard() {
                         exit={{ opacity: 0, scale: 0.95 }}
                         className={`p-3.5 sm:p-5 space-y-3.5 sm:space-y-4 transition-colors ${
                           isGenap
-                            ? "border-2 border-amber-500/30 dark:border-yellow-400/25 border-l-4 sm:border-l-6 border-l-yellow-400 dark:border-l-yellow-400 bg-[#fffdf0] dark:bg-[#232017] shadow-[3px_3px_0px_0px_rgba(234,179,8,0.12)] dark:shadow-[3px_3px_0px_0px_rgba(234,179,8,0.06)]"
-                            : "border-2 border-black/15 dark:border-white/15 border-l-4 sm:border-l-6 border-l-black dark:border-l-white bg-white dark:bg-[#202020] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.06)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.05)]"
+                            ? "border-2 border-black/20 dark:border-white/20 border-l-4 sm:border-l-6 border-l-gray-500 dark:border-l-gray-400 bg-gray-100/70 dark:bg-[#27272a] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.05)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.03)]"
+                            : "border-2 border-black/15 dark:border-white/15 border-l-4 sm:border-l-6 border-l-black dark:border-l-white bg-white dark:bg-[#1a1a1a] shadow-[3px_3px_0px_0px_rgba(0,0,0,0.06)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.04)]"
                         }`}
                       >
                         {/* Card Header */}
@@ -878,7 +878,7 @@ export default function CreateQuestionWizard() {
                             <span
                               className={`text-[10px] font-black px-2 py-0.5 uppercase tracking-wider ${
                                 isGenap
-                                  ? "bg-yellow-300 text-black dark:bg-yellow-400 dark:text-black border border-black/20"
+                                  ? "bg-gray-800 text-white dark:bg-gray-200 dark:text-black border border-black/20"
                                   : "bg-black text-white dark:bg-white dark:text-black"
                               }`}
                             >
@@ -919,8 +919,8 @@ export default function CreateQuestionWizard() {
                                   block.type === t.id
                                     ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
                                     : isGenap
-                                    ? "bg-white dark:bg-[#2b271d] text-gray-700 dark:text-gray-300 border-amber-900/15 dark:border-yellow-500/20 hover:border-black dark:hover:border-white"
-                                    : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                                    ? "bg-white dark:bg-[#1f1f23] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                                    : "bg-gray-50 dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
                                 }`}
                               >
                                 {t.label}
@@ -954,8 +954,8 @@ export default function CreateQuestionWizard() {
                                     isSelected
                                       ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
                                       : isGenap
-                                      ? "bg-white dark:bg-[#2b271d] text-gray-700 dark:text-gray-300 border-amber-900/15 dark:border-yellow-500/20 hover:border-black dark:hover:border-white"
-                                      : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                                      ? "bg-white dark:bg-[#1f1f23] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
+                                      : "bg-gray-50 dark:bg-[#252525] text-gray-600 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
                                   }`}
                                 >
                                   {lvl.label}
@@ -969,8 +969,8 @@ export default function CreateQuestionWizard() {
                         <div
                           className={`space-y-2.5 p-3 sm:p-4 border ${
                             isGenap
-                              ? "bg-yellow-100/35 dark:bg-[#2b271d] border-amber-300/30 dark:border-yellow-400/15"
-                              : "bg-gray-50 dark:bg-[#282828] border-black/10 dark:border-white/10"
+                              ? "bg-white dark:bg-[#1e1e22] border-black/10 dark:border-white/10"
+                              : "bg-gray-50 dark:bg-[#252525] border-black/10 dark:border-white/10"
                           }`}
                         >
                           <div className="flex items-center justify-between">
@@ -981,18 +981,30 @@ export default function CreateQuestionWizard() {
                               <button
                                 type="button"
                                 onClick={() => updateBlock(block.id, "count", Math.max(1, block.count - 1))}
-                                className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
+                                className={`w-8 h-8 rounded border-2 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs ${
+                                  isGenap
+                                    ? "bg-gray-50 dark:bg-[#27272a] border-black/20 dark:border-white/20"
+                                    : "bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20"
+                                }`}
                                 aria-label="Kurangi 1 soal"
                               >
                                 -
                               </button>
-                              <div className="w-12 text-center font-black text-base dark:text-white bg-white dark:bg-[#1e1e1e] py-1 border border-black/10 dark:border-white/10">
+                              <div
+                                className={`w-12 text-center font-black text-base dark:text-white py-1 border border-black/10 dark:border-white/10 ${
+                                  isGenap ? "bg-gray-50 dark:bg-[#27272a]" : "bg-white dark:bg-[#1e1e1e]"
+                                }`}
+                              >
                                 {block.count}
                               </div>
                               <button
                                 type="button"
                                 onClick={() => updateBlock(block.id, "count", Math.min(50, block.count + 1))}
-                                className="w-8 h-8 rounded bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs"
+                                className={`w-8 h-8 rounded border-2 hover:border-black dark:hover:border-white flex items-center justify-center font-bold text-base active:scale-95 transition-all cursor-pointer shadow-xs ${
+                                  isGenap
+                                    ? "bg-gray-50 dark:bg-[#27272a] border-black/20 dark:border-white/20"
+                                    : "bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20"
+                                }`}
                                 aria-label="Tambah 1 soal"
                               >
                                 +
@@ -1014,7 +1026,7 @@ export default function CreateQuestionWizard() {
                                   block.count === val
                                     ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[1px_1px_0px_#000]"
                                     : isGenap
-                                    ? "bg-white dark:bg-[#242017] text-gray-700 dark:text-gray-300 border-amber-900/15 dark:border-yellow-500/20 hover:border-black"
+                                    ? "bg-gray-50 dark:bg-[#27272a] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black"
                                     : "bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300 border-black/15 dark:border-white/15 hover:border-black"
                                 }`}
                               >
