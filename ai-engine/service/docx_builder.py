@@ -929,12 +929,15 @@ def generate_exam_docx(
         running_number += len(essay_list)
         rendered_sections_count += 1
 
+    # Gabungkan seluruh soal berurutan: PG dulu, lalu Isian, lalu Essay
+    ordered_all_questions = pg_list + isian_list + essay_list
+
     # 6. Kunci Jawaban & Pembahasan Pegangan Guru (Jika diminta)
     if sertakan_jawaban or sertakan_pembahasan:
         render_teacher_master_key(
             doc,
             header_data,
-            soal_list,
+            ordered_all_questions,
             sertakan_pembahasan=sertakan_pembahasan
         )
 

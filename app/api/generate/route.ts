@@ -80,6 +80,14 @@ export async function POST(req: Request) {
     // Set image_url langsung ke URL Pollinations (tanpa download+upload blocking).
     // Server balas instan; client render gambar secara lazy.
     if (data.soal && Array.isArray(data.soal)) {
+      const typeRank = (t: string) => {
+        const s = (t || "").toLowerCase();
+        if (s.includes("pg") || s.includes("pilihan") || s.includes("benar")) return 1;
+        if (s.includes("isian")) return 2;
+        return 3;
+      };
+      data.soal.sort((a: any, b: any) => typeRank(a.tipe) - typeRank(b.tipe));
+
       for (const soalItem of data.soal) {
         if (soalItem.image_prompt && soalItem.image_prompt.trim() !== "") {
           const promptEncoded = encodeURIComponent(soalItem.image_prompt);

@@ -57,13 +57,24 @@ async def eksekusi_ai_dengan_retry(user_prompt: str) -> list:
                 raise HTTPException(status_code=500, detail=str(e))
     return []
 
+def _tipe_rank(item) -> int:
+    """Urutan standar resmi naskah soal: 1. PG -> 2. Isian -> 3. Essay."""
+    t = str(getattr(item, "tipe", None) or item.get("tipe", item.get("type", "pg"))).strip().lower()
+    if t in ("pg", "pilihan ganda", "pilihan_ganda", "benar/salah", "benar_salah", "bs"):
+        return 1
+    if t in ("isian", "isian singkat", "isian_singkat"):
+        return 2
+    return 3
+
+
 @router.post("/generate")
 async def generate_soal(req: RequestGenerate):
     semua_soal = []
 
-    # Generate per-blok mengikuti urutan input parameter.
-    # Hasil dikelompokkan per tipe sesuai urutan blok (mis. Essay semua, lalu PG semua).
-    for b in req.config.blocks:
+    # Sort blocks agar AI men-generate sesuai urutan standar: PG -> Isian -> Essay
+    sorted_blocks = sorted(req.config.blocks, key=_tipe_rank)
+
+    for b in sorted_blocks:
         prompt = buat_user_prompt(
             konten_materi=req.konten_materi, blocks=[b],
             level_bloom=req.config.level_bloom, mata_pelajaran=req.config.mata_pelajaran,
@@ -73,7 +84,10 @@ async def generate_soal(req: RequestGenerate):
         )
         semua_soal.extend(await eksekusi_ai_dengan_retry(prompt))
 
-    return {"soal": semua_soal}
+    # Pastikan hasil akhir terurut mutlak: Semua PG dulu, lalu Isian, lalu Essay
+    semua_soal_terurut = sorted(semua_soal, key=_tipe_rank)
+
+    return {"soal": semua_soal_terurut}
 
 
 @router.post("/regenerate")

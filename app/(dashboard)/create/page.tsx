@@ -510,7 +510,15 @@ export default function CreateQuestionWizard() {
       }
       
       const data = await res.json();
-      setGeneratedQuestions(data.soal || []);
+      const rawSoal = data.soal || [];
+      const typeRank = (t: string) => {
+        const s = (t || "").toLowerCase();
+        if (s.includes("pg") || s.includes("pilihan") || s.includes("benar")) return 1;
+        if (s.includes("isian")) return 2;
+        return 3;
+      };
+      const sortedSoal = [...rawSoal].sort((a, b) => typeRank(a.tipe) - typeRank(b.tipe));
+      setGeneratedQuestions(sortedSoal);
       setStep(3);
     } catch(err: any) {
       if (err.name === "AbortError") {
