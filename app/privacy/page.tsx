@@ -156,12 +156,52 @@ export default function PrivacyPage() {
             </ul>
           </section>
 
-          {/* Section 5 */}
+          {/* Section 5 - Kepatuhan Data Google API */}
           <section className="bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/15 p-6 sm:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
             <div className="flex items-center gap-3 mb-4">
               <span className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-black text-sm flex items-center justify-center border border-blue-300">5</span>
               <h2 className="text-lg sm:text-xl font-bold uppercase tracking-wide text-black dark:text-white">
-                Hak Pengguna & Penghapusan Data
+                Kepatuhan Data Pengguna Google API (Google API Services User Data Policy)
+              </h2>
+            </div>
+            <div className="space-y-3 text-gray-700 dark:text-gray-300">
+              <p>
+                EduCraft AI menggunakan layanan Google OAuth dan Google Forms API untuk memfasilitasi autentikasi guru dan pembuatan kuis otomatis langsung ke Google Drive / Google Forms milik pengguna.
+              </p>
+              <div className="p-4 bg-gray-50 dark:bg-[#252525] border-l-4 border-blue-600 dark:border-blue-400 space-y-2 text-xs sm:text-sm">
+                <p className="font-semibold text-black dark:text-white">
+                  Pernyataan Kepatuhan &amp; Penggunaan Terbatas (Limited Use):
+                </p>
+                <p className="italic">
+                  &quot;Penggunaan dan transfer informasi yang diterima dari Google APIs ke aplikasi lain oleh EduCraft AI akan sepenuhnya mematuhi <strong>Google API Services User Data Policy</strong>, termasuk persyaratan Penggunaan Terbatas (Limited Use requirements).&quot;
+                </p>
+              </div>
+              <ul className="list-disc list-inside space-y-2 text-xs sm:text-sm pl-2">
+                <li>
+                  <strong>Akses &amp; Penggunaan:</strong> Akses ke Google Forms hanya diminta saat pengguna secara eksplisit menekan tombol &quot;Google Forms&quot; untuk mengekspor paket kuis. Kami tidak membaca, mengubah, atau menghapus file lain di Google Drive pengguna.
+                </li>
+                <li>
+                  <strong>Penyimpanan:</strong> Kami TIDAK menyimpan token akses Google atau data kredensial Google Anda di server database kami. Token hanya disimpan sementara di sesi browser lokal pengguna dan langsung kedaluwarsa setelah proses pembuatan form selesai.
+                </li>
+                <li>
+                  <strong>Berbagi Data:</strong> Data pengguna yang diperoleh melalui Google APIs tidak pernah dibagikan, dijual, atau dialihkan ke pihak ketiga, maupun digunakan untuk melatih model kecerdasan buatan (AI/LLM).
+                </li>
+                <li>
+                  <strong>Pencabutan Akses:</strong> Anda dapat mencabut akses EduCraft AI kapan saja melalui halaman resmi Keamanan Akun Google Anda di:{" "}
+                  <a href="https://myaccount.google.com/permissions" target="_blank" rel="noreferrer" className="font-bold underline text-blue-600 dark:text-blue-400">
+                    https://myaccount.google.com/permissions
+                  </a>.
+                </li>
+              </ul>
+            </div>
+          </section>
+
+          {/* Section 6 */}
+          <section className="bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/15 p-6 sm:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
+            <div className="flex items-center gap-3 mb-4">
+              <span className="w-7 h-7 rounded bg-blue-100 dark:bg-blue-950 text-blue-600 dark:text-blue-400 font-black text-sm flex items-center justify-center border border-blue-300">6</span>
+              <h2 className="text-lg sm:text-xl font-bold uppercase tracking-wide text-black dark:text-white">
+                Hak Pengguna &amp; Penghapusan Data
               </h2>
             </div>
             <p className="text-gray-700 dark:text-gray-300 mb-3">
