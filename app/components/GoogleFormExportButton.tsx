@@ -54,24 +54,24 @@ const ExportButtonInner = ({ soalData, disabled }: Props) => {
 
   if (formUrl) {
     return (
-      <div className="p-6 border border-green-500 bg-green-50 hover:bg-green-100 transition-all flex flex-col items-center justify-center gap-3 text-center group w-full h-full rounded">
-        <div className="w-12 h-12 rounded-full bg-green-200 text-green-700 flex items-center justify-center font-bold text-xl mb-1">
+      <div className="p-3 sm:p-4 border-2 border-green-500 bg-green-50 dark:bg-green-950/30 transition-all flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-2 text-left sm:text-center group w-full h-full shadow-[2px_2px_0px_0px_rgba(34,197,94,0.2)]">
+        <div className="w-8 h-8 sm:w-10 sm:h-10 rounded bg-green-200 text-green-700 flex items-center justify-center font-bold text-sm sm:text-lg shrink-0">
           ✓
         </div>
-        <div>
-          <div className="font-bold text-green-800">
+        <div className="min-w-0 flex-1">
+          <div className="font-bold text-xs sm:text-sm text-green-800 dark:text-green-300">
             Form Siap!
           </div>
+          <a 
+            href={formUrl} 
+            target="_blank" 
+            rel="noreferrer"
+            className="mt-1 px-2.5 py-1 rounded text-[10px] sm:text-xs font-bold inline-flex items-center gap-1.5 hover:opacity-85 transition-opacity"
+            style={{ backgroundColor: "#16a34a", color: "white" }}
+          >
+            Buka Form <ExternalLink size={11} />
+          </a>
         </div>
-        <a 
-          href={formUrl} 
-          target="_blank" 
-          rel="noreferrer"
-          className="mt-2 px-4 py-2 rounded text-xs font-semibold flex items-center gap-2 mx-auto hover:opacity-80 transition-opacity"
-          style={{ backgroundColor: "#16a34a", color: "white" }}
-        >
-          Buka Form <ExternalLink size={12} />
-        </a>
       </div>
     );
   }
@@ -80,16 +80,16 @@ const ExportButtonInner = ({ soalData, disabled }: Props) => {
     <button
       onClick={() => login()}
       disabled={disabled || isExporting}
-      className="p-6 border border-black/10 bg-white hover:border-[#673AB7] hover:bg-[#f9f5ff] transition-all flex flex-col items-center justify-center gap-3 text-center group w-full h-full disabled:opacity-50"
+      className="p-3 sm:p-4 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-[#673AB7] hover:bg-[#f9f5ff] dark:hover:bg-[#281e3a] transition-all flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-2 text-left sm:text-center group w-full h-full disabled:opacity-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5"
     >
-      <div className="w-12 h-12 rounded-full bg-[#673AB7]/10 text-[#673AB7] flex items-center justify-center font-bold text-xl mb-1">
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded bg-[#673AB7]/10 text-[#673AB7] flex items-center justify-center font-bold text-sm sm:text-lg shrink-0 border border-[#673AB7]/20">
         G
       </div>
-      <div>
-        <div className="font-bold text-gray-900 group-hover:text-[#673AB7]">
+      <div className="min-w-0">
+        <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white group-hover:text-[#673AB7] truncate">
           {isExporting ? "Memproses..." : "Google Forms"}
         </div>
-        <div className="text-[10px] text-gray-500 mt-1 uppercase tracking-wider">
+        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 uppercase tracking-wider truncate">
           {isExporting ? "Harap Tunggu" : "Auto-Import"}
         </div>
       </div>

@@ -1511,113 +1511,93 @@ export default function CreateQuestionWizard() {
             />
 
             <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-4xl bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10 shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-lg sm:max-w-xl bg-white dark:bg-[#1e1e1e] border-2 sm:border-3 border-black dark:border-white/20 shadow-[6px_6px_0px_0px_#000] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden flex flex-col max-h-[88vh]"
             >
-              <div className="flex items-center justify-between p-6 border-b border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a]">
+              {/* Header */}
+              <div className="flex items-center justify-between p-3.5 sm:p-5 border-b-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#252525]">
                 <div>
-                  <h3 className="text-2xl font-bold flex items-center gap-2 text-black dark:text-white">
-                    <Download className="text-gray-400 dark:text-gray-500 dark:text-gray-400" /> Download Hub
+                  <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 text-black dark:text-white">
+                    <Download size={18} className="text-gray-500 dark:text-gray-400" /> Download Hub
                   </h3>
-                  <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">
-                    Pilih format ekspor yang paling sesuai dengan kebutuhan
-                    kelas Anda.
+                  <p className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-xs mt-0.5">
+                    Pilih format ekspor sesuai kebutuhan Anda.
                   </p>
                 </div>
                 <button
                   onClick={() => setIsDownloadModalOpen(false)}
-                  className="p-2 text-gray-400 dark:text-gray-500 dark:text-gray-400 hover:text-black dark:text-white hover:bg-gray-200 transition-colors rounded-full"
+                  className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white hover:bg-gray-200 dark:hover:bg-[#333] transition-colors rounded-lg cursor-pointer"
+                  aria-label="Tutup"
                 >
-                  <X size={24} />
+                  <X size={18} />
                 </button>
               </div>
 
-              <div className="p-8 overflow-y-auto">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold font-editorial">
-                        01
-                      </div>
-                      <h4 className="font-bold text-lg uppercase tracking-wider text-black dark:text-white">
-                        Dokumen Cetak
-                      </h4>
-                    </div>
-
-                    <div className="space-y-3">
-
-
-                      <button 
-                        onClick={() => handleExport("docx", true, true)}
-                        className="w-full flex items-center justify-between p-4 border border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] hover:border-blue-500 hover:shadow-[4px_4px_0px_0px_rgba(59,130,246,0.2)] transition-all group text-left"
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
-                            W
-                          </div>
-                          <div>
-                            <div className="font-bold text-gray-900">
-                              Microsoft Word (.docx)
-                            </div>
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                              Format MS Word sepaket (Soal, Kunci, Pembahasan)
-                            </div>
-                          </div>
-                        </div>
-                        <Download
-                          size={18}
-                          className="text-gray-300 group-hover:text-blue-500"
-                        />
-                      </button>
-
-                    </div>
+              {/* Body */}
+              <div className="p-3.5 sm:p-5 space-y-4 overflow-y-auto">
+                {/* 01 Dokumen Cetak */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider">
+                      01
+                    </span>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Dokumen Cetak
+                    </h4>
                   </div>
 
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <div className="w-8 h-8 bg-black text-white flex items-center justify-center text-xs font-bold font-editorial">
-                        02
+                  <button 
+                    onClick={() => handleExport("docx", true, true)}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-blue-300 dark:border-blue-800">
+                        W
                       </div>
-                      <h4 className="font-bold text-lg uppercase tracking-wider text-black dark:text-white">
-                        Platform Digital
-                      </h4>
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <QuizizzExportButton 
-                        soalData={{
-                          soal: generatedQuestions
-                        }}
-                      />
-
-                      <GoogleFormExportButton 
-                        soalData={{
-                          header: {
-                            nama_sekolah: "EDUCRAFT AI",
-                            mata_pelajaran: "Materi Umum",
-                            kelas: "Umum",
-                            durasi: "60 Menit"
-                          },
-                          soal: generatedQuestions
-                        }}
-                      />
-
-                      <button className="p-6 border border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] hover:border-black dark:border-white/20 transition-all flex flex-col items-center justify-center gap-3 text-center border-dashed group">
-                        <div className="w-12 h-12 rounded-full bg-gray-50 dark:bg-[#2a2a2a] text-gray-400 dark:text-gray-500 dark:text-gray-400 flex items-center justify-center font-bold text-xl mb-1 group-hover:bg-black group-hover:text-white transition-colors">
-                          <Plus size={20} />
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                          Microsoft Word (.docx)
                         </div>
-                        <div>
-                          <div className="font-bold text-gray-500 dark:text-gray-400 group-hover:text-black dark:text-white">
-                            Lainnya
-                          </div>
-                          <div className="text-[10px] text-gray-400 dark:text-gray-500 dark:text-gray-400 mt-1 uppercase tracking-wider">
-                            Moodle, Canvas
-                          </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                          Format MS Word sepaket (Soal, Kunci, Pembahasan)
                         </div>
-                      </button>
+                      </div>
                     </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+                </div>
+
+                {/* 02 Platform Digital */}
+                <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider">
+                      02
+                    </span>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Platform Digital
+                    </h4>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
+                    <QuizizzExportButton 
+                      soalData={{
+                        soal: generatedQuestions
+                      }}
+                    />
+
+                    <GoogleFormExportButton 
+                      soalData={{
+                        header: {
+                          nama_sekolah: "EDUCRAFT AI",
+                          mata_pelajaran: "Materi Umum",
+                          kelas: "Umum",
+                          durasi: "60 Menit"
+                        },
+                        soal: generatedQuestions
+                      }}
+                    />
                   </div>
                 </div>
               </div>
