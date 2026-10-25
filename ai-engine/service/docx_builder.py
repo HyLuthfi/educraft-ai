@@ -718,9 +718,13 @@ def render_teacher_master_key(
     all_questions: List[Dict[str, Any]],
     sertakan_pembahasan: bool = True
 ):
-    """Membuat halaman kunci jawaban dan pembahasan khusus pegangan guru (terpisah via Page Break)."""
+    """
+    Membuat halaman Kunci Jawaban & Rubrik Pembahasan Pegangan Guru terstandar kedinasan.
+    Menggunakan format matriks kompak dan tabel rubrik terpadu (anti-card clutter).
+    """
     doc.add_page_break()
 
+    # Header Lembar Kunci
     p_top = doc.add_paragraph()
     p_top.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_top.paragraph_format.space_before = Pt(4)
@@ -728,139 +732,229 @@ def render_teacher_master_key(
     
     r_k1 = p_top.add_run("LEMBAR KUNCI JAWABAN & PEMBAHASAN\n")
     r_k1.font.name = "Times New Roman"
-    r_k1.font.size = Pt(13)
+    r_k1.font.size = Pt(12)
     r_k1.font.bold = True
-
-    r_k2 = p_top.add_run("(DOKUMEN KHUSUS PEGANGAN GURU / TIM PENGUJI)\n")
-    r_k2.font.name = "Times New Roman"
-    r_k2.font.size = Pt(9.5)
-    r_k2.font.bold = True
-    r_k2.font.italic = True
-    r_k2.font.color.rgb = RGBColor(180, 50, 50)
 
     mapel = clean_subject_name(header_data.get("mata_pelajaran", ""))
     kelas = header_data.get("kelas") or "Semua Kelas"
-    r_k3 = p_top.add_run(f"Mata Pelajaran: {mapel} • Kelas: {kelas}")
-    r_k3.font.name = "Times New Roman"
-    r_k3.font.size = Pt(9.5)
+    r_k2 = p_top.add_run(f"Pegangan Guru / Penilai • Mata Pelajaran: {mapel} • Kelas: {kelas}")
+    r_k2.font.name = "Times New Roman"
+    r_k2.font.size = Pt(9)
+    r_k2.font.italic = True
+    r_k2.font.color.rgb = RGBColor(90, 90, 90)
 
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        r'<w:bottom w:val="single" w:sz="8" w:space="3" w:color="000000"/>'
+        r'<w:bottom w:val="double" w:sz="10" w:space="4" w:color="000000"/>'
         r'</w:pBdr>'
     )
     p_top._p.get_or_add_pPr().append(pBdr)
 
-    # 1. Matriks Kunci Cepat Pilihan Ganda (Quick Key Grid)
+    # 1. Matriks Kunci Cepat Pilihan Ganda (Compact 10-Column Ruled Grid)
     pg_items = [q for q in all_questions if str(q.get("tipe", q.get("type", "pg"))).strip().lower() in ("pg", "pilihan ganda", "pilihan_ganda", "benar/salah", "benar_salah")]
     if pg_items:
         p_m = doc.add_paragraph()
-        p_m.paragraph_format.space_before = Pt(10)
-        p_m.paragraph_format.space_after = Pt(4)
-        r_m = p_m.add_run("A. TABEL KUNCI CEPAT PILIHAN GANDA (KOREKSI CEPAT)")
+        p_m.paragraph_format.space_before = Pt(8)
+        p_m.paragraph_format.space_after = Pt(3)
+        p_m.paragraph_format.keep_with_next = True
+        r_m = p_m.add_run("A. TABEL KUNCI CEPAT PILIHAN GANDA")
         r_m.font.name = "Times New Roman"
-        r_m.font.size = Pt(10)
+        r_m.font.size = Pt(9.5)
         r_m.font.bold = True
 
         num_cols = min(5, len(pg_items))
         num_rows = (len(pg_items) + num_cols - 1) // num_cols
         
-        t_key = doc.add_table(rows=num_rows, cols=num_cols)
+        t_key = doc.add_table(rows=num_rows + 1, cols=num_cols * 2)
         t_key.alignment = WD_TABLE_ALIGNMENT.CENTER
-        set_table_borders_thin(t_key, color="B0B0B0", sz="4")
+        set_table_borders_thin(t_key, color="D1D5DB", sz="4")
 
+        # Header baris
+        hdr_row = t_key.rows[0]
+        trPr = hdr_row._tr.get_or_add_trPr()
+        trPr.append(parse_xml(f'<w:tblHeader {nsdecls("w")}/>'))
+        trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+        for col_pair in range(num_cols):
+            c_no = hdr_row.cells[col_pair * 2]
+            c_key = hdr_row.cells[col_pair * 2 + 1]
+            c_no.width = Inches(0.48)
+            c_key.width = Inches(0.48)
+            set_cell_background(c_no, "F3F4F6")
+            set_cell_background(c_key, "F3F4F6")
+            set_cell_margins(c_no, top=35, bottom=35, left=15, right=15)
+            set_cell_margins(c_key, top=35, bottom=35, left=15, right=15)
+
+            p_n = c_no.paragraphs[0]
+            p_n.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_n.paragraph_format.space_after = Pt(0)
+            r = p_n.add_run("No")
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(8.5)
+            r.font.bold = True
+
+            p_k = c_key.paragraphs[0]
+            p_k.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_k.paragraph_format.space_after = Pt(0)
+            r = p_k.add_run("Kunci")
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(8.5)
+            r.font.bold = True
+
+        # Isi data matriks
         for idx, q in enumerate(pg_items):
-            row_i = idx // num_cols
-            col_i = idx % num_cols
-            cell = t_key.rows[row_i].cells[col_i]
-            cell.width = Inches(1.3)
-            set_cell_background(cell, "F3F4F6" if (row_i + col_i) % 2 == 0 else "FFFFFF")
-            set_cell_margins(cell, top=60, bottom=60, left=80, right=80)
+            row_idx = (idx % num_rows) + 1
+            col_pair = idx // num_rows
+            if col_pair >= num_cols:
+                continue
+            row = t_key.rows[row_idx]
+            trPr = row._tr.get_or_add_trPr()
+            trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
 
-            kunci = str(q.get("kunci_jawaban", q.get("jawaban", "-"))).strip()
-            p = cell.paragraphs[0]
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-            p.paragraph_format.space_after = Pt(0)
-            
-            r_num = p.add_run(f"No. {idx + 1}: ")
-            r_num.font.name = "Times New Roman"
-            r_num.font.size = Pt(9.5)
+            c_no = row.cells[col_pair * 2]
+            c_key = row.cells[col_pair * 2 + 1]
+            c_no.width = Inches(0.48)
+            c_key.width = Inches(0.48)
+            set_cell_margins(c_no, top=30, bottom=30, left=15, right=15)
+            set_cell_margins(c_key, top=30, bottom=30, left=15, right=15)
 
-            r_key = p.add_run(f"[{kunci}]")
-            r_key.font.name = "Times New Roman"
-            r_key.font.size = Pt(10)
-            r_key.font.bold = True
-            r_key.font.color.rgb = RGBColor(16, 120, 60)
+            p_n = c_no.paragraphs[0]
+            p_n.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_n.paragraph_format.space_after = Pt(0)
+            r = p_n.add_run(str(idx + 1))
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(8.5)
 
-    # 2. Pembahasan Lengkap & Taksonomi Bloom
+            kunci = str(q.get("kunci_jawaban", q.get("jawaban", "-"))).strip().upper()
+            p_k = c_key.paragraphs[0]
+            p_k.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_k.paragraph_format.space_after = Pt(0)
+            r = p_k.add_run(kunci)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9)
+            r.font.bold = True
+
+    # 2. Tabel Rubrik & Pembahasan Terpadu (Unified Table, No Floating Cards!)
     if sertakan_pembahasan:
         p_d = doc.add_paragraph()
-        p_d.paragraph_format.space_before = Pt(14)
+        p_d.paragraph_format.space_before = Pt(12)
         p_d.paragraph_format.space_after = Pt(4)
-        r_d = p_d.add_run("B. PEMBAHASAN DETAIL & KUNCI JAWABAN LENGKAP")
+        p_d.paragraph_format.keep_with_next = True
+        r_d = p_d.add_run("B. RUBRIK PENILAIAN & PEMBAHASAN DETAIL")
         r_d.font.name = "Times New Roman"
-        r_d.font.size = Pt(10)
+        r_d.font.size = Pt(9.5)
         r_d.font.bold = True
 
+        # Satu tabel terpadu untuk semua pembahasan
+        t_rubric = doc.add_table(rows=len(all_questions) + 1, cols=4)
+        t_rubric.alignment = WD_TABLE_ALIGNMENT.CENTER
+        set_table_borders_thin(t_rubric, color="E5E7EB", sz="4")
+
+        # Header Baris Rubrik
+        r_hdr = t_rubric.rows[0]
+        trPr = r_hdr._tr.get_or_add_trPr()
+        trPr.append(parse_xml(f'<w:tblHeader {nsdecls("w")}/>'))
+        trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+
+        headers_meta = [
+            ("No.", Inches(0.45), WD_ALIGN_PARAGRAPH.CENTER),
+            ("Kunci", Inches(0.65), WD_ALIGN_PARAGRAPH.CENTER),
+            ("Aspek / Level", Inches(1.2), WD_ALIGN_PARAGRAPH.LEFT),
+            ("Uraian Pembahasan & Pedoman Jawaban", Inches(4.45), WD_ALIGN_PARAGRAPH.LEFT),
+        ]
+
+        for col_idx, (text_h, w, align) in enumerate(headers_meta):
+            cell = r_hdr.cells[col_idx]
+            cell.width = w
+            set_cell_background(cell, "F3F4F6")
+            set_cell_margins(cell, top=50, bottom=50, left=40, right=40)
+            p = cell.paragraphs[0]
+            p.alignment = align
+            p.paragraph_format.space_after = Pt(0)
+            r = p.add_run(text_h)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(8.5)
+            r.font.bold = True
+
         for i, q in enumerate(all_questions, start=1):
-            tipe = q.get("tipe", q.get("type", "pg"))
-            kunci = q.get("kunci_jawaban", q.get("jawaban", "-"))
+            row = t_rubric.rows[i]
+            trPr = row._tr.get_or_add_trPr()
+            trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+
+            tipe = str(q.get("tipe", q.get("type", "pg"))).strip().lower()
+            kunci = str(q.get("kunci_jawaban", q.get("jawaban", "-"))).strip()
             pembahasan = clean_latex_math(q.get("pembahasan", q.get("explanation", "-")))
             bloom = q.get("level_bloom", "")
             diff = q.get("kesulitan", "")
 
-            t_box = doc.add_table(rows=1, cols=1)
-            t_box.alignment = WD_TABLE_ALIGNMENT.CENTER
-            cell = t_box.rows[0].cells[0]
-            cell.width = Inches(6.7)
-            set_cell_background(cell, "FAFAFA")
-            set_cell_margins(cell, top=60, bottom=60, left=90, right=90)
-            set_table_borders_thin(t_box, color="E2E8F0", sz="4")
+            # Sel 1: Nomor
+            c_no = row.cells[0]
+            c_no.width = Inches(0.45)
+            set_cell_margins(c_no, top=45, bottom=45, left=30, right=30)
+            p_n = c_no.paragraphs[0]
+            p_n.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_n.paragraph_format.space_after = Pt(0)
+            r = p_n.add_run(str(i))
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9)
+            r.font.bold = True
 
-            p = cell.paragraphs[0]
-            p.paragraph_format.line_spacing = 1.15
-            p.paragraph_format.space_after = Pt(0)
+            # Sel 2: Kunci
+            c_k = row.cells[1]
+            c_k.width = Inches(0.65)
+            set_cell_margins(c_k, top=45, bottom=45, left=30, right=30)
+            p_k = c_k.paragraphs[0]
+            p_k.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            p_k.paragraph_format.space_after = Pt(0)
+            r = p_k.add_run(kunci.upper() if len(kunci) <= 3 else "Uraian")
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+            r.font.bold = True
 
-            r_n = p.add_run(f"Soal Nomor {i} ({str(tipe).upper()})\n")
-            r_n.font.name = "Times New Roman"
-            r_n.font.size = Pt(9.5)
-            r_n.font.bold = True
-
-            meta_str = []
-            if bloom:
-                meta_str.append(f"Level: {bloom}")
-            if diff:
-                meta_str.append(f"Kesulitan: {str(diff).capitalize()}")
-            if meta_str:
-                r_meta = p.add_run(f"[{' • '.join(meta_str)}]\n")
-                r_meta.font.name = "Times New Roman"
-                r_meta.font.size = Pt(8.5)
-                r_meta.font.italic = True
-                r_meta.font.color.rgb = RGBColor(100, 100, 100)
-
-            r_klabel = p.add_run("Kunci Jawaban: ")
-            r_klabel.font.name = "Times New Roman"
-            r_klabel.font.size = Pt(9.5)
-            r_klabel.font.bold = True
+            # Sel 3: Tingkat & Aspek
+            c_asp = row.cells[2]
+            c_asp.width = Inches(1.2)
+            set_cell_margins(c_asp, top=45, bottom=45, left=40, right=40)
+            p_asp = c_asp.paragraphs[0]
+            p_asp.paragraph_format.space_after = Pt(0)
+            p_asp.paragraph_format.line_spacing = 1.15
             
-            r_kval = p.add_run(f"{kunci}\n")
-            r_kval.font.name = "Times New Roman"
-            r_kval.font.size = Pt(9.5)
-            r_kval.font.bold = True
-            r_kval.font.color.rgb = RGBColor(16, 120, 60)
+            type_label = "PG" if tipe in ("pg", "pilihan ganda") else ("Isian" if tipe in ("isian", "isian singkat") else "Essay")
+            r_t = p_asp.add_run(f"[{type_label}]\n")
+            r_t.font.name = "Times New Roman"
+            r_t.font.size = Pt(8.5)
+            r_t.font.bold = True
 
-            r_plabel = p.add_run("Pembahasan: ")
-            r_plabel.font.name = "Times New Roman"
-            r_plabel.font.size = Pt(9.5)
-            r_plabel.font.bold = True
+            info_parts = []
+            if bloom:
+                info_parts.append(bloom.upper())
+            if diff:
+                info_parts.append(str(diff).capitalize())
+            if info_parts:
+                r_inf = p_asp.add_run(" • ".join(info_parts))
+                r_inf.font.name = "Times New Roman"
+                r_inf.font.size = Pt(8)
+                r_inf.font.color.rgb = RGBColor(90, 90, 90)
 
-            r_pval = p.add_run(f"{pembahasan}")
-            r_pval.font.name = "Times New Roman"
-            r_pval.font.size = Pt(9.5)
+            # Sel 4: Uraian Pembahasan
+            c_pem = row.cells[3]
+            c_pem.width = Inches(4.45)
+            set_cell_margins(c_pem, top=45, bottom=45, left=40, right=40)
+            p_pem = c_pem.paragraphs[0]
+            p_pem.paragraph_format.space_after = Pt(0)
+            p_pem.paragraph_format.line_spacing = 1.15
 
-            p_gap = doc.add_paragraph()
-            p_gap.paragraph_format.space_before = Pt(0)
-            p_gap.paragraph_format.space_after = Pt(2)
+            # Render teks dengan Arabic token handling
+            pattern = r'([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+)'
+            tokens = re.split(pattern, pembahasan)
+            for token in tokens:
+                if not token:
+                    continue
+                r_tok = p_pem.add_run(token)
+                r_tok.font.name = "Times New Roman"
+                if bool(re.search(r'[\u0600-\u06FF]', token)):
+                    r_tok.font.size = Pt(11)
+                else:
+                    r_tok.font.size = Pt(9)
 
 
 def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_count: int):
