@@ -705,54 +705,111 @@ export default function LibraryPage() {
                       </div>
                     )}
 
-                    {/* Options (Pilihan Ganda) */}
-                    {q.opsi && Array.isArray(q.opsi) && q.opsi.length > 0 && (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
-                        {q.opsi.map((op: any, oIdx: number) => {
-                          const isCorrect =
-                            viewMode === "guru" &&
-                            (op.benar ||
-                              op.label?.toUpperCase() === q.kunci_jawaban?.toUpperCase());
+                    {/* Options (Pilihan Ganda & Benar/Salah) */}
+                    {(() => {
+                      const t = (q.tipe || "").toLowerCase().trim();
+                      const isBS =
+                        t.includes("benar") ||
+                        t.includes("salah") ||
+                        t === "bs" ||
+                        (q.opsi?.length === 2 &&
+                          q.opsi.some((o: any) => o.teks?.toLowerCase().trim() === "benar") &&
+                          q.opsi.some((o: any) => o.teks?.toLowerCase().trim() === "salah"));
 
-                          return (
+                      if (isBS) {
+                        const isBenarKey =
+                          q.opsi?.find((o: any) => o.teks?.toLowerCase().trim() === "benar")?.benar ||
+                          String(q.kunci_jawaban || "").toLowerCase().trim() === "benar" ||
+                          String(q.kunci_jawaban || "").toUpperCase().trim() === "A";
+
+                        return (
+                          <div className="flex items-center gap-2.5 pt-1">
                             <div
-                              key={oIdx}
-                              className={`p-2.5 border text-xs flex items-start gap-2.5 transition-colors ${
-                                isCorrect
-                                  ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold shadow-xs"
+                              className={`px-4 py-2 border flex items-center gap-2 text-xs font-bold transition-colors ${
+                                viewMode === "guru" && isBenarKey
+                                  ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200"
                                   : "bg-gray-50 dark:bg-[#282828] border-black/10 dark:border-white/10 text-gray-700 dark:text-gray-300"
                               }`}
                             >
-                              <span
-                                className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
-                                  isCorrect
-                                    ? "bg-emerald-600 text-white"
-                                    : "bg-black/10 dark:bg-white/10"
-                                }`}
-                              >
-                                {op.label}
-                              </span>
-                              {isEditing ? (
-                                <input
-                                  type="text"
-                                  value={op.teks}
-                                  onChange={(e) => {
-                                    const updated = [...editedQuestions];
-                                    updated[idx].opsi[oIdx].teks = e.target.value;
-                                    setEditedQuestions(updated);
-                                  }}
-                                  className="w-full bg-white dark:bg-[#1e1e1e] p-1 border outline-none font-normal"
-                                />
-                              ) : (
-                                <span className="flex-1 leading-snug">
-                                  <MathText content={op.teks} inline />
+                              <span className="font-mono text-sm">{viewMode === "guru" && isBenarKey ? "[✓]" : "[  ]"}</span>
+                              <span>Benar</span>
+                              {viewMode === "guru" && isBenarKey && (
+                                <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold uppercase">
+                                  Kunci
                                 </span>
                               )}
                             </div>
-                          );
-                        })}
-                      </div>
-                    )}
+                            <div
+                              className={`px-4 py-2 border flex items-center gap-2 text-xs font-bold transition-colors ${
+                                viewMode === "guru" && !isBenarKey
+                                  ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200"
+                                  : "bg-gray-50 dark:bg-[#282828] border-black/10 dark:border-white/10 text-gray-700 dark:text-gray-300"
+                              }`}
+                            >
+                              <span className="font-mono text-sm">{viewMode === "guru" && !isBenarKey ? "[✓]" : "[  ]"}</span>
+                              <span>Salah</span>
+                              {viewMode === "guru" && !isBenarKey && (
+                                <span className="text-[9px] bg-emerald-600 text-white px-1.5 py-0.2 rounded font-bold uppercase">
+                                  Kunci
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (q.opsi && Array.isArray(q.opsi) && q.opsi.length > 0) {
+                        return (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                            {q.opsi.map((op: any, oIdx: number) => {
+                              const isCorrect =
+                                viewMode === "guru" &&
+                                (op.benar ||
+                                  op.label?.toUpperCase() === q.kunci_jawaban?.toUpperCase());
+
+                              return (
+                                <div
+                                  key={oIdx}
+                                  className={`p-2.5 border text-xs flex items-start gap-2.5 transition-colors ${
+                                    isCorrect
+                                      ? "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500 text-emerald-900 dark:text-emerald-200 font-bold shadow-xs"
+                                      : "bg-gray-50 dark:bg-[#282828] border-black/10 dark:border-white/10 text-gray-700 dark:text-gray-300"
+                                  }`}
+                                >
+                                  <span
+                                    className={`w-5 h-5 rounded-full flex items-center justify-center font-black text-[10px] shrink-0 ${
+                                      isCorrect
+                                        ? "bg-emerald-600 text-white"
+                                        : "bg-black/10 dark:bg-white/10"
+                                    }`}
+                                  >
+                                    {op.label}
+                                  </span>
+                                  {isEditing ? (
+                                    <input
+                                      type="text"
+                                      value={op.teks}
+                                      onChange={(e) => {
+                                        const updated = [...editedQuestions];
+                                        updated[idx].opsi[oIdx].teks = e.target.value;
+                                        setEditedQuestions(updated);
+                                      }}
+                                      className="w-full bg-white dark:bg-[#1e1e1e] p-1 border outline-none font-normal"
+                                    />
+                                  ) : (
+                                    <span className="flex-1 leading-snug">
+                                      <MathText content={op.teks} inline />
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })()}
 
                     {/* Guru Exclusive: Kunci Jawaban & Pembahasan */}
                     {viewMode === "guru" && (

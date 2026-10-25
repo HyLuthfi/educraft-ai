@@ -1366,32 +1366,92 @@ export default function CreateQuestionWizard() {
                       </div>
                     )}
 
-                    {q.opsi && (
-                      <div className="space-y-1.5 mt-2">
-                        {q.opsi.map((opt: any, i: number) => (
-                          <div
-                            key={i}
-                            className={`px-2.5 py-1.5 sm:py-2 border flex items-center justify-between gap-2 text-xs sm:text-sm ${
-                              opt.benar
-                                ? "border-green-500 bg-green-50/80 dark:bg-green-950/20 text-green-800 dark:text-green-300 font-semibold"
-                                : "border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300"
-                            }`}
-                          >
-                            <span className="flex-1 leading-snug">
-                              <span className="font-bold mr-1.5 text-black dark:text-white">{opt.label}.</span>
-                              <MathText content={opt.teks} inline />
-                            </span>
-                            {opt.benar && (
-                              <span className="text-[9px] sm:text-[10px] font-bold bg-green-600 text-white px-1.5 py-0.5 uppercase tracking-wider shrink-0">
-                                Kunci
-                              </span>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    )}
+                    {(() => {
+                      const t = (q.tipe || "").toLowerCase().trim();
+                      const isBS =
+                        t.includes("benar") ||
+                        t.includes("salah") ||
+                        t === "bs" ||
+                        (q.opsi?.length === 2 &&
+                          q.opsi.some((o: any) => o.teks?.toLowerCase().trim() === "benar") &&
+                          q.opsi.some((o: any) => o.teks?.toLowerCase().trim() === "salah"));
 
-                    {(q.kunci_jawaban || q.pembahasan) && q.tipe !== "pg" && (
+                      if (isBS) {
+                        const isBenarKey =
+                          q.opsi?.find((o: any) => o.teks?.toLowerCase().trim() === "benar")?.benar ||
+                          String(q.kunci_jawaban || "").toLowerCase().trim() === "benar" ||
+                          String(q.kunci_jawaban || "").toUpperCase().trim() === "A";
+
+                        return (
+                          <div className="flex items-center gap-2.5 mt-2">
+                            <div
+                              className={`flex-1 sm:flex-initial px-4 py-2 border flex items-center justify-between sm:justify-start gap-2.5 text-xs sm:text-sm font-bold ${
+                                isBenarKey
+                                  ? "border-green-600 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 shadow-xs"
+                                  : "border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] text-gray-500"
+                              }`}
+                            >
+                              <span className="font-mono text-sm">{isBenarKey ? "[✓]" : "[  ]"}</span>
+                              <span>Benar</span>
+                              {isBenarKey && (
+                                <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 uppercase tracking-wider font-bold">
+                                  Kunci
+                                </span>
+                              )}
+                            </div>
+                            <div
+                              className={`flex-1 sm:flex-initial px-4 py-2 border flex items-center justify-between sm:justify-start gap-2.5 text-xs sm:text-sm font-bold ${
+                                !isBenarKey
+                                  ? "border-green-600 bg-green-50 dark:bg-green-950/30 text-green-700 dark:text-green-300 shadow-xs"
+                                  : "border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] text-gray-500"
+                              }`}
+                            >
+                              <span className="font-mono text-sm">{!isBenarKey ? "[✓]" : "[  ]"}</span>
+                              <span>Salah</span>
+                              {!isBenarKey && (
+                                <span className="text-[9px] bg-green-600 text-white px-1.5 py-0.5 uppercase tracking-wider font-bold">
+                                  Kunci
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      }
+
+                      if (q.opsi && Array.isArray(q.opsi)) {
+                        return (
+                          <div className="space-y-1.5 mt-2">
+                            {q.opsi.map((opt: any, i: number) => (
+                              <div
+                                key={i}
+                                className={`px-2.5 py-1.5 sm:py-2 border flex items-center justify-between gap-2 text-xs sm:text-sm ${
+                                  opt.benar
+                                    ? "border-green-500 bg-green-50/80 dark:bg-green-950/20 text-green-800 dark:text-green-300 font-semibold"
+                                    : "border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300"
+                                }`}
+                              >
+                                <span className="flex-1 leading-snug">
+                                  <span className="font-bold mr-1.5 text-black dark:text-white">{opt.label}.</span>
+                                  <MathText content={opt.teks} inline />
+                                </span>
+                                {opt.benar && (
+                                  <span className="text-[9px] sm:text-[10px] font-bold bg-green-600 text-white px-1.5 py-0.5 uppercase tracking-wider shrink-0">
+                                    Kunci
+                                  </span>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        );
+                      }
+
+                      return null;
+                    })()}
+
+                    {(q.kunci_jawaban || q.pembahasan) &&
+                      q.tipe !== "pg" &&
+                      !String(q.tipe || "").toLowerCase().includes("benar") &&
+                      !String(q.tipe || "").toLowerCase().includes("salah") && (
                       <div className="p-2.5 bg-yellow-50 dark:bg-yellow-950/20 border border-yellow-200 dark:border-yellow-900/30 mt-2 text-xs text-yellow-900 dark:text-yellow-200">
                         <span className="font-bold">Kunci Jawaban:</span> <MathText content={q.kunci_jawaban} inline />
                       </div>

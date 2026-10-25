@@ -640,6 +640,125 @@ def render_short_answer_questions(
     return accum_h
 
 
+def render_true_false_matrix(
+    doc: Document,
+    bs_list: List[Dict[str, Any]],
+    start_num: int = 1,
+    has_top_divider: bool = False,
+    title: str = "III. BENAR / SALAH",
+    subtitle: str = "Petunjuk: Berilah tanda centang (✓) atau silang (X) pada kolom Benar atau Salah sesuai dengan pernyataan!"
+) -> float:
+    """
+    Merender butir-butir soal Benar/Salah dalam format Tabel Matriks Checklist (Standar AKM / Asesmen Nasional).
+    Kolom: No. | Pernyataan | Benar | Salah
+    """
+    add_section_header(
+        doc,
+        title,
+        subtitle,
+        has_top_divider=has_top_divider
+    )
+    accum_h = 0.8
+
+    table = doc.add_table(rows=len(bs_list) + 1, cols=4)
+    table.alignment = WD_TABLE_ALIGNMENT.CENTER
+
+    # Setup header row
+    hdr = table.rows[0]
+    trPr = hdr._tr.get_or_add_trPr()
+    trPr.append(parse_xml(f'<w:tblHeader {nsdecls("w")}/>'))
+    trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+
+    cols_cfg = [
+        ("No.", Inches(0.45), WD_ALIGN_PARAGRAPH.CENTER),
+        ("Pernyataan", Inches(4.8), WD_ALIGN_PARAGRAPH.LEFT),
+        ("Benar", Inches(0.75), WD_ALIGN_PARAGRAPH.CENTER),
+        ("Salah", Inches(0.75), WD_ALIGN_PARAGRAPH.CENTER),
+    ]
+
+    for idx, (lbl, w, align) in enumerate(cols_cfg):
+        c = hdr.cells[idx]
+        c.width = w
+        set_cell_background(c, "F3F4F6")
+        set_cell_margins(c, top=40, bottom=40, left=30, right=30)
+        p = c.paragraphs[0]
+        p.alignment = align
+        p.paragraph_format.space_before = Pt(3)
+        p.paragraph_format.space_after = Pt(3)
+        run = p.add_run(lbl)
+        run.font.name = "Times New Roman"
+        run.font.size = Pt(9)
+        run.font.bold = True
+
+    for i, q in enumerate(bs_list, start=start_num):
+        accum_h += 0.45
+        row = table.rows[i - start_num + 1]
+        trPr = row._tr.get_or_add_trPr()
+        trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+
+        raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
+
+        # Col 0: No
+        c0 = row.cells[0]
+        c0.width = Inches(0.45)
+        set_cell_margins(c0, top=45, bottom=45, left=20, right=20)
+        p0 = c0.paragraphs[0]
+        p0.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p0.paragraph_format.space_before = Pt(3)
+        p0.paragraph_format.space_after = Pt(3)
+        r0 = p0.add_run(f"{i}.")
+        r0.font.name = "Times New Roman"
+        r0.font.size = Pt(9.5)
+        r0.font.bold = True
+
+        # Col 1: Pernyataan
+        c1 = row.cells[1]
+        c1.width = Inches(4.8)
+        set_cell_margins(c1, top=45, bottom=45, left=40, right=40)
+        p1 = c1.paragraphs[0]
+        p1.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p1.paragraph_format.space_before = Pt(3)
+        p1.paragraph_format.space_after = Pt(3)
+        p1.paragraph_format.line_spacing = 1.15
+        render_question_text_with_runs(p1, raw_teks)
+
+        # Col 2: Benar [   ]
+        c2 = row.cells[2]
+        c2.width = Inches(0.75)
+        set_cell_margins(c2, top=45, bottom=45, left=15, right=15)
+        p2 = c2.paragraphs[0]
+        p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p2.paragraph_format.space_before = Pt(3)
+        p2.paragraph_format.space_after = Pt(3)
+        r2 = p2.add_run("[   ]")
+        r2.font.name = "Times New Roman"
+        r2.font.size = Pt(9)
+        r2.font.color.rgb = RGBColor(140, 140, 140)
+
+        # Col 3: Salah [   ]
+        c3 = row.cells[3]
+        c3.width = Inches(0.75)
+        set_cell_margins(c3, top=45, bottom=45, left=15, right=15)
+        p3 = c3.paragraphs[0]
+        p3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p3.paragraph_format.space_before = Pt(3)
+        p3.paragraph_format.space_after = Pt(3)
+        r3 = p3.add_run("[   ]")
+        r3.font.name = "Times New Roman"
+        r3.font.size = Pt(9)
+        r3.font.color.rgb = RGBColor(140, 140, 140)
+
+    # Borders
+    set_table_borders_thin(table, color="D1D5DB", sz="4")
+
+    # Space after table
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(0)
+    p_sp.paragraph_format.space_after = Pt(4)
+
+    return accum_h
+
+
 def render_essay_questions(
     doc: Document,
     essay_list: List[Dict[str, Any]],
@@ -756,20 +875,30 @@ def render_teacher_master_key(
     )
     p_top._p.get_or_add_pPr().append(pBdr)
 
-    # 1. Matriks Kunci Cepat Pilihan Ganda (Pita Ringkas 5 Kolom, Tanpa Garis Kisi Kaku)
-    pg_items = [q for q in all_questions if str(q.get("tipe", q.get("type", "pg"))).strip().lower() in ("pg", "pilihan ganda", "pilihan_ganda", "benar/salah", "benar_salah")]
-    if pg_items:
+    # 1. Matriks Kunci Cepat (Pita Ringkas 5 Kolom, Tanpa Garis Kisi Kaku)
+    quick_items = []
+    for q in all_questions:
+        t = str(q.get("tipe", q.get("type", "pg"))).strip().lower()
+        is_bs = t in ("benar/salah", "benar salah", "benar_salah", "bs", "true_false", "tf")
+        if not is_bs and len(q.get("opsi") or []) == 2:
+            texts = [str(o.get("teks", "")).strip().lower() for o in (q.get("opsi") or [])]
+            if "benar" in texts and "salah" in texts:
+                is_bs = True
+        if is_bs or t in ("pg", "pilihan ganda", "pilihan_ganda", "pilihan"):
+            quick_items.append((q, is_bs))
+
+    if quick_items:
         p_m = doc.add_paragraph()
         p_m.paragraph_format.space_before = Pt(10)
         p_m.paragraph_format.space_after = Pt(4)
         p_m.paragraph_format.keep_with_next = True
-        r_m = p_m.add_run("A. KUNCI JAWABAN CEPAT (PILIHAN GANDA)")
+        r_m = p_m.add_run("A. KUNCI JAWABAN CEPAT (PILIHAN GANDA & BENAR/SALAH)")
         r_m.font.name = "Times New Roman"
         r_m.font.size = Pt(9.5)
         r_m.font.bold = True
 
-        num_cols = min(5, len(pg_items))
-        num_rows = (len(pg_items) + num_cols - 1) // num_cols
+        num_cols = min(5, len(quick_items))
+        num_rows = (len(quick_items) + num_cols - 1) // num_cols
 
         t_ribbon = doc.add_table(rows=1, cols=num_cols)
         t_ribbon.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -800,16 +929,26 @@ def render_teacher_master_key(
 
             for r_i in range(num_rows):
                 idx = c_i * num_rows + r_i
-                if idx >= len(pg_items):
+                if idx >= len(quick_items):
                     continue
-                q = pg_items[idx]
-                kunci = str(q.get("kunci_jawaban", q.get("jawaban", "-"))).strip().upper()
+                q, is_bs = quick_items[idx]
+                kunci_raw = str(q.get("kunci_jawaban", q.get("jawaban", "-"))).strip()
+                if is_bs:
+                    if "benar" in kunci_raw.lower() or kunci_raw.upper() == "A":
+                        kunci = "B (Benar)"
+                    elif "salah" in kunci_raw.lower() or kunci_raw.upper() == "B":
+                        kunci = "S (Salah)"
+                    else:
+                        kunci = kunci_raw.upper()
+                else:
+                    kunci = kunci_raw.upper()
+
                 r_n = p.add_run(f"{idx + 1:2d}. ")
                 r_n.font.name = "Times New Roman"
                 r_n.font.size = Pt(9.5)
                 r_n.font.color.rgb = RGBColor(90, 90, 90)
                 
-                is_last_in_col = (r_i == num_rows - 1) or (idx + 1 == len(pg_items))
+                is_last_in_col = (r_i == num_rows - 1) or (idx + 1 == len(quick_items))
                 r_k = p.add_run(f"{kunci}" if is_last_in_col else f"{kunci}\n")
                 r_k.font.name = "Times New Roman"
                 r_k.font.size = Pt(9.5)
@@ -846,7 +985,24 @@ def render_teacher_master_key(
             r_num.font.size = Pt(10)
             r_num.font.bold = True
 
-            kunci_display = kunci.upper() if len(kunci) <= 3 else "Uraian"
+            is_bs = tipe in ("benar/salah", "benar salah", "benar_salah", "bs", "true_false", "tf")
+            if not is_bs and len(q.get("opsi") or []) == 2:
+                texts = [str(o.get("teks", "")).strip().lower() for o in (q.get("opsi") or [])]
+                if "benar" in texts and "salah" in texts:
+                    is_bs = True
+
+            if is_bs:
+                if "benar" in kunci.lower() or kunci.upper() == "A":
+                    kunci_display = "Benar"
+                elif "salah" in kunci.lower() or kunci.upper() == "B":
+                    kunci_display = "Salah"
+                else:
+                    kunci_display = kunci
+            elif len(kunci) <= 3:
+                kunci_display = kunci.upper()
+            else:
+                kunci_display = "Uraian"
+
             r_ans = p_item.add_run(f"Kunci: {kunci_display}")
             r_ans.font.name = "Times New Roman"
             r_ans.font.size = Pt(10)
@@ -955,14 +1111,14 @@ def generate_exam_docx(
         running_number += len(isian_list)
         rendered_sections_count += 1
 
-    # 3. Benar / Salah
+    # 3. Benar / Salah (Format Tabel Matriks Checklist AKM)
     if bs_list:
         has_prev = rendered_sections_count > 0
         roman = ROMAN_NUMS[rendered_sections_count]
-        render_multiple_choice_questions(
+        render_true_false_matrix(
             doc, bs_list, start_num=running_number,
             title=f"{roman}. BENAR / SALAH",
-            subtitle="Petunjuk: Pilihlah jawaban Benar (A) atau Salah (B) untuk setiap butir pernyataan berikut!",
+            subtitle="Petunjuk: Berilah tanda centang (✓) atau silang (X) pada kolom Benar atau Salah sesuai dengan pernyataan!",
             has_top_divider=has_prev
         )
         running_number += len(bs_list)
