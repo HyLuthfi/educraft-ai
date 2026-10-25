@@ -67,7 +67,11 @@ export async function POST(req: Request) {
           pesanError = parsed.detail;
         }
       } catch {
-        pesanError = errorText || pesanError;
+        if (errorText.includes("<html") || errorText.includes("<!DOCTYPE") || errorText.includes("524") || errorText.includes("Cloudflare")) {
+          pesanError = "Waktu pemrosesan melebihi batas (Cloudflare Timeout 524). Sistem telah diperbarui ke mode paralel, silakan coba kembali.";
+        } else {
+          pesanError = errorText || pesanError;
+        }
       }
       return NextResponse.json(
         { error: pesanError },

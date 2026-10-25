@@ -497,11 +497,15 @@ export default function CreateQuestionWizard() {
         let errMessage = "Gagal generate soal.";
         try {
           const rawText = await res.text();
-          try {
-            const errData = JSON.parse(rawText);
-            errMessage = errData.error || errData.detail || errMessage;
-          } catch {
-            errMessage = rawText || errMessage;
+          if (rawText.includes("<html") || rawText.includes("<!DOCTYPE") || rawText.includes("524") || rawText.includes("Cloudflare")) {
+            errMessage = "Proses melebihi batas waktu (Cloudflare Timeout 524). Silakan coba lagi.";
+          } else {
+            try {
+              const errData = JSON.parse(rawText);
+              errMessage = errData.error || errData.detail || errMessage;
+            } catch {
+              errMessage = rawText || errMessage;
+            }
           }
         } catch (e: any) {
           errMessage = e?.message || errMessage;

@@ -92,27 +92,55 @@ async def generate_soal(req: RequestGenerate):
     # 1. Urutkan konfigurasi blok: PG -> Isian -> Benar/Salah -> Essay
     sorted_blocks = sorted(req.config.blocks, key=_tipe_rank)
 
-    # 2. Eksekusi request TERPISAH per-blok/tipe soal secara konkuren ke LLM
-    async def proses_satu_blok(b):
-        prompt = buat_user_prompt(
-            konten_materi=req.konten_materi,
-            blocks=[b],
-            level_bloom=req.config.level_bloom,
-            mata_pelajaran=req.config.mata_pelajaran,
-            jenjang=req.config.jenjang,
-            bahasa=req.config.bahasa,
-            instruksi_khusus=req.config.instruksi_khusus,
-            mode="gambar" if b.image_count > 0 else "reguler"
-        )
-        return await eksekusi_ai_dengan_retry(prompt)
+    # 2. Pecah blok besar menjadi micro-chunks agar pemrosesan paralel super cepat (anti Cloudflare 524 Timeout!)
+    # Max per chunk: 5 soal untuk PG/Isian/Benar-Salah, 3 soal untuk Essay
+    tasks = []
 
-    hasil_per_blok = await asyncio.gather(*[proses_satu_blok(b) for b in sorted_blocks])
+    for b in sorted_blocks:
+        t_lower = str(b.tipe).strip().lower()
+        max_chunk = 3 if ("essay" in t_lower or "uraian" in t_lower) else 5
+
+        total_count = max(b.count, 1)
+        remaining = total_count
+        chunk_idx = 0
+
+        while remaining > 0:
+            current_c = min(remaining, max_chunk)
+            chunk_block = BlockSoal(
+                tipe=b.tipe,
+                level=b.level,
+                count=current_c,
+                image_count=b.image_count if chunk_idx == 0 else 0
+            )
+
+            # Berikan variasi instruksi agar soal antar-chunk tidak menduplikasi topik yang sama persis
+            sub_instruction = req.config.instruksi_khusus or ""
+            if total_count > max_chunk:
+                sub_instruction += f" (Bagian {chunk_idx + 1}: buat variasi konsep/aspek yang berbeda dari bagian lainnya)."
+
+            prompt = buat_user_prompt(
+                konten_materi=req.konten_materi,
+                blocks=[chunk_block],
+                level_bloom=req.config.level_bloom,
+                mata_pelajaran=req.config.mata_pelajaran,
+                jenjang=req.config.jenjang,
+                bahasa=req.config.bahasa,
+                instruksi_khusus=sub_instruction.strip(),
+                mode="gambar" if chunk_block.image_count > 0 else "reguler"
+            )
+
+            tasks.append(eksekusi_ai_dengan_retry(prompt))
+            remaining -= current_c
+            chunk_idx += 1
+
+    # 3. Jalankan semua micro-chunks secara paralel konkuren (10-15s untuk 50 soal!)
+    hasil_chunks = await asyncio.gather(*tasks)
 
     semua_soal = []
-    for hasil in hasil_per_blok:
-        semua_soal.extend(hasil)
+    for chunk_res in hasil_chunks:
+        semua_soal.extend(chunk_res)
 
-    # 3. Urutkan hasil akhir mutlak: PG -> Isian -> Benar/Salah -> Essay
+    # 4. Urutkan hasil akhir mutlak: PG -> Isian -> Benar/Salah -> Essay
     semua_soal_terurut = sorted(semua_soal, key=_tipe_rank)
 
     return {"soal": semua_soal_terurut}
