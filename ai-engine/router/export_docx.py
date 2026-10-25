@@ -23,7 +23,7 @@ class RequestExportDocx(BaseModel):
     header: HeaderDocx
     sertakan_jawaban: bool = Field(default=False)
     sertakan_pembahasan: bool = Field(default=False)
-    sertakan_ljk: bool = Field(default=True)
+    sertakan_ljk: bool = Field(default=False)
 
 @router.post("/export/docx")
 async def export_docx(req: RequestExportDocx):

@@ -866,94 +866,12 @@ def render_teacher_master_key(
                     r_tok.font.size = Pt(9.5)
 
 
-def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_count: int):
-    """Menghadirkan Lembar Jawaban Siswa (LJK Manual Mini) siap fotokopi di akhir dokumen."""
-    doc.add_page_break()
-
-    p_top = doc.add_paragraph()
-    p_top.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    p_top.paragraph_format.space_before = Pt(4)
-    p_top.paragraph_format.space_after = Pt(2)
-
-    r1 = p_top.add_run("LEMBAR JAWABAN SISWA (LJK MANUAL)\n")
-    r1.font.name = "Times New Roman"
-    r1.font.size = Pt(12)
-    r1.font.bold = True
-
-    sekolah = header_data.get("nama_sekolah") or "SATUAN PENDIDIKAN"
-    mapel = clean_subject_name(header_data.get("mata_pelajaran", ""))
-    r2 = p_top.add_run(f"{sekolah.upper()} • MATA PELAJARAN: {mapel.upper()}")
-    r2.font.name = "Times New Roman"
-    r2.font.size = Pt(9.5)
-    r2.font.bold = True
-
-    pBdr = parse_xml(
-        r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        r'<w:bottom w:val="single" w:sz="6" w:space="3" w:color="000000"/>'
-        r'</w:pBdr>'
-    )
-    p_top._p.get_or_add_pPr().append(pBdr)
-
-    t_id = doc.add_table(rows=2, cols=2)
-    t_id.alignment = WD_TABLE_ALIGNMENT.CENTER
-    set_table_borders_thin(t_id, color="CCCCCC", sz="4")
-
-    fields = [
-        ("Nama Lengkap Siswa", "...................................................."),
-        ("Nomor Peserta / Absen", "...................................................."),
-        ("Kelas / Ruang", "...................................................."),
-        ("Tanda Tangan Siswa", "...................................................."),
-    ]
-    for idx, (label, val) in enumerate(fields):
-        r_i = idx // 2
-        c_i = idx % 2
-        cell = t_id.rows[r_i].cells[c_i]
-        cell.width = Inches(3.3)
-        set_cell_margins(cell, top=50, bottom=50, left=80, right=80)
-        p = cell.paragraphs[0]
-        p.paragraph_format.space_after = Pt(0)
-        r = p.add_run(f"{label}: {val}")
-        r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
-
-    limit_soal = min(max(pg_count, 10), 50)
-    p_ljk = doc.add_paragraph()
-    p_ljk.paragraph_format.space_before = Pt(8)
-    p_ljk.paragraph_format.space_after = Pt(4)
-    r_pet = p_ljk.add_run("Berilah tanda silang (X) pada huruf jawaban yang Anda pilih:")
-    r_pet.font.name = "Times New Roman"
-    r_pet.font.size = Pt(8.5)
-    r_pet.font.italic = True
-
-    per_col = (limit_soal + 1) // 2
-    t_grid = doc.add_table(rows=per_col, cols=2)
-    t_grid.alignment = WD_TABLE_ALIGNMENT.CENTER
-    set_table_borders_thin(t_grid, color="D1D5DB", sz="2")
-
-    for n in range(1, limit_soal + 1):
-        if n <= per_col:
-            r_idx = n - 1
-            c_idx = 0
-        else:
-            r_idx = n - 1 - per_col
-            c_idx = 1
-        
-        cell = t_grid.rows[r_idx].cells[c_idx]
-        cell.width = Inches(3.3)
-        set_cell_margins(cell, top=25, bottom=25, left=60, right=60)
-        p = cell.paragraphs[0]
-        p.paragraph_format.space_after = Pt(0)
-        r_row = p.add_run(f"No. {n:02d}\t[ A ]   [ B ]   [ C ]   [ D ]")
-        r_row.font.name = "Times New Roman"
-        r_row.font.size = Pt(8.5)
-
-
 def generate_exam_docx(
     header_data: Dict[str, Any],
     soal_list: List[Dict[str, Any]],
     sertakan_jawaban: bool = False,
     sertakan_pembahasan: bool = False,
-    sertakan_ljk: bool = True
+    **kwargs
 ) -> io.BytesIO:
     """Fungsi utama untuk membangun dokumen .docx siap cetak secara murni."""
     doc = Document()
@@ -1019,10 +937,6 @@ def generate_exam_docx(
             soal_list,
             sertakan_pembahasan=sertakan_pembahasan
         )
-
-    # 7. Lembar Jawaban Siswa Siap Cetak / Fotokopi (LJK Manual)
-    if sertakan_ljk and pg_list:
-        render_student_answer_sheet(doc, header_data, len(pg_list))
 
     output_stream = io.BytesIO()
     doc.save(output_stream)
