@@ -496,10 +496,15 @@ export default function CreateQuestionWizard() {
       if (!res.ok) {
         let errMessage = "Gagal generate soal.";
         try {
-          const errData = await res.json();
-          errMessage = errData.error || errData.detail || errMessage;
-        } catch {
-          errMessage = await res.text();
+          const rawText = await res.text();
+          try {
+            const errData = JSON.parse(rawText);
+            errMessage = errData.error || errData.detail || errMessage;
+          } catch {
+            errMessage = rawText || errMessage;
+          }
+        } catch (e: any) {
+          errMessage = e?.message || errMessage;
         }
         throw new Error(errMessage);
       }

@@ -8,12 +8,18 @@ import itertools
 import logging
 
 from openai import OpenAI
+import httpx
 
 logger = logging.getLogger(__name__)
 
 IMAGE_MIME = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 
 BASE_URL = os.getenv("OPENAI_BASE_URL", "").strip()
+if not BASE_URL or "9router.luthfi-m.my.id" in BASE_URL:
+    BASE_URL = "http://127.0.0.1:20128/v1"
+
+# Client httpx khusus tanpa proxy sistem Windows agar kebal dari connection aborted
+_http_client = httpx.Client(trust_env=False, timeout=180.0)
 
 _keys_str = os.getenv("OPENAI_API_KEYS", "")
 if not _keys_str:
@@ -49,7 +55,7 @@ def _chat(messages, model_name, **kwargs) -> str:
     last_error = None
     for attempt in range(MAX_RETRY):
         current_key = next(key_cycler)
-        client = OpenAI(api_key=current_key, base_url=BASE_URL, timeout=180.0)
+        client = OpenAI(api_key=current_key, base_url=BASE_URL, http_client=_http_client, timeout=180.0)
         try:
             resp = client.chat.completions.create(model=model_name, messages=messages, **kwargs)
             return resp.choices[0].message.content or ""
