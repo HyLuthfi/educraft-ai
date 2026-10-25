@@ -1392,31 +1392,26 @@ export default function CreateQuestionWizard() {
                           exit={{ height: 0, opacity: 0 }}
                           className="overflow-hidden"
                         >
-                          <div className="mt-4 pt-4 border-t border-black/10 dark:border-white/10 flex flex-col gap-3">
-                            <label className="text-xs font-bold uppercase text-gray-500 dark:text-gray-400">
-                              Instruksi Perbaikan (Opsional)
-                            </label>
-                            <div className="flex gap-2">
-                              <input
-                                type="text"
-                                value={editInstruction}
-                                onChange={(e) => setEditInstruction(e.target.value)}
-                                placeholder="Contoh: Ganti konteksnya menjadi tentang lingkungan RT/RW"
-                                className="flex-1 px-3 py-2 text-sm border border-black/10 dark:border-white/10 focus:border-black dark:border-white/20 outline-none bg-white dark:bg-[#1e1e1e] transition-colors"
-                                disabled={regeneratingId === idx}
-                              />
-                              <button
-                                onClick={() => handleRegenerate(idx)}
-                                disabled={regeneratingId !== null}
-                                className="px-5 py-2 bg-black text-white text-sm font-bold hover:bg-gray-800 transition-colors flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                              >
-                                {regeneratingId === idx ? (
-                                  <><Loader2 size={14} className="animate-spin" /> Memproses...</>
-                                ) : (
-                                  <><Sparkles size={14} className="text-yellow-400" /> Buat Ulang</>
-                                )}
-                              </button>
-                            </div>
+                          <div className="mt-3 pt-3 border-t border-black/10 dark:border-white/10 flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={editInstruction}
+                              onChange={(e) => setEditInstruction(e.target.value)}
+                              placeholder="Instruksi perbaikan (opsional), misal: ubah konteks..."
+                              className="flex-1 min-w-0 px-3 py-2 text-xs sm:text-sm border border-black/15 dark:border-white/15 focus:border-black dark:focus:border-white outline-none bg-white dark:bg-[#1e1e1e] transition-colors"
+                              disabled={regeneratingId === idx}
+                            />
+                            <button
+                              onClick={() => handleRegenerate(idx)}
+                              disabled={regeneratingId !== null}
+                              className="px-3.5 sm:px-4 py-2 bg-black dark:bg-white text-white dark:text-black text-xs sm:text-sm font-bold whitespace-nowrap hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center justify-center shrink-0 border border-black dark:border-white disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {regeneratingId === idx ? (
+                                <><Loader2 size={13} className="animate-spin mr-1.5" /> Memproses...</>
+                              ) : (
+                                "Buat Ulang"
+                              )}
+                            </button>
                           </div>
                         </motion.div>
                       )}
