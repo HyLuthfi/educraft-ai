@@ -841,23 +841,10 @@ def render_teacher_master_key(
             r_num.font.bold = True
 
             kunci_display = kunci.upper() if len(kunci) <= 3 else "Uraian"
-            r_ans = p_item.add_run(f"Kunci: {kunci_display}    ")
+            r_ans = p_item.add_run(f"Kunci: {kunci_display}")
             r_ans.font.name = "Times New Roman"
             r_ans.font.size = Pt(10)
             r_ans.font.bold = True
-
-            # Meta badge halus
-            type_label = "Pilihan Ganda" if tipe in ("pg", "pilihan ganda") else ("Isian Singkat" if tipe in ("isian", "isian singkat") else "Essay / Uraian")
-            meta_parts = [type_label]
-            if bloom:
-                meta_parts.append(f"Level {bloom.upper()}")
-            if diff:
-                meta_parts.append(str(diff).capitalize())
-            
-            r_meta = p_item.add_run(f"[{' • '.join(meta_parts)}]")
-            r_meta.font.name = "Times New Roman"
-            r_meta.font.size = Pt(8.5)
-            r_meta.font.color.rgb = RGBColor(100, 100, 100)
 
             # Baris Isi Pembahasan (Bebas bernapas, teks Arab proporsional, line-height 1.25)
             p_body = doc.add_paragraph()
