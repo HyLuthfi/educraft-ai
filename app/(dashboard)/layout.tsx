@@ -144,7 +144,7 @@ export default function DashboardLayout({
       label: "Soal & Penilaian",
       items: [
         { name: "Buat Soal", href: "/create", icon: Sparkles },
-        { name: "Bedah & Kunci Soal", href: "/play", icon: FileQuestion },
+        { name: "Jawab Soal", href: "/play", icon: FileQuestion },
         { name: "Koreksi Jawaban", href: "/koreksi", icon: ClipboardCheck },
       ],
     },
@@ -383,20 +383,20 @@ export default function DashboardLayout({
             </span>
           </Link>
 
-          {/* Absensi */}
+          {/* Jawab Soal */}
           <Link
-            href="/absensi"
-            onClick={(e) => handleNavClick(e, "/absensi")}
+            href="/play"
+            onClick={(e) => handleNavClick(e, "/play")}
             className={`flex flex-col items-center justify-center py-1 px-3 rounded-lg text-xs font-medium transition-colors ${
-              pathname === "/absensi"
+              pathname === "/play"
                 ? "text-black dark:text-white font-bold"
                 : "text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white"
             }`}
           >
-            <div className={`p-1.5 rounded-lg transition-colors ${pathname === "/absensi" ? "bg-black/5 dark:bg-white/10" : ""}`}>
-              <UserCheck size={19} />
+            <div className={`p-1.5 rounded-lg transition-colors ${pathname === "/play" ? "bg-black/5 dark:bg-white/10" : ""}`}>
+              <FileQuestion size={19} />
             </div>
-            <span className="text-[10px] mt-0.5">Absensi</span>
+            <span className="text-[10px] mt-0.5">Jawab Soal</span>
           </Link>
 
           {/* Menu Lainnya */}
