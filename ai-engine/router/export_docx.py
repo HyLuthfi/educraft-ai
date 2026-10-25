@@ -29,7 +29,7 @@ class RequestExportDocx(BaseModel):
 async def export_docx(req: RequestExportDocx):
     try:
         header_dict = {
-            "nama_sekolah": req.header.nama_sekolah or "LEMBAGA PENDIDIKAN",
+            "nama_sekolah": req.header.nama_sekolah or "SAI TECH",
             "mata_pelajaran": req.header.mata_pelajaran or "Mata Pelajaran Umum",
             "kelas": req.header.kelas or "Semua Kelas",
             "tanggal": req.header.tanggal or "",

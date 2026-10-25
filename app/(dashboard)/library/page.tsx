@@ -61,7 +61,7 @@ export default function LibraryPage() {
   const [exportFormat, setExportFormat] = useState<"pdf" | "docx">("docx");
   const [sertakanJawaban, setSertakanJawaban] = useState(true);
   const [sertakanPembahasan, setSertakanPembahasan] = useState(true);
-  const [schoolName, setSchoolName] = useState("LEMBAGA PENDIDIKAN");
+  const [schoolName, setSchoolName] = useState("SAI TECH");
   const [subjectName, setSubjectName] = useState("");
   const [classNameStr, setClassNameStr] = useState("Semua Kelas");
   const [durationStr, setDurationStr] = useState("60 Menit");
@@ -293,7 +293,7 @@ export default function LibraryPage() {
       const payload = {
         soal: questions,
         header: {
-          nama_sekolah: schoolName || "LEMBAGA PENDIDIKAN",
+          nama_sekolah: schoolName || "SAI TECH",
           mata_pelajaran: subjectName || activeDoc.title,
           kelas: classNameStr || "Semua Kelas",
           tanggal: new Date().toLocaleDateString("id-ID"),

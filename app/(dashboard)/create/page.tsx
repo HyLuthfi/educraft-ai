@@ -334,7 +334,7 @@ export default function CreateQuestionWizard() {
       const payload = {
         soal: generatedQuestions,
         header: {
-          nama_sekolah: "LEMBAGA PENDIDIKAN",
+          nama_sekolah: "SAI TECH",
           mata_pelajaran: subject,
           kelas: "Semua Kelas",
           tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
