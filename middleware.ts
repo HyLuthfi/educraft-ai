@@ -13,26 +13,19 @@ export async function middleware(request: NextRequest) {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       cookies: {
-        get(name: string) {
-          return request.cookies.get(name)?.value
+        getAll() {
+          return request.cookies.getAll()
         },
-        set(name: string, value: string, options: CookieOptions) {
-          request.cookies.set({ name, value, ...options })
+        setAll(cookiesToSet) {
+          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({
             request: {
               headers: request.headers,
             },
           })
-          supabaseResponse.cookies.set({ name, value, ...options })
-        },
-        remove(name: string, options: CookieOptions) {
-          request.cookies.set({ name, value: '', ...options })
-          supabaseResponse = NextResponse.next({
-            request: {
-              headers: request.headers,
-            },
-          })
-          supabaseResponse.cookies.set({ name, value: '', ...options })
+          cookiesToSet.forEach(({ name, value, options }) =>
+            supabaseResponse.cookies.set(name, value, options)
+          )
         },
       },
     }
@@ -68,12 +61,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Lindungi endpoint internal /api/* dari pemanggilan tanpa otentikasi
+  // Lindungi endpoint internal /api/* dari pemanggilan anonim liar di luar aplikasi
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
   if (!user && isApiRoute) {
     const apiKey = request.headers.get('x-api-key') || ''
     const validKey = process.env.AI_ENGINE_API_KEY || 'dev-key-educraft'
-    if (apiKey !== validKey) {
+    const referer = request.headers.get('referer') || ''
+    const isSameOrigin =
+      request.headers.get('sec-fetch-site') === 'same-origin' ||
+      referer.includes('educraft.saitech.co.id') ||
+      referer.includes('saitech.co.id') ||
+      referer.includes('localhost') ||
+      referer.includes('127.0.0.1')
+
+    if (apiKey !== validKey && !isSameOrigin) {
       return NextResponse.json(
         { error: 'Sesi login tidak valid atau telah kedaluwarsa. Silakan login terlebih dahulu.' },
         { status: 401 }
