@@ -176,10 +176,15 @@ def add_official_kop(doc: Document, nama_sekolah: str):
     # Garis ganda resmi (Word XML Paragraph Border Double)
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        r'<w:bottom w:val="double" w:sz="12" w:space="5" w:color="000000"/>'
+        r'<w:bottom w:val="double" w:sz="12" w:space="6" w:color="000000"/>'
         r'</w:pBdr>'
     )
     p_kop._p.get_or_add_pPr().append(pBdr)
+
+    # Spacer pemisah antara Kop dan Tabel Metadata
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(6)
+    p_sp.paragraph_format.space_after = Pt(2)
 
 
 def add_exam_metadata_table(doc: Document, header_data: Dict[str, Any]):
@@ -223,8 +228,8 @@ def add_exam_metadata_table(doc: Document, header_data: Dict[str, Any]):
         
         # Kolom Kiri
         c0, c1 = row.cells[0], row.cells[1]
-        set_cell_margins(c0, top=45, bottom=45, left=40, right=20)
-        set_cell_margins(c1, top=45, bottom=45, left=20, right=40)
+        set_cell_margins(c0, top=70, bottom=70, left=40, right=20)
+        set_cell_margins(c1, top=70, bottom=70, left=20, right=40)
         
         p0 = c0.paragraphs[0]
         p0.paragraph_format.space_after = Pt(0)
@@ -245,8 +250,8 @@ def add_exam_metadata_table(doc: Document, header_data: Dict[str, Any]):
 
         # Kolom Kanan
         c2, c3 = row.cells[2], row.cells[3]
-        set_cell_margins(c2, top=45, bottom=45, left=40, right=20)
-        set_cell_margins(c3, top=45, bottom=45, left=20, right=40)
+        set_cell_margins(c2, top=70, bottom=70, left=40, right=20)
+        set_cell_margins(c3, top=70, bottom=70, left=20, right=40)
 
         p2 = c2.paragraphs[0]
         p2.paragraph_format.space_after = Pt(0)
@@ -269,12 +274,12 @@ def add_exam_metadata_table(doc: Document, header_data: Dict[str, Any]):
 
 def add_compact_instructions(doc: Document):
     """
-    Menampilkan Petunjuk Umum dalam format grid 2 kolom ringkas (hanya memakan 3 baris).
-    Menghilangkan kotak abu-abu tunggal yang memotong ritme membaca.
+    Menampilkan Petunjuk Umum dalam format grid 2 kolom ringkas.
+    Diberi jarak napas (spacing) yang lega dan nyaman dibaca.
     """
     p_hdr = doc.add_paragraph()
-    p_hdr.paragraph_format.space_before = Pt(6)
-    p_hdr.paragraph_format.space_after = Pt(2)
+    p_hdr.paragraph_format.space_before = Pt(10)
+    p_hdr.paragraph_format.space_after = Pt(3)
     r_hdr = p_hdr.add_run("PETUNJUK UMUM:")
     r_hdr.font.name = "Times New Roman"
     r_hdr.font.size = Pt(9)
@@ -294,10 +299,10 @@ def add_compact_instructions(doc: Document):
         for c_idx, text in enumerate([col1, col2]):
             c = r.cells[c_idx]
             c.width = Inches(3.35)
-            set_cell_margins(c, top=20, bottom=20, left=40, right=40)
+            set_cell_margins(c, top=25, bottom=25, left=30, right=30)
             p = c.paragraphs[0]
             p.paragraph_format.space_after = Pt(0)
-            p.paragraph_format.line_spacing = 1.1
+            p.paragraph_format.line_spacing = 1.15
             run = p.add_run(text)
             run.font.name = "Times New Roman"
             run.font.size = Pt(8.5)
@@ -305,11 +310,11 @@ def add_compact_instructions(doc: Document):
 
     # Garis pemisah tipis sebelum masuk ke butir soal
     p_div = doc.add_paragraph()
-    p_div.paragraph_format.space_before = Pt(3)
-    p_div.paragraph_format.space_after = Pt(2)
+    p_div.paragraph_format.space_before = Pt(6)
+    p_div.paragraph_format.space_after = Pt(6)
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        r'<w:bottom w:val="single" w:sz="4" w:space="2" w:color="CCCCCC"/>'
+        r'<w:bottom w:val="single" w:sz="4" w:space="3" w:color="CCCCCC"/>'
         r'</w:pBdr>'
     )
     p_div._p.get_or_add_pPr().append(pBdr)
@@ -319,7 +324,7 @@ def add_section_header(doc: Document, title: str, subtitle: str):
     """Membuat separator bagian soal (Bagian I / II / III) dengan bar rapi."""
     p = doc.add_paragraph()
     p.paragraph_format.space_before = Pt(8)
-    p.paragraph_format.space_after = Pt(1)
+    p.paragraph_format.space_after = Pt(2)
     p.paragraph_format.line_spacing = 1.15
 
     r = p.add_run(title.upper())
@@ -329,8 +334,8 @@ def add_section_header(doc: Document, title: str, subtitle: str):
 
     p_sub = doc.add_paragraph()
     p_sub.paragraph_format.space_before = Pt(0)
-    p_sub.paragraph_format.space_after = Pt(5)
-    p_sub.paragraph_format.line_spacing = 1.1
+    p_sub.paragraph_format.space_after = Pt(6)
+    p_sub.paragraph_format.line_spacing = 1.15
     r_sub = p_sub.add_run(subtitle)
     r_sub.font.name = "Times New Roman"
     r_sub.font.size = Pt(9)
@@ -367,12 +372,12 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
         raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
         is_q_arabic = contains_arabic(raw_teks)
 
-        # Paragraf Soal dengan Hanging Indent Presisi
+        # Paragraf Soal dengan Hanging Indent Presisi & Jarak Antar Soal Lega
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
         p_q.paragraph_format.first_line_indent = Inches(-0.28)
-        p_q.paragraph_format.space_before = Pt(4)
-        p_q.paragraph_format.space_after = Pt(2)
+        p_q.paragraph_format.space_before = Pt(4 if i == start_num else 12)
+        p_q.paragraph_format.space_after = Pt(3)
         p_q.paragraph_format.line_spacing = 1.15
 
         r_num = p_q.add_run(f"{i}.\t")
@@ -396,17 +401,22 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
         max_len = max([len(t) for _, t, _ in normalized_options]) if normalized_options else 0
         has_any_arabic = any([is_ar for _, _, is_ar in normalized_options])
 
-        # ── MODE 1: OPSI SANGAT PENDEK / 1 KATA (SEJAJAR 4 KOLOM DALAM 1 BARIS) ──
+        # ── MODE 1: OPSI SANGAT PENDEK / 1 KATA (SEJAJAR 4 KOLOM, INDENT KE KANAN) ──
         if len(normalized_options) == 4 and max_len <= 18:
             t_opt = doc.add_table(rows=1, cols=4)
-            t_opt.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t_opt.alignment = WD_TABLE_ALIGNMENT.LEFT
             set_table_borders_none(t_opt)
-            col_w = Inches(1.6)
+            
+            # Indent tabel opsi ke kanan sejajar di bawah teks soal
+            tblPr = t_opt._tbl.tblPr
+            tblInd = parse_xml(f'<w:tblInd {nsdecls("w")} w:w="560" w:type="dxa"/>')
+            tblPr.append(tblInd)
+            col_w = Inches(1.55)
 
             for col_i, (lbl, txt, is_ar) in enumerate(normalized_options):
                 cell = t_opt.rows[0].cells[col_i]
                 cell.width = col_w
-                set_cell_margins(cell, top=15, bottom=15, left=30, right=30)
+                set_cell_margins(cell, top=20, bottom=20, left=25, right=25)
                 p = cell.paragraphs[0]
                 p.paragraph_format.line_spacing = 1.1
                 p.paragraph_format.space_after = Pt(0)
@@ -420,18 +430,23 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
                 r_val.font.name = "Times New Roman"
                 r_val.font.size = Pt(12.5 if is_ar else 10)
 
-        # ── MODE 2: OPSI SEDANG (GRID 2 KOLOM 2 BARIS) ──
+        # ── MODE 2: OPSI SEDANG (GRID 2 KOLOM 2 BARIS, INDENT KE KANAN) ──
         elif len(normalized_options) == 4 and max_len <= 45:
             t_opt = doc.add_table(rows=2, cols=2)
-            t_opt.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t_opt.alignment = WD_TABLE_ALIGNMENT.LEFT
             set_table_borders_none(t_opt)
-            col_w = Inches(3.2)
+
+            # Indent tabel opsi ke kanan sejajar di bawah teks soal
+            tblPr = t_opt._tbl.tblPr
+            tblInd = parse_xml(f'<w:tblInd {nsdecls("w")} w:w="560" w:type="dxa"/>')
+            tblPr.append(tblInd)
+            col_w = Inches(3.1)
 
             # Baris 1: A dan B
             for col_i, opt_i in enumerate([0, 1]):
                 cell = t_opt.rows[0].cells[col_i]
                 cell.width = col_w
-                set_cell_margins(cell, top=20, bottom=20, left=35, right=35)
+                set_cell_margins(cell, top=20, bottom=20, left=30, right=30)
                 p = cell.paragraphs[0]
                 p.paragraph_format.line_spacing = 1.1
                 p.paragraph_format.space_after = Pt(0)
@@ -450,7 +465,7 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
             for col_i, opt_i in enumerate([2, 3]):
                 cell = t_opt.rows[1].cells[col_i]
                 cell.width = col_w
-                set_cell_margins(cell, top=20, bottom=20, left=35, right=35)
+                set_cell_margins(cell, top=20, bottom=20, left=30, right=30)
                 p = cell.paragraphs[0]
                 p.paragraph_format.line_spacing = 1.1
                 p.paragraph_format.space_after = Pt(0)
@@ -465,15 +480,15 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
                 r_val.font.name = "Times New Roman"
                 r_val.font.size = Pt(12.5 if is_ar else 10)
 
-        # ── MODE 3: OPSI PANJANG (1 KOLOM VERTIKAL) ──
+        # ── MODE 3: OPSI PANJANG (1 KOLOM VERTIKAL, INDENT KE KANAN) ──
         else:
             for lbl, txt, is_ar in normalized_options:
                 p_o = doc.add_paragraph()
-                p_o.paragraph_format.left_indent = Inches(0.48)
-                p_o.paragraph_format.first_line_indent = Inches(-0.2)
-                p_o.paragraph_format.space_before = Pt(1)
-                p_o.paragraph_format.space_after = Pt(1)
-                p_o.paragraph_format.line_spacing = 1.1
+                p_o.paragraph_format.left_indent = Inches(0.55)
+                p_o.paragraph_format.first_line_indent = Inches(-0.25)
+                p_o.paragraph_format.space_before = Pt(1.5)
+                p_o.paragraph_format.space_after = Pt(1.5)
+                p_o.paragraph_format.line_spacing = 1.15
 
                 r_lbl = p_o.add_run(f"{lbl}.\t")
                 r_lbl.font.name = "Times New Roman"
@@ -500,7 +515,7 @@ def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
         p_q.paragraph_format.first_line_indent = Inches(-0.28)
-        p_q.paragraph_format.space_before = Pt(4)
+        p_q.paragraph_format.space_before = Pt(4 if i == start_num else 12)
         p_q.paragraph_format.space_after = Pt(2)
         p_q.paragraph_format.line_spacing = 1.15
 
@@ -512,9 +527,9 @@ def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]
         render_question_text_with_runs(p_q, raw_teks, is_arabic=is_ar)
 
         p_ans = doc.add_paragraph()
-        p_ans.paragraph_format.left_indent = Inches(0.28)
-        p_ans.paragraph_format.space_before = Pt(1)
-        p_ans.paragraph_format.space_after = Pt(4)
+        p_ans.paragraph_format.left_indent = Inches(0.48)
+        p_ans.paragraph_format.space_before = Pt(2)
+        p_ans.paragraph_format.space_after = Pt(6)
         r_dot = p_ans.add_run("Jawaban: " + "." * 55)
         r_dot.font.name = "Times New Roman"
         r_dot.font.size = Pt(9.5)
@@ -536,8 +551,8 @@ def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], star
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
         p_q.paragraph_format.first_line_indent = Inches(-0.28)
-        p_q.paragraph_format.space_before = Pt(6)
-        p_q.paragraph_format.space_after = Pt(3)
+        p_q.paragraph_format.space_before = Pt(6 if i == start_num else 14)
+        p_q.paragraph_format.space_after = Pt(4)
         p_q.paragraph_format.line_spacing = 1.15
 
         r_num = p_q.add_run(f"{i}.\t")
@@ -554,14 +569,18 @@ def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], star
         r_score.font.bold = True
         r_score.font.color.rgb = RGBColor(90, 90, 90)
 
-        # Ruang Jawaban Bergaris Rapi
+        # Ruang Jawaban Bergaris Rapi (Indent ke kanan)
         tbl_space = doc.add_table(rows=3, cols=1)
-        tbl_space.alignment = WD_TABLE_ALIGNMENT.CENTER
+        tbl_space.alignment = WD_TABLE_ALIGNMENT.LEFT
+        tblPr = tbl_space._tbl.tblPr
+        tblInd = parse_xml(f'<w:tblInd {nsdecls("w")} w:w="560" w:type="dxa"/>')
+        tblPr.append(tblInd)
+
         set_table_borders_thin(tbl_space, color="E5E7EB", sz="2")
         for r_idx in range(3):
             c = tbl_space.rows[r_idx].cells[0]
-            c.width = Inches(6.5)
-            set_cell_margins(c, top=70, bottom=70, left=70, right=70)
+            c.width = Inches(6.2)
+            set_cell_margins(c, top=65, bottom=65, left=60, right=60)
 
 
 def render_teacher_master_key(
