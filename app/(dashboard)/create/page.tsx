@@ -324,13 +324,14 @@ export default function CreateQuestionWizard() {
     const toastId = toast.loading(`Sedang memproses dokumen ${format.toUpperCase()}...`);
 
     try {
+      const subject = topicText || saveBankTitle || "Materi Pelajaran";
       const payload = {
         soal: generatedQuestions,
         header: {
-          nama_sekolah: "EDUCRAFT AI",
-          mata_pelajaran: "Materi Umum",
+          nama_sekolah: "LEMBAGA PENDIDIKAN",
+          mata_pelajaran: subject,
           kelas: "Semua Kelas",
-          tanggal: new Date().toLocaleDateString("id-ID"),
+          tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
           durasi: "60 Menit"
         },
         sertakan_jawaban,
@@ -352,13 +353,14 @@ export default function CreateQuestionWizard() {
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `soal-educraft-${Date.now()}.${format}`;
+      const cleanSubject = subject.replace(/[^a-zA-Z0-9_-]/g, "_").slice(0, 30);
+      a.download = `Naskah_Soal_${cleanSubject}.${format}`;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);
       a.remove();
       
-      toast.success("Dokumen berhasil diunduh!", { id: toastId });
+      toast.success("Dokumen siap dicetak berhasil diunduh!", { id: toastId });
       setIsDownloadModalOpen(false);
     } catch (err: any) {
       toast.error(err.message || "Gagal melakukan export", { id: toastId });
