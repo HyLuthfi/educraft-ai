@@ -85,8 +85,8 @@ def clean_latex_math(text: str) -> str:
     t = re.sub(r"\$([^$]+)\$", r"\1", t)
     # Bersihkan sisa escape
     t = t.replace(r"\_", "_").replace(r"\%", "%").replace(r"\&", "&")
-    # Perbaiki tanda kutip di sekitar teks Arab yang sering terbalik
-    t = re.sub(r'\"([^\"]*[\u0600-\u06FF][^\"]*)\"', r'«\1»', t)
+    # Bersihkan kurung sudut « » kembali ke tanda kutip biasa
+    t = t.replace("«", '"').replace("»", '"')
     return t.strip()
 
 
@@ -218,7 +218,7 @@ def add_exam_metadata_table(doc: Document, header_data: Dict[str, Any]):
     meta_grid = [
         [("Mata Pelajaran", f": {mapel}"), ("Hari / Tanggal", f": {tanggal}")],
         [("Kelas / Fase", f": {kelas}"), ("Alokasi Waktu", f": {durasi}")],
-        [("Nama Peserta", ": ................................................"), ("No. Peserta / Ruang", ": ...................................")],
+        [("Nama Peserta", ":"), ("No. Peserta / Ruang", ":")],
     ]
 
     col_widths = [Inches(1.25), Inches(2.2), Inches(1.35), Inches(1.9)]
