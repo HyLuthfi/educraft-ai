@@ -666,7 +666,10 @@ def render_essay_questions(
 
         set_table_borders_thin(tbl_space, color="E5E7EB", sz="2")
         for r_idx in range(3):
-            c = tbl_space.rows[r_idx].cells[0]
+            row = tbl_space.rows[r_idx]
+            trPr = row._tr.get_or_add_trPr()
+            trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+            c = row.cells[0]
             c.width = Inches(6.2)
             set_cell_margins(c, top=65, bottom=65, left=60, right=60)
 
@@ -948,49 +951,25 @@ def generate_exam_docx(
         else:
             essay_list.append(s)
 
-    # 5. Render Butir Soal Berurutan dengan Logika Cerdas Pemisah Seksi & Anti-Nanggung
+    # 5. Render Butir Soal Berurutan dengan Aliran Alami & Garis Pembatas Seksi
     running_number = 1
-    total_content_height = 0.0  # Tinggi vertikal akumulatif (dalam inci)
     rendered_sections_count = 0
 
     if pg_list:
-        h = render_multiple_choice_questions(doc, pg_list, start_num=running_number, has_top_divider=False)
+        render_multiple_choice_questions(doc, pg_list, start_num=running_number, has_top_divider=False)
         running_number += len(pg_list)
-        total_content_height += h
         rendered_sections_count += 1
 
     if isian_list:
         has_prev = rendered_sections_count > 0
-        need_break = False
-        if has_prev:
-            need_break = should_break_page_for_new_section(total_content_height, "isian", len(isian_list))
-
-        if need_break:
-            doc.add_page_break()
-            total_content_height = 0.0  # Mulai segar di lembar baru
-            h = render_short_answer_questions(doc, isian_list, start_num=running_number, has_top_divider=False)
-        else:
-            h = render_short_answer_questions(doc, isian_list, start_num=running_number, has_top_divider=has_prev)
-
+        render_short_answer_questions(doc, isian_list, start_num=running_number, has_top_divider=has_prev)
         running_number += len(isian_list)
-        total_content_height += h
         rendered_sections_count += 1
 
     if essay_list:
         has_prev = rendered_sections_count > 0
-        need_break = False
-        if has_prev:
-            need_break = should_break_page_for_new_section(total_content_height, "essay", len(essay_list))
-
-        if need_break:
-            doc.add_page_break()
-            total_content_height = 0.0  # Mulai segar di lembar baru
-            h = render_essay_questions(doc, essay_list, start_num=running_number, has_top_divider=False)
-        else:
-            h = render_essay_questions(doc, essay_list, start_num=running_number, has_top_divider=has_prev)
-
+        render_essay_questions(doc, essay_list, start_num=running_number, has_top_divider=has_prev)
         running_number += len(essay_list)
-        total_content_height += h
         rendered_sections_count += 1
 
     # 6. Kunci Jawaban & Pembahasan Pegangan Guru (Jika diminta)
