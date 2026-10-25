@@ -78,19 +78,27 @@ const ExportButtonInner = ({ soalData, disabled }: Props) => {
 
   return (
     <button
-      onClick={() => login()}
-      disabled={disabled || isExporting}
-      className="p-3 sm:p-4 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-[#673AB7] hover:bg-[#f9f5ff] dark:hover:bg-[#281e3a] transition-all flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-2 text-left sm:text-center group w-full h-full disabled:opacity-50 cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5"
+      type="button"
+      onClick={() => {
+        toast.info(
+          "Fitur Ekspor Google Forms sedang dalam proses verifikasi resmi Google Trust & Safety. Silakan gunakan format Word (.docx) atau Quizizz terlebih dahulu.",
+          { duration: 5000 }
+        );
+      }}
+      className="p-3 sm:p-4 border-2 border-black/15 dark:border-white/15 bg-gray-50/70 dark:bg-[#202020] transition-all flex flex-row sm:flex-col items-center justify-start sm:justify-center gap-2.5 sm:gap-2 text-left sm:text-center group w-full h-full cursor-pointer shadow-[2px_2px_0px_0px_rgba(0,0,0,0.04)] relative overflow-hidden"
     >
-      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded bg-[#673AB7]/10 text-[#673AB7] flex items-center justify-center font-bold text-sm sm:text-lg shrink-0 border border-[#673AB7]/20">
+      <div className="absolute top-1.5 right-1.5 px-1.5 py-0.5 bg-yellow-300 dark:bg-yellow-400 text-black text-[9px] font-black uppercase tracking-wider rounded-xs border border-black/20 shadow-xs">
+        Maintenance
+      </div>
+      <div className="w-8 h-8 sm:w-10 sm:h-10 rounded bg-gray-200 dark:bg-[#2e2e2e] text-gray-500 dark:text-gray-400 flex items-center justify-center font-bold text-sm sm:text-lg shrink-0 border border-black/10 dark:border-white/10">
         G
       </div>
-      <div className="min-w-0">
-        <div className="font-bold text-xs sm:text-sm text-gray-900 dark:text-white group-hover:text-[#673AB7] truncate">
-          {isExporting ? "Memproses..." : "Google Forms"}
+      <div className="min-w-0 pr-8 sm:pr-0">
+        <div className="font-bold text-xs sm:text-sm text-gray-600 dark:text-gray-300 truncate">
+          Google Forms
         </div>
-        <div className="text-[10px] text-gray-500 dark:text-gray-400 mt-0.5 uppercase tracking-wider truncate">
-          {isExporting ? "Harap Tunggu" : "Auto-Import"}
+        <div className="text-[10px] text-gray-400 dark:text-gray-500 mt-0.5 uppercase tracking-wider truncate">
+          Dalam Pembaruan
         </div>
       </div>
     </button>
