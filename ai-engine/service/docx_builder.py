@@ -395,16 +395,27 @@ def should_break_page_for_new_section(
     return rem_space < needed_threshold
 
 
-def render_question_text_with_runs(paragraph, text: str, is_arabic: bool = False):
-    """Menambahkan teks soal ke paragraf dengan penanganan proporsional untuk teks Arab."""
+def render_question_text_with_runs(paragraph, text: str):
+    """
+    Menambahkan teks soal ke paragraf dengan ukuran font Latin KONSISTEN 10.5pt.
+    Jika di dalam kalimat terdapat kata/frasa Arab, hanya glif Arab tersebut yang
+    diberi skala proporsional 12pt agar tanda harakatnya terbaca jelas, sementara
+    seluruh teks Latin (termasuk kata pengantar, tanda kurung, tanda baca) tetap
+    konsisten 10.5pt.
+    """
     cleaned = clean_latex_math(text)
-    run = paragraph.add_run(cleaned)
-    run.font.name = "Times New Roman"
-    if is_arabic:
-        # Font Arab harus lebih besar agar harakat jelas
-        run.font.size = Pt(12.5)
-    else:
-        run.font.size = Pt(10.5)
+    pattern = r'([\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]+)'
+    tokens = re.split(pattern, cleaned)
+
+    for token in tokens:
+        if not token:
+            continue
+        run = paragraph.add_run(token)
+        run.font.name = "Times New Roman"
+        if bool(re.search(r'[\u0600-\u06FF]', token)):
+            run.font.size = Pt(12)
+        else:
+            run.font.size = Pt(10.5)
 
 
 def render_multiple_choice_questions(
@@ -439,13 +450,14 @@ def render_multiple_choice_questions(
         p_q.paragraph_format.space_before = Pt(4 if i == start_num else 12)
         p_q.paragraph_format.space_after = Pt(3)
         p_q.paragraph_format.line_spacing = 1.15
+        p_q.paragraph_format.keep_with_next = True  # Kunci agar soal tidak menggantung di akhir halaman tanpa opsi!
 
         r_num = p_q.add_run(f"{i}.\t")
         r_num.font.name = "Times New Roman"
         r_num.font.size = Pt(10.5)
         r_num.font.bold = True
 
-        render_question_text_with_runs(p_q, raw_teks, is_arabic=is_q_arabic)
+        render_question_text_with_runs(p_q, raw_teks)
 
         # Opsi Jawaban
         opsi_list = q.get("opsi", q.get("options", []))
@@ -475,6 +487,10 @@ def render_multiple_choice_questions(
             tblPr.append(tblInd)
             col_w = Inches(1.55)
 
+            for row in t_opt.rows:
+                trPr = row._tr.get_or_add_trPr()
+                trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
+
             for col_i, (lbl, txt, is_ar) in enumerate(normalized_options):
                 cell = t_opt.rows[0].cells[col_i]
                 cell.width = col_w
@@ -490,7 +506,7 @@ def render_multiple_choice_questions(
 
                 r_val = p.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(12.5 if is_ar else 10)
+                r_val.font.size = Pt(12 if is_ar else 10)
 
         # ── MODE 2: OPSI SEDANG (GRID 2 KOLOM 2 BARIS, INDENT KE KANAN) ──
         elif len(normalized_options) == 4 and max_len <= 45:
@@ -504,6 +520,10 @@ def render_multiple_choice_questions(
             tblInd = parse_xml(f'<w:tblInd {nsdecls("w")} w:w="560" w:type="dxa"/>')
             tblPr.append(tblInd)
             col_w = Inches(3.1)
+
+            for row in t_opt.rows:
+                trPr = row._tr.get_or_add_trPr()
+                trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
 
             # Baris 1: A dan B
             for col_i, opt_i in enumerate([0, 1]):
@@ -522,7 +542,7 @@ def render_multiple_choice_questions(
 
                 r_val = p.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(12.5 if is_ar else 10)
+                r_val.font.size = Pt(12 if is_ar else 10)
 
             # Baris 2: C dan D
             for col_i, opt_i in enumerate([2, 3]):
@@ -541,18 +561,20 @@ def render_multiple_choice_questions(
 
                 r_val = p.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(12.5 if is_ar else 10)
+                r_val.font.size = Pt(12 if is_ar else 10)
 
         # ── MODE 3: OPSI PANJANG (1 KOLOM VERTIKAL, INDENT KE KANAN) ──
         else:
             accum_h += 0.35 + (len(normalized_options) * 0.22)
-            for lbl, txt, is_ar in normalized_options:
+            for idx_o, (lbl, txt, is_ar) in enumerate(normalized_options):
                 p_o = doc.add_paragraph()
                 p_o.paragraph_format.left_indent = Inches(0.55)
                 p_o.paragraph_format.first_line_indent = Inches(-0.25)
                 p_o.paragraph_format.space_before = Pt(1.5)
                 p_o.paragraph_format.space_after = Pt(1.5)
                 p_o.paragraph_format.line_spacing = 1.15
+                if idx_o < len(normalized_options) - 1:
+                    p_o.paragraph_format.keep_with_next = True
 
                 r_lbl = p_o.add_run(f"{lbl}.\t")
                 r_lbl.font.name = "Times New Roman"
@@ -561,7 +583,7 @@ def render_multiple_choice_questions(
 
                 r_val = p_o.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(12.5 if is_ar else 10)
+                r_val.font.size = Pt(12 if is_ar else 10)
 
     return accum_h
 
@@ -586,21 +608,21 @@ def render_short_answer_questions(
         raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
         is_ar = contains_arabic(raw_teks)
 
+        # Short Answer
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
         p_q.paragraph_format.first_line_indent = Inches(-0.28)
         p_q.paragraph_format.space_before = Pt(4 if i == start_num else 12)
         p_q.paragraph_format.space_after = Pt(2)
         p_q.paragraph_format.line_spacing = 1.15
-        if i == start_num:
-            p_q.paragraph_format.keep_with_next = True
+        p_q.paragraph_format.keep_with_next = True  # Kunci agar soal tidak menggantung tanpa baris jawaban
 
         r_num = p_q.add_run(f"{i}.\t")
         r_num.font.name = "Times New Roman"
         r_num.font.size = Pt(10.5)
         r_num.font.bold = True
 
-        render_question_text_with_runs(p_q, raw_teks, is_arabic=is_ar)
+        render_question_text_with_runs(p_q, raw_teks)
 
         p_ans = doc.add_paragraph()
         p_ans.paragraph_format.left_indent = Inches(0.48)
@@ -634,21 +656,21 @@ def render_essay_questions(
         raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
         is_ar = contains_arabic(raw_teks)
 
+        # Essay Question
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
         p_q.paragraph_format.first_line_indent = Inches(-0.28)
         p_q.paragraph_format.space_before = Pt(6 if i == start_num else 14)
         p_q.paragraph_format.space_after = Pt(4)
         p_q.paragraph_format.line_spacing = 1.15
-        if i == start_num:
-            p_q.paragraph_format.keep_with_next = True
+        p_q.paragraph_format.keep_with_next = True  # Kunci agar soal tidak menggantung tanpa 5 baris jawaban
 
         r_num = p_q.add_run(f"{i}.\t")
         r_num.font.name = "Times New Roman"
         r_num.font.size = Pt(10.5)
         r_num.font.bold = True
 
-        render_question_text_with_runs(p_q, raw_teks, is_arabic=is_ar)
+        render_question_text_with_runs(p_q, raw_teks)
 
         r_score = p_q.add_run("  [Skor Maks: 10]")
         r_score.font.name = "Times New Roman"
