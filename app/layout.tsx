@@ -70,6 +70,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#0F0F11" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="google-site-verification" content="google2b0c34c5f00f8ecc" />
       </head>
       <body>
         <OfflineDetector />
