@@ -24,6 +24,7 @@ import {
   Loader2,
   FileText,
   RotateCcw,
+  ChevronDown,
 } from "lucide-react";
 
 export default function SolveQuestionWizard() {
@@ -81,6 +82,7 @@ export default function SolveQuestionWizard() {
   const [solvedQuestions, setSolvedQuestions] = useState<any[]>([]);
   const [isMounted, setIsMounted] = useState(false);
   const [isSelectBankSoalOpen, setIsSelectBankSoalOpen] = useState(false);
+  const [showReference, setShowReference] = useState(false);
 
   // Modals Download & Simpan ke Bank Soal
   const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
@@ -385,26 +387,14 @@ export default function SolveQuestionWizard() {
   return (
     <div className="max-w-5xl mx-auto p-3 sm:p-6 md:p-10 pb-24">
       {/* Header Halaman */}
-      <div className="mb-4 sm:mb-8">
+      <div className="mb-4 sm:mb-10">
         <div className="flex justify-between items-center mb-3 sm:mb-6">
-          <div>
-            <h1 className="text-xl sm:text-3xl font-editorial font-bold text-black dark:text-white">
-              Jawab &amp; Bedah Soal
-            </h1>
-            <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-              Rapikan naskah soal berantakan, temukan kunci jawaban akurat, dan susun pembahasan ilmiah berbasis AI.
-            </p>
-          </div>
-          <button
-            onClick={resetAll}
-            className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-xs flex items-center gap-1.5 shrink-0"
-            title="Bersihkan Semua Data"
-          >
-            <RotateCcw size={13} /> Reset
-          </button>
+          <h1 className="text-xl sm:text-3xl font-editorial font-bold text-black dark:text-white">
+            Jawab &amp; Bedah Soal
+          </h1>
         </div>
 
-        {/* Stepper Balok Bergaris - Standar Kiblat Buat Soal */}
+        {/* Stepper Wizard - Standar Kiblat Buat Soal */}
         <div className="relative flex justify-between items-start sm:items-center">
           <div className="absolute top-4 sm:top-5 left-8 sm:left-10 right-8 sm:right-10 h-1 bg-gray-200 dark:bg-white/10 z-0 hidden sm:block">
             <motion.div
@@ -418,13 +408,13 @@ export default function SolveQuestionWizard() {
           </div>
 
           {[
-            { id: 1, label: "1. Bahan Soal & Referensi" },
-            { id: 2, label: "2. Atur Parameter" },
-            { id: 3, label: "3. Hasil & Pembahasan" },
+            { id: 1, label: "1. Input Soal" },
+            { id: 2, label: "2. Parameter" },
+            { id: 3, label: "3. Hasil Kuis" },
           ].map((s) => (
             <div
               key={s.id}
-              className="relative z-10 flex flex-col items-center gap-1 sm:gap-3 bg-[#f9f9f9] dark:bg-[#121212] px-1 sm:px-4"
+              className="relative z-10 flex flex-col items-center gap-1 sm:gap-3 bg-[#f5f5f7] dark:bg-[#121212] px-1 sm:px-4"
             >
               <div
                 className={`w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center font-bold text-xs sm:text-sm transition-colors duration-500
@@ -469,7 +459,7 @@ export default function SolveQuestionWizard() {
         <div className="absolute bottom-0 right-0 w-3 h-3 sm:w-4 sm:h-4 border-b-2 border-r-2 border-black dark:border-white/20 -mb-0.5 -mr-0.5"></div>
 
         <AnimatePresence mode="wait" custom={1}>
-          {/* STEP 1: INPUT SOAL & REFERENSI */}
+          {/* STEP 1: INPUT SOAL */}
           {step === 1 && !isSolving && (
             <motion.div
               key="step1"
@@ -481,400 +471,225 @@ export default function SolveQuestionWizard() {
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
               className="space-y-6 sm:space-y-8"
             >
-              <div>
-                <h2 className="text-lg sm:text-2xl font-bold mb-1 sm:mb-2 text-black dark:text-white">
-                  Bahan Baku Soal &amp; Referensi
-                </h2>
-                <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                  Masukkan berkas atau ketikkan soal Anda. AI akan mengekstrak butir soal, melengkapi opsi, dan merumuskan kunci jawabannya.
-                </p>
+              <div className="flex justify-between items-start gap-2 mb-2 sm:mb-4">
+                <div>
+                  <h2 className="text-lg sm:text-2xl font-bold mb-0.5 sm:mb-1">Bahan Baku Soal</h2>
+                  <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
+                    Pilih satu atau kombinasi input naskah soal untuk dipecahkan.
+                  </p>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => setIsSelectBankSoalOpen(true)}
+                    className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold text-xs flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                  >
+                    <FileText size={13} /> Bank Soal
+                  </button>
+                  <button
+                    onClick={resetAll}
+                    className="px-2.5 sm:px-3.5 py-1 sm:py-1.5 border-2 border-red-500 text-red-500 font-bold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-xs flex items-center gap-1.5 shrink-0"
+                    title="Bersihkan Semua Data"
+                  >
+                    <Trash2 size={13} /> Reset
+                  </button>
+                </div>
               </div>
 
-              {/* CARD 1: BAHAN BAKU SOAL MENTAH (WAJIB) */}
-              <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-gray-50/50 dark:bg-[#252525]">
-                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-black/10 dark:border-white/10">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-black dark:text-white flex items-center gap-2">
-                      <FileQuestion size={18} /> Bahan Baku Soal Mentah <span className="text-red-500">*</span>
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Pilih format input soal yang Anda miliki.
+              {/* Input Method Selector */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                {inputTypeOptions.map((type) => {
+                  const isSelected = rawInputTypes.includes(type.id);
+                  return (
+                    <button
+                      key={type.id}
+                      type="button"
+                      onClick={() => toggleInputType(type.id, false)}
+                      className={`p-2.5 sm:p-3 flex items-center justify-center gap-2 border-2 transition-all cursor-pointer text-xs sm:text-sm font-bold ${
+                        isSelected
+                          ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)] md:shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]"
+                          : "border-black/15 dark:border-white/15 hover:border-black/40 hover:bg-gray-50 dark:bg-[#2a2a2a] text-gray-700 dark:text-gray-300"
+                      }`}
+                    >
+                      <type.icon size={16} />
+                      <span>{type.label}</span>
+                      {isSelected && (
+                        <CheckCircle size={13} className="shrink-0 md:hidden ml-0.5 text-current" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <input
+                type="file"
+                accept=".pdf"
+                ref={rawPdfRef}
+                className="hidden"
+                multiple
+                onChange={(e) => handleFileChange(e, false)}
+              />
+              <input
+                type="file"
+                accept="image/*"
+                ref={rawImgRef}
+                className="hidden"
+                multiple
+                onChange={(e) => handleFileChange(e, false)}
+              />
+
+              <div className="space-y-4 sm:space-y-6">
+                {rawInputTypes.includes("text") && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="space-y-1.5 sm:space-y-2"
+                  >
+                    <div className="flex justify-between items-center">
+                      <label className="text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300">
+                        Paste Soal Anda di sini
+                      </label>
+                      {rawQuestions.length > 0 && (
+                        <button
+                          onClick={() => setRawQuestions("")}
+                          className="text-[11px] sm:text-xs font-semibold text-red-500 hover:text-red-700 transition-colors flex items-center gap-1"
+                        >
+                          <Trash2 size={13} /> Bersihkan Teks
+                        </button>
+                      )}
+                    </div>
+                    <textarea
+                      rows={5}
+                      className="w-full p-2.5 sm:p-4 bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black dark:border-white/20 focus:bg-white dark:focus:bg-[#333] focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none resize-none transition-all text-xs sm:text-sm font-mono sm:font-sans"
+                      placeholder="Tempel naskah soal mentah di sini (misal dari Word, ujian, atau buku)..."
+                      value={rawQuestions}
+                      onChange={(e) => setRawQuestions(e.target.value)}
+                    />
+                  </motion.div>
+                )}
+
+                {rawInputTypes.includes("file") && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="border-2 border-dashed border-black/20 dark:border-white/20 bg-gray-50 dark:bg-[#2a2a2a] p-4 sm:p-8 flex flex-col items-center justify-center text-center hover:border-black/50 transition-colors"
+                  >
+                    <UploadCloud size={32} className="text-gray-400 dark:text-gray-500 mb-2" />
+                    <p className="font-semibold text-black dark:text-white text-xs sm:text-base mb-1">
+                      Pilih berkas PDF soal Anda
                     </p>
-                  </div>
-                  <div className="flex items-center gap-2">
+                    <p className="text-[11px] sm:text-sm text-gray-500 dark:text-gray-400">
+                      Mendukung format .PDF (Naskah ujian, kisi-kisi, modul)
+                    </p>
                     <button
                       type="button"
-                      onClick={() => setIsSelectBankSoalOpen(true)}
-                      className="px-3 py-1.5 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold text-xs flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                      onClick={() => rawPdfRef.current?.click()}
+                      className="mt-3 sm:mt-5 px-4 sm:px-6 py-1.5 sm:py-2 bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 text-xs sm:text-sm font-bold hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-0.5 transition-all cursor-pointer"
                     >
-                      <FileText size={13} /> Ambil dari Bank Soal
+                      Pilih File PDF
                     </button>
-                    {(rawQuestions || rawFiles.length > 0) && (
-                      <button
-                        onClick={() => {
-                          setRawQuestions("");
-                          setRawFiles([]);
-                        }}
-                        className="px-2.5 py-1.5 border border-red-500 text-red-500 font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-xs flex items-center gap-1"
-                      >
-                        <Trash2 size={12} /> Bersihkan
-                      </button>
-                    )}
-                  </div>
-                </div>
 
-                {/* Input Type Selector Tabs */}
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
-                  {inputTypeOptions.map((type) => {
-                    const isSelected = rawInputTypes.includes(type.id);
-                    return (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => toggleInputType(type.id, false)}
-                        className={`p-2.5 sm:p-3 flex items-center justify-center gap-2 border-2 transition-all cursor-pointer text-xs sm:text-sm font-bold ${
-                          isSelected
-                            ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)]"
-                            : "border-black/15 dark:border-white/15 bg-white dark:bg-[#1e1e1e] hover:border-black/40 text-gray-600 dark:text-gray-300"
-                        }`}
-                      >
-                        <type.icon size={16} />
-                        <span>{type.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <input
-                  type="file"
-                  accept=".pdf"
-                  ref={rawPdfRef}
-                  className="hidden"
-                  multiple
-                  onChange={(e) => handleFileChange(e, false)}
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={rawImgRef}
-                  className="hidden"
-                  multiple
-                  onChange={(e) => handleFileChange(e, false)}
-                />
-
-                <div className="space-y-4">
-                  {/* Mode Teks */}
-                  {rawInputTypes.includes("text") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="space-y-1.5"
-                    >
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-wider">
-                        Ketik / Tempel Soal Anda di Sini:
-                      </label>
-                      <textarea
-                        rows={4}
-                        className="w-full p-3 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none resize-none text-xs sm:text-sm transition-all"
-                        placeholder="Contoh:
-1. Apa fungsi utama organel mitokondria pada sel hewan?
-A. Sintesis protein
-B. Menghasilkan energi ATP
-C. Tempat fotosintesis
-D. Membentuk dinding sel"
-                        value={rawQuestions}
-                        onChange={(e) => setRawQuestions(e.target.value)}
-                      />
-                    </motion.div>
-                  )}
-
-                  {/* Mode PDF */}
-                  {rawInputTypes.includes("file") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="border-2 border-dashed border-black/20 dark:border-white/20 bg-white dark:bg-[#1e1e1e] p-5 sm:p-7 flex flex-col items-center justify-center text-center hover:border-black/50 transition-colors"
-                    >
-                      <UploadCloud
-                        size={32}
-                        className="text-gray-400 dark:text-gray-500 mb-2"
-                      />
-                      <p className="font-semibold text-black dark:text-white text-xs sm:text-sm mb-1">
-                        Pilih Berkas PDF Naskah Soal
-                      </p>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                        Mendukung dokumen .PDF (Soal ujian, modul, atau kisi-kisi)
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => rawPdfRef.current?.click()}
-                        className="mt-3 px-4 py-1.5 bg-gray-100 dark:bg-[#2a2a2a] border border-black/20 dark:border-white/20 text-xs font-bold hover:border-black dark:hover:border-white transition-colors cursor-pointer"
-                      >
-                        Pilih Berkas PDF
-                      </button>
-
-                      {rawFiles.filter((f) => f.name.endsWith(".pdf")).length >
-                        0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          {rawFiles
-                            .filter((f) => f.name.endsWith(".pdf"))
-                            .map((f, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-1.5 bg-black text-white px-2.5 py-1 text-xs font-medium"
+                    {rawFiles.filter((f) => f.name.endsWith(".pdf")).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-3 sm:mt-4">
+                        {rawFiles
+                          .filter((f) => f.name.endsWith(".pdf"))
+                          .map((f, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-1.5 bg-black text-white px-2.5 py-1 text-[11px] sm:text-xs font-semibold"
+                            >
+                              <span className="truncate max-w-[120px] sm:max-w-[150px]">{f.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(rawFiles.indexOf(f), false)}
+                                className="hover:text-red-400"
                               >
-                                <span className="truncate max-w-[150px]">
-                                  {f.name}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeFile(rawFiles.indexOf(f), false)
-                                  }
-                                  className="hover:text-red-400"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {/* Mode Foto */}
-                  {rawInputTypes.includes("image") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="border-2 border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] p-4 sm:p-5 flex flex-col gap-3"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Camera
-                          size={18}
-                          className="text-gray-700 dark:text-gray-300"
-                        />
-                        <label className="text-xs font-semibold text-gray-700 dark:text-gray-300">
-                          Foto Lembar Soal (Kamera / Gambar)
-                        </label>
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => rawImgRef.current?.click()}
-                        className="py-6 flex flex-col items-center justify-center gap-2 bg-gray-50 dark:bg-[#2a2a2a] border border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-all text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer"
-                      >
-                        <UploadCloud size={22} />
-                        <span className="font-bold text-xs sm:text-sm">
-                          Unggah Foto Soal (JPG / PNG)
-                        </span>
-                      </button>
+                    )}
+                  </motion.div>
+                )}
 
-                      {rawFiles.filter((f) => f.type.startsWith("image/"))
-                        .length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {rawFiles
-                            .filter((f) => f.type.startsWith("image/"))
-                            .map((f, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-1.5 bg-black text-white px-2.5 py-1 text-xs font-semibold"
+                {rawInputTypes.includes("image") && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="border-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#2a2a2a] p-3.5 sm:p-6 flex flex-col gap-3 sm:gap-4"
+                  >
+                    <button
+                      type="button"
+                      onClick={() => rawImgRef.current?.click()}
+                      className="py-4 sm:py-6 px-3 flex flex-col items-center justify-center gap-1.5 sm:gap-2 bg-white dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white transition-all shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer text-gray-700 dark:text-gray-300 hover:text-black dark:hover:text-white"
+                    >
+                      <Camera size={20} className="sm:w-6 sm:h-6" />
+                      <span className="font-bold text-xs sm:text-sm">
+                        Ambil Foto / Unggah Gambar (JPG/PNG)
+                      </span>
+                    </button>
+
+                    {rawFiles.filter((f) => f.type.startsWith("image/")).length > 0 && (
+                      <div className="flex flex-wrap gap-1.5 sm:gap-2 mt-1">
+                        {rawFiles
+                          .filter((f) => f.type.startsWith("image/"))
+                          .map((f, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-1.5 bg-black text-white px-2.5 py-1 text-[11px] sm:text-xs font-semibold"
+                            >
+                              <span className="truncate max-w-[120px] sm:max-w-[150px]">{f.name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeFile(rawFiles.indexOf(f), false)}
+                                className="hover:text-red-400"
                               >
-                                <span className="truncate max-w-[150px]">
-                                  {f.name}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeFile(rawFiles.indexOf(f), false)
-                                  }
-                                  className="hover:text-red-400"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                      </div>
+                    )}
+                  </motion.div>
+                )}
               </div>
 
-              {/* CARD 2: MATERI REFERENSI / KUNCI (OPSIONAL) */}
-              <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-gray-50/50 dark:bg-[#252525]">
-                <div className="flex flex-wrap justify-between items-center gap-2 mb-4 pb-3 border-b border-black/10 dark:border-white/10">
-                  <div>
-                    <h3 className="text-base sm:text-lg font-bold text-black dark:text-white flex items-center gap-2">
-                      <BookOpen size={18} /> Materi Referensi &amp; Kunci Jawaban{" "}
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-gray-500 bg-gray-200 dark:bg-gray-700 px-2 py-0.5">
-                        Opsional
-                      </span>
-                    </h3>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">
-                      Berikan teks rujukan atau catatan materi jika ingin AI memprioritaskan sumber tertentu.
-                    </p>
-                  </div>
-                  {(referenceMaterial || refFiles.length > 0) && (
-                    <button
-                      onClick={() => {
-                        setReferenceMaterial("");
-                        setRefFiles([]);
-                      }}
-                      className="px-2.5 py-1.5 border border-red-500 text-red-500 font-semibold hover:bg-red-50 dark:hover:bg-red-950/20 transition-colors text-xs flex items-center gap-1"
-                    >
-                      <Trash2 size={12} /> Bersihkan
-                    </button>
-                  )}
-                </div>
+              {/* Collapsible Rujukan Tambahan (Opsional) */}
+              <div className="pt-2 border-t border-black/10 dark:border-white/10">
+                <button
+                  type="button"
+                  onClick={() => setShowReference(!showReference)}
+                  className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <ChevronDown
+                    size={15}
+                    className={`transition-transform duration-200 ${
+                      showReference ? "rotate-180" : ""
+                    }`}
+                  />
+                  <span>+ Referensi Pembelajaran / Kunci Tambahan (Opsional)</span>
+                </button>
 
-                <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4">
-                  {inputTypeOptions.map((type) => {
-                    const isSelected = refInputTypes.includes(type.id);
-                    return (
-                      <button
-                        key={type.id}
-                        type="button"
-                        onClick={() => toggleInputType(type.id, true)}
-                        className={`p-2.5 sm:p-3 flex items-center justify-center gap-2 border-2 transition-all cursor-pointer text-xs sm:text-sm font-bold ${
-                          isSelected
-                            ? "border-black dark:border-white bg-black dark:bg-white text-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)]"
-                            : "border-black/15 dark:border-white/15 bg-white dark:bg-[#1e1e1e] hover:border-black/40 text-gray-600 dark:text-gray-300"
-                        }`}
-                      >
-                        <type.icon size={16} />
-                        <span>{type.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                <input
-                  type="file"
-                  accept=".pdf"
-                  ref={refPdfRef}
-                  className="hidden"
-                  multiple
-                  onChange={(e) => handleFileChange(e, true)}
-                />
-                <input
-                  type="file"
-                  accept="image/*"
-                  ref={refImgRef}
-                  className="hidden"
-                  multiple
-                  onChange={(e) => handleFileChange(e, true)}
-                />
-
-                <div className="space-y-4">
-                  {refInputTypes.includes("text") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="space-y-1.5"
-                    >
-                      <label className="text-xs font-semibold text-gray-700 dark:text-gray-300 flex items-center gap-1.5 uppercase tracking-wider">
-                        Ketik / Tempel Materi Referensi:
-                      </label>
-                      <textarea
-                        rows={3}
-                        className="w-full p-3 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 focus:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:focus:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.15)] outline-none resize-none text-xs sm:text-sm transition-all"
-                        placeholder="Contoh: Bab 4 Sel Biologi Kelas XI, catatan materi fotosintesis, atau panduan guru..."
-                        value={referenceMaterial}
-                        onChange={(e) => setReferenceMaterial(e.target.value)}
-                      />
-                    </motion.div>
-                  )}
-
-                  {refInputTypes.includes("file") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="border-2 border-dashed border-black/20 dark:border-white/20 bg-white dark:bg-[#1e1e1e] p-5 flex flex-col items-center justify-center text-center"
-                    >
-                      <UploadCloud
-                        size={28}
-                        className="text-gray-400 dark:text-gray-500 mb-1.5"
-                      />
-                      <p className="font-semibold text-black dark:text-white text-xs mb-1">
-                        Pilih PDF Referensi Pembelajaran
-                      </p>
-                      <button
-                        type="button"
-                        onClick={() => refPdfRef.current?.click()}
-                        className="mt-2 px-3 py-1 bg-gray-100 dark:bg-[#2a2a2a] border border-black/20 dark:border-white/20 text-xs font-bold hover:border-black transition-colors"
-                      >
-                        Pilih Berkas PDF
-                      </button>
-                      {refFiles.filter((f) => f.name.endsWith(".pdf")).length >
-                        0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-2">
-                          {refFiles
-                            .filter((f) => f.name.endsWith(".pdf"))
-                            .map((f, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-1.5 bg-black text-white px-2 py-0.5 text-xs"
-                              >
-                                <span>{f.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeFile(refFiles.indexOf(f), true)
-                                  }
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {refInputTypes.includes("image") && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: "auto" }}
-                      className="border-2 border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] p-4 flex flex-col gap-2"
-                    >
-                      <button
-                        type="button"
-                        onClick={() => refImgRef.current?.click()}
-                        className="py-4 flex flex-col items-center justify-center gap-1.5 bg-gray-50 dark:bg-[#2a2a2a] border border-black/20 dark:border-white/20 hover:border-black text-xs font-bold"
-                      >
-                        <UploadCloud size={18} />
-                        <span>Unggah Foto Buku Rujukan / Materi</span>
-                      </button>
-                      {refFiles.filter((f) => f.type.startsWith("image/"))
-                        .length > 0 && (
-                        <div className="flex flex-wrap gap-1.5 mt-1">
-                          {refFiles
-                            .filter((f) => f.type.startsWith("image/"))
-                            .map((f, i) => (
-                              <div
-                                key={i}
-                                className="flex items-center gap-1.5 bg-black text-white px-2 py-0.5 text-xs"
-                              >
-                                <span>{f.name}</span>
-                                <button
-                                  type="button"
-                                  onClick={() =>
-                                    removeFile(refFiles.indexOf(f), true)
-                                  }
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-                </div>
+                {showReference && (
+                  <motion.div
+                    initial={{ opacity: 0, height: 0 }}
+                    animate={{ opacity: 1, height: "auto" }}
+                    className="mt-3 p-3.5 sm:p-4 bg-gray-50 dark:bg-[#252525] border-2 border-black/10 dark:border-white/10 space-y-2"
+                  >
+                    <textarea
+                      rows={3}
+                      value={referenceMaterial}
+                      onChange={(e) => setReferenceMaterial(e.target.value)}
+                      placeholder="Tempelkan materi referensi atau kunci acuan jika ingin jawaban diprioritaskan dari sumber tertentu..."
+                      className="w-full p-2.5 sm:p-3 bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/15 focus:border-black dark:focus:border-white outline-none resize-none text-xs sm:text-sm transition-all"
+                    />
+                  </motion.div>
+                )}
               </div>
 
               {/* Tombol Lanjut Step 2 */}
-              <div className="flex justify-end pt-6 border-t border-black/10 dark:border-white/10">
+              <div className="flex justify-end pt-4 sm:pt-6 border-t border-black/10 dark:border-white/10">
                 <button
                   type="button"
                   onClick={handleNext}
@@ -904,11 +719,11 @@ D. Membentuk dinding sel"
               className="space-y-6 sm:space-y-8 max-w-2xl"
             >
               <div>
-                <h2 className="text-lg sm:text-2xl font-bold mb-1 sm:mb-2 text-black dark:text-white">
-                  Parameter Penjawab &amp; Pembahasan
+                <h2 className="text-lg sm:text-2xl font-bold mb-0.5 sm:mb-1 text-black dark:text-white">
+                  Parameter Jawaban
                 </h2>
                 <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
-                  Sesuaikan gaya ulasan dan tingkat kedalaman analisis yang dihasilkan oleh AI.
+                  Atur kedalaman pembahasan dan gaya ulasan AI.
                 </p>
               </div>
 
