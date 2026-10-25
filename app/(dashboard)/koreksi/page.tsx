@@ -226,6 +226,7 @@ export default function AutoKoreksiPage() {
   const [isKoreksiLoading, setIsKoreksiLoading] = useState(false);
   const [koreksiResult, setKoreksiResult] = useState<ResponseKoreksi | null>(null);
   const [activeStudentDetail, setActiveStudentDetail] = useState<number | null>(null);
+  const [reportTab, setReportTab] = useState<"rekap" | "analitik">("rekap");
 
   // ── Timer Live Loading ──
   const [koreksiSeconds, setKoreksiSeconds] = useState(0);
@@ -1519,159 +1520,275 @@ export default function AutoKoreksiPage() {
                 })()}
               </div>
 
-              {/* Visualisasi Grafik Kelas */}
-              <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-white dark:bg-[#202020]">
-                <KoreksiCharts koreksiResult={koreksiResult} skala={scoringConfig.skala} />
+              {/* Tab Switcher: Rekap Nilai Siswa vs Grafik & Evaluasi */}
+              <div className="flex border-b-2 border-black/15 dark:border-white/15 gap-2 sm:gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setReportTab("rekap")}
+                  className={`pb-3 px-3 sm:px-4 font-bold text-xs sm:text-sm flex items-center gap-2 border-b-3 -mb-[2px] transition-all cursor-pointer ${
+                    reportTab === "rekap"
+                      ? "border-black dark:border-white text-black dark:text-white font-extrabold"
+                      : "border-transparent text-gray-500 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  <GraduationCap size={16} /> Rekap Nilai &amp; Lembar Siswa ({koreksiResult.hasil.length})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setReportTab("analitik")}
+                  className={`pb-3 px-3 sm:px-4 font-bold text-xs sm:text-sm flex items-center gap-2 border-b-3 -mb-[2px] transition-all cursor-pointer ${
+                    reportTab === "analitik"
+                      ? "border-black dark:border-white text-black dark:text-white font-extrabold"
+                      : "border-transparent text-gray-500 hover:text-black dark:hover:text-white"
+                  }`}
+                >
+                  <TrendingUp size={16} /> Grafik &amp; Evaluasi AI
+                </button>
               </div>
 
-              {/* Evaluasi & Analitik Kelas AI */}
-              {koreksiResult.analitik_kelas && (
-                <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-gray-50 dark:bg-[#252525] border-l-6 border-l-black dark:border-l-white">
-                  <div className="flex items-center gap-2 mb-3">
-                    <Sparkles size={16} className="text-black dark:text-white" />
-                    <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black dark:text-white">
-                      Catatan Pedagogis &amp; Analitik AI
-                    </h3>
+              {/* TAB 1: REKAP BUKU NILAI & LEMBAR SISWA */}
+              {reportTab === "rekap" && (
+                <div className="space-y-6">
+                  {/* TABEL BUKU NILAI KELAS */}
+                  <div className="border-2 border-black/15 dark:border-white/15 overflow-hidden bg-white dark:bg-[#1e1e1e]">
+                    <div className="p-3 sm:p-4 bg-gray-50 dark:bg-[#252525] border-b border-black/10 dark:border-white/10 flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-black dark:text-white">
+                        Buku Nilai Kelas • Klik Siswa untuk Buka Rincian
+                      </span>
+                      <span className="text-[11px] font-semibold text-gray-500">
+                        {koreksiResult.hasil.length} Siswa Dinilai
+                      </span>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-xs sm:text-sm border-collapse">
+                        <thead>
+                          <tr className="border-b border-black/10 dark:border-white/10 bg-gray-100/60 dark:bg-[#202020] text-gray-500 font-bold uppercase text-[10px] tracking-wider">
+                            <th className="py-2.5 px-3 w-12 text-center">No</th>
+                            <th className="py-2.5 px-4">Nama Siswa</th>
+                            <th className="py-2.5 px-4 w-28 text-center">Nilai Akhir</th>
+                            <th className="py-2.5 px-4 w-32 text-center">Status KKM</th>
+                            <th className="py-2.5 px-4 hidden md:table-cell">Catatan AI</th>
+                            <th className="py-2.5 px-4 w-32 text-right">Lembar Jawaban</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {koreksiResult.hasil.map((s, idx) => {
+                            const isSelected = activeStudentDetail === idx;
+                            const isTuntas = s.status_kelulusan === "tuntas";
+                            return (
+                              <tr
+                                key={idx}
+                                onClick={() => setActiveStudentDetail(idx)}
+                                className={`border-b border-black/5 dark:border-white/5 transition-colors cursor-pointer ${
+                                  isSelected
+                                    ? "bg-black/5 dark:bg-white/10 font-semibold"
+                                    : "hover:bg-gray-50 dark:hover:bg-[#252525]"
+                                }`}
+                              >
+                                <td className="py-3 px-3 text-center font-mono text-gray-500">{idx + 1}</td>
+                                <td className="py-3 px-4 font-bold text-black dark:text-white">{s.nama_siswa}</td>
+                                <td className="py-3 px-4 text-center font-mono font-black text-sm text-black dark:text-white">
+                                  {s.nilai_akhir}
+                                </td>
+                                <td className="py-3 px-4 text-center">
+                                  <span
+                                    className={`inline-block px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded-sm ${
+                                      isTuntas
+                                        ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                        : "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+                                    }`}
+                                  >
+                                    {isTuntas ? "✓ Tuntas" : "⚠ Remedial"}
+                                  </span>
+                                </td>
+                                <td className="py-3 px-4 hidden md:table-cell text-xs text-gray-600 dark:text-gray-400 truncate max-w-[240px]">
+                                  {s.rekomendasi || "-"}
+                                </td>
+                                <td className="py-3 px-4 text-right">
+                                  <span
+                                    className={`text-xs font-bold inline-flex items-center gap-1 ${
+                                      isSelected
+                                        ? "text-black dark:text-white"
+                                        : "text-gray-400 group-hover:text-black"
+                                    }`}
+                                  >
+                                    {isSelected ? "Buka Rincian ▼" : "Buka Rincian →"}
+                                  </span>
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </div>
-                  <MarkdownText text={koreksiResult.analitik_kelas} />
+
+                  {/* DETAIL LEMBAR SISWA TERPILIH */}
+                  {activeStudentDetail !== null && koreksiResult.hasil[activeStudentDetail] && (
+                    <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-white dark:bg-[#1e1e1e] space-y-4 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)]">
+                      {(() => {
+                        const cur = koreksiResult.hasil[activeStudentDetail];
+                        const isTuntas = cur.status_kelulusan === "tuntas";
+
+                        return (
+                          <>
+                            {/* Header Siswa & Navigasi Antar-Siswa */}
+                            <div className="flex flex-wrap justify-between items-center gap-3 pb-3 border-b border-black/10 dark:border-white/10">
+                              <div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                                  Lembar Jawaban Siswa #{activeStudentDetail + 1}
+                                </span>
+                                <h4 className="text-base sm:text-xl font-bold text-black dark:text-white">
+                                  {cur.nama_siswa}
+                                </h4>
+                                <p className="text-xs text-gray-500 mt-0.5">
+                                  Nilai Akhir: <strong className="text-black dark:text-white text-sm font-mono">{cur.nilai_akhir}</strong>
+                                </p>
+                              </div>
+
+                              <div className="flex items-center gap-2">
+                                <span
+                                  className={`px-3 py-1 text-xs font-bold uppercase tracking-wider border ${
+                                    isTuntas
+                                      ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+                                      : "border-red-500 bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300"
+                                  }`}
+                                >
+                                  {isTuntas ? "✓ Tuntas KKM" : "⚠ Remedial"}
+                                </span>
+
+                                {/* Tombol Cepat Siswa Sebelumnya / Berikutnya */}
+                                <div className="flex items-center gap-1 border-2 border-black/15 dark:border-white/15 p-0.5 bg-gray-50 dark:bg-[#252525]">
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveStudentDetail(Math.max(0, activeStudentDetail - 1))}
+                                    disabled={activeStudentDetail === 0}
+                                    className="p-1 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:opacity-30 transition-colors cursor-pointer"
+                                    title="Siswa Sebelumnya"
+                                  >
+                                    <ChevronLeft size={16} />
+                                  </button>
+                                  <span className="text-xs font-mono font-bold px-1.5">
+                                    {activeStudentDetail + 1} / {koreksiResult.hasil.length}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => setActiveStudentDetail(Math.min(koreksiResult.hasil.length - 1, activeStudentDetail + 1))}
+                                    disabled={activeStudentDetail === koreksiResult.hasil.length - 1}
+                                    className="p-1 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black disabled:opacity-30 transition-colors cursor-pointer"
+                                    title="Siswa Berikutnya"
+                                  >
+                                    <ChevronRight size={16} />
+                                  </button>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Rekomendasi Belajar */}
+                            {cur.rekomendasi && (
+                              <div className="p-3.5 bg-gray-50 dark:bg-[#252525] border-l-4 border-l-black dark:border-l-white border-t border-r border-b border-black/10 dark:border-white/10 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                                <strong>Rekomendasi Belajar:</strong> {cur.rekomendasi}
+                              </div>
+                            )}
+
+                            {/* Daftar Nomor Butir Soal */}
+                            <div className="space-y-3 pt-2">
+                              {cur.detail_koreksi.map((item, itemIdx) => {
+                                const isBenar = item.status === "benar";
+                                const isSetengah = item.status === "setengah";
+
+                                return (
+                                  <div
+                                    key={itemIdx}
+                                    className="p-3 sm:p-4 bg-gray-50 dark:bg-[#262626] border border-black/10 dark:border-white/10 space-y-2.5"
+                                  >
+                                    <div className="flex justify-between items-center text-xs">
+                                      <span className="font-bold text-black dark:text-white">
+                                        Nomor {item.nomor}
+                                      </span>
+                                      <div className="flex items-center gap-2">
+                                        <span
+                                          className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-sm ${
+                                            isBenar
+                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                              : isSetengah
+                                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
+                                              : "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+                                          }`}
+                                        >
+                                          {item.status}
+                                        </span>
+                                        <span className="font-mono font-bold text-black dark:text-white">
+                                          Skor: {item.nilai}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {item.pertanyaan && (
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 italic">
+                                        "{item.pertanyaan}"
+                                      </p>
+                                    )}
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                                      <div className="p-2.5 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10">
+                                        <span className="text-[10px] font-bold text-gray-400 block mb-0.5 uppercase tracking-wider">
+                                          Jawaban Siswa
+                                        </span>
+                                        <span className="font-mono text-black dark:text-white font-medium break-words">
+                                          {item.jawaban_siswa || <span className="italic text-gray-400">(Kosong)</span>}
+                                        </span>
+                                      </div>
+                                      <div className="p-2.5 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10">
+                                        <span className="text-[10px] font-bold text-gray-400 block mb-0.5 uppercase tracking-wider">
+                                          Kunci Acuan
+                                        </span>
+                                        <span className="font-mono text-black dark:text-white font-medium break-words">
+                                          {item.kunci_jawaban}
+                                        </span>
+                                      </div>
+                                    </div>
+
+                                    {item.catatan && (
+                                      <p className="text-xs text-gray-600 dark:text-gray-400 pt-1 leading-relaxed border-t border-black/5 dark:border-white/5">
+                                        💡 {parseInlineMarkdown(item.catatan)}
+                                      </p>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </>
+                        );
+                      })()}
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Tabs Detail Per Siswa */}
-              <div className="space-y-4">
-                <h3 className="text-sm sm:text-base font-bold text-black dark:text-white flex items-center gap-2">
-                  <GraduationCap size={18} /> Rincian Lembar Jawaban Siswa
-                </h3>
-
-                {/* Tab Navigation Siswa */}
-                <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
-                  {koreksiResult.hasil.map((s, idx) => {
-                    const isSelected = activeStudentDetail === idx;
-                    return (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => setActiveStudentDetail(idx)}
-                        className={`px-3.5 py-2 border-2 font-bold text-xs whitespace-nowrap transition-all cursor-pointer shrink-0 ${
-                          isSelected
-                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)]"
-                            : "bg-white dark:bg-[#1e1e1e] border-black/15 dark:border-white/15 text-gray-700 dark:text-gray-300 hover:border-black/40"
-                        }`}
-                      >
-                        {s.nama_siswa} ({s.nilai_akhir})
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Detail Siswa Terpilih */}
-                {activeStudentDetail !== null && koreksiResult.hasil[activeStudentDetail] && (
-                  <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-white dark:bg-[#202020] space-y-4">
-                    {(() => {
-                      const cur = koreksiResult.hasil[activeStudentDetail];
-                      const isTuntas = cur.status_kelulusan === "tuntas";
-
-                      return (
-                        <>
-                          <div className="flex flex-wrap justify-between items-center gap-2 pb-3 border-b border-black/10 dark:border-white/10">
-                            <div>
-                              <h4 className="text-base sm:text-lg font-bold text-black dark:text-white">
-                                {cur.nama_siswa}
-                              </h4>
-                              <p className="text-xs text-gray-500">
-                                Nilai Akhir: <strong className="text-black dark:text-white text-sm">{cur.nilai_akhir}</strong>
-                              </p>
-                            </div>
-                            <span
-                              className={`px-2.5 py-1 text-xs font-bold uppercase tracking-wider border ${
-                                isTuntas
-                                  ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
-                                  : "border-red-500 bg-red-50 text-red-800 dark:bg-red-950/30 dark:text-red-300"
-                              }`}
-                            >
-                              {isTuntas ? "✓ Tuntas KKM" : "⚠ Remedial"}
-                            </span>
-                          </div>
-
-                          {cur.rekomendasi && (
-                            <div className="p-3 bg-gray-50 dark:bg-[#2a2a2a] border border-black/10 dark:border-white/10 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
-                              <strong>Rekomendasi Belajar:</strong> {cur.rekomendasi}
-                            </div>
-                          )}
-
-                          {/* List Butir Soal & Jawaban */}
-                          <div className="space-y-3 pt-2">
-                            {cur.detail_koreksi.map((item, itemIdx) => {
-                              const isBenar = item.status === "benar";
-                              const isSetengah = item.status === "setengah";
-
-                              return (
-                                <div
-                                  key={itemIdx}
-                                  className="p-3 sm:p-4 bg-gray-50 dark:bg-[#262626] border border-black/10 dark:border-white/10 space-y-2"
-                                >
-                                  <div className="flex justify-between items-center text-xs">
-                                    <span className="font-bold text-black dark:text-white">
-                                      Nomor {item.nomor}
-                                    </span>
-                                    <div className="flex items-center gap-2">
-                                      <span
-                                        className={`px-2 py-0.5 text-[10px] font-bold uppercase ${
-                                          isBenar
-                                            ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
-                                            : isSetengah
-                                            ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
-                                            : "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
-                                        }`}
-                                      >
-                                        {item.status}
-                                      </span>
-                                      <span className="font-mono font-bold text-black dark:text-white">
-                                        Skor: {item.nilai}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {item.pertanyaan && (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 italic">
-                                      "{item.pertanyaan}"
-                                    </p>
-                                  )}
-
-                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                    <div className="p-2 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10">
-                                      <span className="text-[10px] font-bold text-gray-400 block mb-0.5 uppercase">
-                                        Jawaban Siswa
-                                      </span>
-                                      <span className="font-mono text-black dark:text-white font-medium">
-                                        {item.jawaban_siswa || "(Kosong)"}
-                                      </span>
-                                    </div>
-                                    <div className="p-2 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10">
-                                      <span className="text-[10px] font-bold text-gray-400 block mb-0.5 uppercase">
-                                        Kunci Acuan
-                                      </span>
-                                      <span className="font-mono text-black dark:text-white font-medium">
-                                        {item.kunci_jawaban}
-                                      </span>
-                                    </div>
-                                  </div>
-
-                                  {item.catatan && (
-                                    <p className="text-xs text-gray-600 dark:text-gray-400 pt-1 leading-relaxed">
-                                      💡 {parseInlineMarkdown(item.catatan)}
-                                    </p>
-                                  )}
-                                </div>
-                              );
-                            })}
-                          </div>
-                        </>
-                      );
-                    })()}
+              {/* TAB 2: ANALITIK KELAS & GRAFIK VISUAL */}
+              {reportTab === "analitik" && (
+                <div className="space-y-6">
+                  {/* Visualisasi Grafik Kelas */}
+                  <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-white dark:bg-[#202020]">
+                    <KoreksiCharts koreksiResult={koreksiResult} skala={scoringConfig.skala} />
                   </div>
-                )}
-              </div>
+
+                  {/* Evaluasi & Analitik Kelas AI */}
+                  {koreksiResult.analitik_kelas && (
+                    <div className="border-2 border-black/15 dark:border-white/15 p-4 sm:p-6 bg-gray-50 dark:bg-[#252525] border-l-6 border-l-black dark:border-l-white">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Sparkles size={16} className="text-black dark:text-white" />
+                        <h3 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black dark:text-white">
+                          Catatan Pedagogis &amp; Analitik AI
+                        </h3>
+                      </div>
+                      <MarkdownText text={koreksiResult.analitik_kelas} />
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* Bottom Action */}
               <div className="flex justify-center pt-6 border-t border-black/10 dark:border-white/10">
