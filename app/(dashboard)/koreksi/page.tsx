@@ -34,6 +34,7 @@ import {
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import KoreksiCharts from "@/app/components/KoreksiCharts";
+import { MathText } from "@/app/components/MathText";
 import { buatSupabaseClient } from "@/lib/supabase/client";
 
 type InputMethod = "text" | "file" | "image";
@@ -62,11 +63,65 @@ type ScoringConfig = {
 interface KoreksiItem {
   nomor: number;
   pertanyaan: string;
+  tipe?: string;
+  opsi?: { label: string; teks: string }[];
   jawaban_siswa: string;
   kunci_jawaban: string;
   status: "benar" | "salah" | "setengah";
   nilai: number;
   catatan: string;
+}
+
+function extractOptionsForQuestion(
+  soalText: string,
+  nomor: number
+): { label: string; teks: string }[] {
+  if (!soalText) return [];
+
+  const regexNomor = new RegExp(
+    `(?:^|\\n)\\s*${nomor}[\\.\\)]\\s*([\\s\\S]*?)(?=(?:\\n\\s*\\d+[\\.\\)]|$))`,
+    "i"
+  );
+  const matchNomor = soalText.match(regexNomor);
+  const blockText = matchNomor ? matchNomor[1] : soalText;
+
+  const options: { label: string; teks: string }[] = [];
+  const regexOpsi = /([A-D])[\.\)]\s*([^A-D\r\n]+)/gi;
+  let match;
+  while ((match = regexOpsi.exec(blockText)) !== null) {
+    const label = match[1].toUpperCase();
+    const teks = match[2]
+      .trim()
+      .replace(/^(jawaban|kunci)\s*[:=].*$/i, "")
+      .trim();
+    if (teks && !options.some((o) => o.label === label)) {
+      options.push({ label, teks });
+    }
+  }
+
+  if (options.length < 2) {
+    const lines = blockText.split("\n");
+    for (const line of lines) {
+      const lineMatch = line.trim().match(/^([A-D])[\.\)]\s*(.*)/i);
+      if (lineMatch) {
+        const label = lineMatch[1].toUpperCase();
+        const teks = lineMatch[2]
+          .trim()
+          .replace(/^(jawaban|kunci)\s*[:=].*$/i, "")
+          .trim();
+        if (teks && !options.some((o) => o.label === label)) {
+          options.push({ label, teks });
+        }
+      }
+    }
+  }
+
+  if (options.length >= 2) {
+    options.sort((a, b) => a.label.localeCompare(b.label));
+    return options;
+  }
+
+  return [];
 }
 
 interface HasilSiswa {
@@ -1664,73 +1719,166 @@ export default function AutoKoreksiPage() {
 
                             {/* Rekomendasi Belajar */}
                             {cur.rekomendasi && (
-                              <div className="p-3.5 bg-gray-50 dark:bg-[#252525] border-l-4 border-l-black dark:border-l-white border-t border-r border-b border-black/10 dark:border-white/10 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
-                                <strong>Rekomendasi Belajar:</strong> {cur.rekomendasi}
+                              <div className="p-3.5 sm:p-4 bg-gray-50/80 dark:bg-[#252525] border border-black/10 dark:border-white/10 flex items-start gap-2.5 text-xs sm:text-sm text-gray-700 dark:text-gray-300 leading-relaxed rounded-sm">
+                                <Sparkles size={16} className="text-gray-400 shrink-0 mt-0.5" />
+                                <div>
+                                  <strong className="text-black dark:text-white block mb-0.5 font-bold">Catatan &amp; Rekomendasi Belajar:</strong>
+                                  {cur.rekomendasi}
+                                </div>
                               </div>
                             )}
 
                             {/* Daftar Nomor Butir Soal */}
-                            <div className="space-y-3 pt-2">
+                            <div className="space-y-4 pt-2">
                               {cur.detail_koreksi.map((item, itemIdx) => {
                                 const isBenar = item.status === "benar";
                                 const isSetengah = item.status === "setengah";
 
+                                // Deteksi options (dari backend AI atau ekstraksi soalText)
+                                const options = (item.opsi && Array.isArray(item.opsi) && item.opsi.length > 0)
+                                  ? item.opsi
+                                  : extractOptionsForQuestion(soalText, item.nomor);
+
+                                const tipeStr = (item.tipe || (options.length > 0 ? "pg" : "soal")).toUpperCase();
+
                                 return (
                                   <div
                                     key={itemIdx}
-                                    className="p-3 sm:p-4 bg-gray-50 dark:bg-[#262626] border border-black/10 dark:border-white/10 space-y-2.5"
+                                    className="border border-black/10 dark:border-white/10 p-3.5 sm:p-6 bg-gray-50 dark:bg-[#2a2a2a] space-y-3"
                                   >
-                                    <div className="flex justify-between items-center text-xs">
-                                      <span className="font-bold text-black dark:text-white">
-                                        Nomor {item.nomor}
-                                      </span>
+                                    {/* Header Nomor & Status Soal */}
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
                                       <div className="flex items-center gap-2">
+                                        <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] sm:text-xs font-bold px-2 py-0.5 sm:py-1 uppercase">
+                                          Soal {item.nomor} • {tipeStr}
+                                        </span>
                                         <span
-                                          className={`px-2 py-0.5 text-[10px] font-bold uppercase rounded-sm ${
+                                          className={`px-2 py-0.5 text-[10px] sm:text-xs font-bold uppercase rounded-sm ${
                                             isBenar
-                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300"
+                                              ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800"
                                               : isSetengah
-                                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300"
-                                              : "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300"
+                                              ? "bg-amber-100 text-amber-800 dark:bg-amber-950/40 dark:text-amber-300 border border-amber-300 dark:border-amber-800"
+                                              : "bg-red-100 text-red-800 dark:bg-red-950/40 dark:text-red-300 border border-red-300 dark:border-red-800"
                                           }`}
                                         >
-                                          {item.status}
-                                        </span>
-                                        <span className="font-mono font-bold text-black dark:text-white">
-                                          Skor: {item.nilai}
+                                          {isBenar ? "✓ Benar" : isSetengah ? "½ Sebagian" : "✗ Salah"}
                                         </span>
                                       </div>
+                                      <span className="font-mono text-xs sm:text-sm font-bold text-black dark:text-white">
+                                        Skor: {item.nilai}
+                                      </span>
                                     </div>
 
+                                    {/* Kalimat Pertanyaan (Tegak & Bersih - Standar Buat Soal) */}
                                     {item.pertanyaan && (
-                                      <p className="text-xs text-gray-600 dark:text-gray-400 italic">
-                                        "{item.pertanyaan}"
-                                      </p>
+                                      <div className="font-medium text-sm sm:text-base leading-relaxed text-black dark:text-white">
+                                        <MathText content={item.pertanyaan} />
+                                      </div>
                                     )}
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
-                                      <div className="p-2.5 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10">
-                                        <span className="text-[10px] font-bold text-gray-400 block mb-0.5 uppercase tracking-wider">
-                                          Jawaban Siswa
-                                        </span>
-                                        <span className="font-mono text-black dark:text-white font-medium break-words">
-                                          {item.jawaban_siswa || <span className="italic text-gray-400">(Kosong)</span>}
-                                        </span>
-                                      </div>
-                                      <div className="p-2.5 bg-white dark:bg-[#1e1e1e] border border-black/10 dark:border-white/10">
-                                        <span className="text-[10px] font-bold text-gray-400 block mb-0.5 uppercase tracking-wider">
-                                          Kunci Acuan
-                                        </span>
-                                        <span className="font-mono text-black dark:text-white font-medium break-words">
-                                          {item.kunci_jawaban}
-                                        </span>
-                                      </div>
-                                    </div>
+                                    {/* Render Seluruh Opsi Jawaban (Persis Buat Soal) */}
+                                    {options.length > 0 && (
+                                      <div className="space-y-1.5 mt-3">
+                                        {options.map((opt, oIdx) => {
+                                          const optLabel = opt.label.toUpperCase();
+                                          const kunciUpper = String(item.kunci_jawaban || "").toUpperCase().trim();
+                                          const isKunci =
+                                            kunciUpper === optLabel ||
+                                            kunciUpper.startsWith(optLabel + " ") ||
+                                            kunciUpper.startsWith(optLabel + ".") ||
+                                            kunciUpper.startsWith(optLabel + "(") ||
+                                            (opt.teks && kunciUpper.includes(opt.teks.toUpperCase()));
 
+                                          const siswaUpper = String(item.jawaban_siswa || "").toUpperCase().trim();
+                                          const isPickedByStudent =
+                                            siswaUpper === optLabel ||
+                                            siswaUpper.startsWith(optLabel + " ") ||
+                                            siswaUpper.startsWith(optLabel + ".") ||
+                                            siswaUpper.startsWith(optLabel + "(") ||
+                                            (opt.teks && siswaUpper.includes(opt.teks.toUpperCase()));
+
+                                          let cardStyle =
+                                            "border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] text-gray-700 dark:text-gray-300";
+                                          if (isKunci) {
+                                            cardStyle =
+                                              "border-emerald-600 bg-emerald-50/80 dark:bg-emerald-950/30 text-emerald-900 dark:text-emerald-200 font-semibold";
+                                          } else if (isPickedByStudent && !isKunci) {
+                                            cardStyle =
+                                              "border-red-500 bg-red-50/80 dark:bg-red-950/30 text-red-900 dark:text-red-200 font-semibold";
+                                          }
+
+                                          return (
+                                            <div
+                                              key={oIdx}
+                                              className={`px-3 py-2 border flex items-center justify-between gap-2 text-xs sm:text-sm ${cardStyle}`}
+                                            >
+                                              <span className="flex-1 leading-snug">
+                                                <span className="font-bold mr-1.5 text-black dark:text-white">
+                                                  {opt.label}.
+                                                </span>
+                                                <MathText content={opt.teks} inline />
+                                              </span>
+
+                                              <div className="flex items-center gap-1.5 shrink-0">
+                                                {isPickedByStudent && (
+                                                  <span
+                                                    className={`text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 uppercase tracking-wider ${
+                                                      isKunci
+                                                        ? "bg-emerald-600 text-white"
+                                                        : "bg-red-600 text-white"
+                                                    }`}
+                                                  >
+                                                    {isKunci ? "✓ Jawaban Siswa" : "✗ Jawaban Siswa"}
+                                                  </span>
+                                                )}
+                                                {isKunci && !isPickedByStudent && (
+                                                  <span className="text-[9px] sm:text-[10px] font-bold bg-emerald-600 text-white px-1.5 py-0.5 uppercase tracking-wider">
+                                                    Kunci Benar
+                                                  </span>
+                                                )}
+                                              </div>
+                                            </div>
+                                          );
+                                        })}
+                                      </div>
+                                    )}
+
+                                    {/* Format Non-PG: Jawaban Siswa vs Kunci Acuan */}
+                                    {options.length === 0 && (
+                                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs sm:text-sm mt-3 pt-2 border-t border-black/5 dark:border-white/5">
+                                        <div
+                                          className={`p-2.5 border ${
+                                            isBenar
+                                              ? "bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-300 dark:border-emerald-800/40 text-emerald-900 dark:text-emerald-200"
+                                              : isSetengah
+                                              ? "bg-amber-50/60 dark:bg-amber-950/20 border-amber-300 dark:border-amber-800/40 text-amber-900 dark:text-amber-200"
+                                              : "bg-red-50/60 dark:bg-red-950/20 border-red-300 dark:border-red-800/40 text-red-900 dark:text-red-200"
+                                          }`}
+                                        >
+                                          <span className="text-[10px] font-bold uppercase tracking-wider block opacity-75 mb-0.5">
+                                            Jawaban Siswa:
+                                          </span>
+                                          <span className="font-semibold">
+                                            {item.jawaban_siswa || <span className="italic opacity-60">(Kosong)</span>}
+                                          </span>
+                                        </div>
+                                        <div className="p-2.5 border border-black/10 dark:border-white/10 bg-white dark:bg-[#1e1e1e] text-gray-800 dark:text-gray-200">
+                                          <span className="text-[10px] font-bold uppercase tracking-wider block text-gray-400 mb-0.5">
+                                            Kunci Acuan:
+                                          </span>
+                                          <span className="font-semibold">{item.kunci_jawaban}</span>
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Catatan / Pembahasan AI */}
                                     {item.catatan && (
-                                      <p className="text-xs text-gray-600 dark:text-gray-400 pt-1 leading-relaxed border-t border-black/5 dark:border-white/5">
-                                        💡 {parseInlineMarkdown(item.catatan)}
-                                      </p>
+                                      <div className="mt-2.5 p-2.5 bg-white/70 dark:bg-[#1e1e1e]/70 border border-black/10 dark:border-white/10 flex items-start gap-2 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">
+                                        <Sparkles size={13} className="text-gray-400 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                          {parseInlineMarkdown(item.catatan)}
+                                        </div>
+                                      </div>
                                     )}
                                   </div>
                                 );

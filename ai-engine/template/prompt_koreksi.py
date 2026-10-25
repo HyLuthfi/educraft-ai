@@ -18,6 +18,10 @@ Aturan Penilaian:
    - Catatan: Jika skala adalah 'huruf', anggap A/B/C sebagai 'tuntas', D/E sebagai 'belum_tuntas' (kecuali batas KKM diatur sangat rendah).
 6. Berikan rekomendasi tindak lanjut pribadi untuk setiap siswa yang relevan dengan kesalahan mereka pada field `rekomendasi`.
 7. Berikan analisis analitik kelas keseluruhan pada field `analitik_kelas`, termasuk materi/soal terlemah di kelas, rata-rata kelas, tingkat kelulusan, dan saran pengajaran berikutnya bagi guru.
+8. Format Rincian Per Butir Soal (`detail_koreksi`):
+   - `pertanyaan`: Tuliskan kalimat pertanyaan secara utuh, jelas, dan tegak.
+   - `tipe`: Tentukan tipe soal ('pg', 'isian', 'benar/salah', atau 'essay').
+   - `opsi`: Jika soal berupa Pilihan Ganda (PG) dan naskah acuan memuat pilihan A, B, C, D, cantumkan SELURUH opsi tersebut: [{"label": "A", "teks": "..."}, {"label": "B", "teks": "..."}, ...].
 """
 
 def buat_user_prompt_koreksi(soal_kunci: str, daftar_siswa: list[dict]) -> str:

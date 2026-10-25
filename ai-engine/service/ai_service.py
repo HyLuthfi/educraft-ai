@@ -1,5 +1,6 @@
 import os
 import logging
+from typing import Optional, List, Dict, Any
 from pydantic import BaseModel, Field
 
 from service.openai_service import (
@@ -55,6 +56,8 @@ class ResponseSolve(BaseModel):
 class KoreksiItem(BaseModel):
     nomor: int = Field(description="Nomor soal")
     pertanyaan: str = Field(description="Teks pertanyaan (jika ada, atau kosong jika tidak diketahui)")
+    tipe: Optional[str] = Field(default="pg", description="Tipe soal: 'pg', 'isian', 'benar/salah', atau 'essay'")
+    opsi: Optional[list[dict]] = Field(default=[], description="Daftar seluruh opsi pilihan jika soal PG (misal: [{'label': 'A', 'teks': '...'}, ...])")
     jawaban_siswa: str = Field(description="Jawaban yang diberikan oleh siswa")
     kunci_jawaban: str = Field(description="Jawaban yang benar menurut kunci")
     status: str = Field(description="'benar' jika tepat, 'salah' jika tidak tepat, atau 'setengah' jika mendapat nilai sebagian (misal untuk essay)")
