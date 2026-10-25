@@ -655,37 +655,54 @@ export default function SolveQuestionWizard() {
                 )}
               </div>
 
-              {/* Collapsible Rujukan Tambahan (Opsional) */}
-              <div className="pt-2 border-t border-black/10 dark:border-white/10">
+              {/* Materi Referensi / Kunci Acuan (Opsional - Collapsible Accordion Standar Buat Soal) */}
+              <div className="border-2 border-black/10 dark:border-white/10 bg-white dark:bg-[#222222] transition-all">
                 <button
                   type="button"
                   onClick={() => setShowReference(!showReference)}
-                  className="flex items-center gap-2 text-xs font-bold text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+                  className="w-full p-3 sm:p-4 flex items-center justify-between text-left cursor-pointer hover:bg-gray-50 dark:hover:bg-[#2a2a2a] transition-colors"
                 >
+                  <div className="flex items-center gap-2">
+                    <BookOpen size={16} className="text-gray-500 dark:text-gray-400" />
+                    <span className="text-xs sm:text-sm font-bold text-gray-800 dark:text-gray-200">
+                      Materi Referensi / Kunci Acuan (Opsional)
+                    </span>
+                    {referenceMaterial.trim() && (
+                      <span className="text-[10px] font-black bg-black text-white dark:bg-white dark:text-black px-1.5 py-0.5 uppercase tracking-wide">
+                        Terisi
+                      </span>
+                    )}
+                  </div>
                   <ChevronDown
-                    size={15}
-                    className={`transition-transform duration-200 ${
+                    size={16}
+                    className={`text-gray-500 transition-transform duration-200 ${
                       showReference ? "rotate-180" : ""
                     }`}
                   />
-                  <span>+ Referensi Pembelajaran / Kunci Tambahan (Opsional)</span>
                 </button>
 
-                {showReference && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    className="mt-3 p-3.5 sm:p-4 bg-gray-50 dark:bg-[#252525] border-2 border-black/10 dark:border-white/10 space-y-2"
-                  >
-                    <textarea
-                      rows={3}
-                      value={referenceMaterial}
-                      onChange={(e) => setReferenceMaterial(e.target.value)}
-                      placeholder="Tempelkan materi referensi atau kunci acuan jika ingin jawaban diprioritaskan dari sumber tertentu..."
-                      className="w-full p-2.5 sm:p-3 bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/15 focus:border-black dark:focus:border-white outline-none resize-none text-xs sm:text-sm transition-all"
-                    />
-                  </motion.div>
-                )}
+                <AnimatePresence>
+                  {showReference && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="p-3 sm:p-4 pt-0 border-t border-black/10 dark:border-white/10 space-y-2 overflow-hidden"
+                    >
+                      <textarea
+                        rows={3}
+                        value={referenceMaterial}
+                        onChange={(e) => setReferenceMaterial(e.target.value)}
+                        className="w-full p-3 bg-gray-50 dark:bg-[#1e1e1e] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none transition-colors text-xs sm:text-sm leading-relaxed resize-y dark:text-white mt-3"
+                        placeholder="Contoh: Bab 4 Sel Biologi, ringkasan materi, atau kunci jawaban acuan guru..."
+                      />
+                      <p className="text-[11px] text-gray-400 dark:text-gray-500">
+                        Bantu AI memprioritaskan kunci dan pembahasan sesuai materi rujukan Anda.
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
               </div>
 
               {/* Tombol Lanjut Step 2 */}
