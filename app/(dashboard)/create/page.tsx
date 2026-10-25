@@ -1562,10 +1562,26 @@ export default function CreateQuestionWizard() {
                 ))}
               </div>
 
-              <div className="flex justify-center pt-8">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-8 pb-4 border-t border-black/10 dark:border-white/10 mt-8">
+                <button 
+                  onClick={openSaveBankModal}
+                  disabled={isSavingToBank}
+                  className="w-full sm:w-auto text-center px-4 py-2.5 border border-black/20 dark:border-white/20 font-medium hover:border-black dark:border-white/20 transition-colors bg-white dark:bg-[#1e1e1e] text-xs sm:text-sm disabled:opacity-50 whitespace-nowrap"
+                >
+                  {isSavingToBank ? "Menyimpan..." : "Simpan ke Bank Soal"}
+                </button>
+                <button
+                  onClick={() => setIsDownloadModalOpen(true)}
+                  className="w-full sm:w-auto justify-center px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2 text-xs sm:text-sm shrink-0 whitespace-nowrap shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+                >
+                  <Download size={16} /> Unduh Naskah Soal
+                </button>
+              </div>
+
+              <div className="flex justify-center pt-2">
                 <button
                   onClick={() => setStep(1)}
-                  className="font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:text-white underline transition-colors"
+                  className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:text-white underline transition-colors"
                 >
                   Buat Soal Baru Lagi
                 </button>
