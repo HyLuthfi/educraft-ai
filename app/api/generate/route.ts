@@ -9,29 +9,33 @@ export async function POST(req: Request) {
       body.konten_materi = "Materi Pembelajaran Umum";
     }
     
-    const supabase = await buatSupabaseServer();
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (user && body.konten_materi) {
-      const { data: existing } = await supabase
-        .from("bank_materi")
-        .select("id")
-        .eq("user_id", user.id)
-        .eq("konten_mentah", body.konten_materi)
-        .single();
-        
-      if (!existing) {
-        let judul = body.konten_materi.substring(0, 50).trim();
-        if (body.konten_materi.length > 50) judul += "...";
-        
-        const { error: insertError } = await supabase.from("bank_materi").insert({
-          user_id: user.id,
-          judul: judul,
-          jenis_sumber: "teks",
-          konten_mentah: body.konten_materi
-        });
-        if (insertError) console.error("Gagal simpan riwayat bank_materi:", insertError.message);
+    try {
+      const supabase = await buatSupabaseServer();
+      const { data } = await supabase.auth.getUser();
+      const user = data?.user;
+      
+      if (user && body.konten_materi) {
+        const { data: existing } = await supabase
+          .from("bank_materi")
+          .select("id")
+          .eq("user_id", user.id)
+          .eq("konten_mentah", body.konten_materi)
+          .single();
+          
+        if (!existing) {
+          let judul = body.konten_materi.substring(0, 50).trim();
+          if (body.konten_materi.length > 50) judul += "...";
+          
+          await supabase.from("bank_materi").insert({
+            user_id: user.id,
+            judul: judul,
+            jenis_sumber: "teks",
+            konten_mentah: body.konten_materi
+          });
+        }
       }
+    } catch (e: any) {
+      console.warn("Peringatan Supabase bank_materi diabaikan:", e?.message || e);
     }
 
     

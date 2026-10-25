@@ -27,7 +27,7 @@ if not _keys_str:
 api_keys = [k.strip() for k in _keys_str.split(",") if k.strip()]
 key_cycler = itertools.cycle(api_keys) if api_keys else None
 
-DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "ag/gemini-3.8-flash-high")
+DEFAULT_MODEL = os.getenv("OPENAI_MODEL", "ag/gemini-3.8-flash-low")
 MAX_TOKENS = int(os.getenv("OPENAI_MAX_TOKENS", "16000"))
 # Total percobaan (bukan cuma per-key). Endpoint bisa 503 'chat_capacity' saat sibuk.
 MAX_RETRY = int(os.getenv("OPENAI_MAX_RETRY", "5"))
