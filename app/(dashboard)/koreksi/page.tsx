@@ -30,6 +30,7 @@ import {
   FileSpreadsheet,
   Share2,
   Loader2,
+  Download,
 } from "lucide-react";
 import * as XLSX from "xlsx";
 import KoreksiCharts from "@/app/components/KoreksiCharts";
@@ -227,6 +228,7 @@ export default function AutoKoreksiPage() {
   const [koreksiResult, setKoreksiResult] = useState<ResponseKoreksi | null>(null);
   const [activeStudentDetail, setActiveStudentDetail] = useState<number | null>(null);
   const [reportTab, setReportTab] = useState<"rekap" | "analitik">("rekap");
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // ── Timer Live Loading ──
   const [koreksiSeconds, setKoreksiSeconds] = useState(0);
@@ -1415,62 +1417,37 @@ export default function AutoKoreksiPage() {
               transition={{ type: "tween", ease: "easeInOut", duration: 0.3 }}
               className="space-y-6 sm:space-y-8"
             >
-              {/* Header Hasil & Toolbar Aksi */}
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 border-b-2 border-black/10 dark:border-white/10">
+              {/* Header Hasil & Toolbar Aksi Bersih (2 Tombol Utama sesuai Kiblat) */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 pb-4 border-b border-black/10 dark:border-white/10">
                 <div>
                   <h2 className="text-xl sm:text-2xl font-bold flex items-center gap-2 text-black dark:text-white">
                     <CheckCircle className="text-emerald-600 shrink-0" size={24} /> Laporan Hasil Koreksi
                   </h2>
                   <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-                    Evaluasi otomatis {koreksiResult.hasil.length} siswa dengan standar kelulusan KKM {scoringConfig.kkm}.
+                    Evaluasi otomatis {koreksiResult.hasil.length} siswa • Standar KKM {scoringConfig.kkm}
                   </p>
                 </div>
 
-                {/* Toolbar Aksi Monokrom Neobrutalisme */}
-                <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setKoreksiResult(null);
-                      setStep(2);
-                    }}
-                    className="py-2 px-3 border-2 border-black/20 dark:border-white/20 font-bold text-xs flex items-center gap-1.5 bg-white dark:bg-[#1e1e1e] hover:border-black transition-colors cursor-pointer"
-                  >
-                    <RotateCcw size={13} /> Edit
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleExportKoreksiExcel}
-                    className="py-2 px-3 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold text-xs flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 transition-all cursor-pointer"
-                  >
-                    <FileSpreadsheet size={13} /> Excel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleShareKoreksiWhatsApp}
-                    className="py-2 px-3 border-2 border-black/20 dark:border-white/20 font-bold text-xs flex items-center gap-1.5 bg-white dark:bg-[#1e1e1e] hover:border-black transition-colors cursor-pointer"
-                  >
-                    <Share2 size={13} /> Salin WA
-                  </button>
+                <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={handleSaveSesi}
                     disabled={isSaving || isSaved}
-                    className={`py-2 px-3 border-2 font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-60 ${
+                    className={`flex-1 sm:flex-initial text-center px-3.5 sm:px-4 py-2 border-2 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-60 whitespace-nowrap ${
                       isSaved
                         ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
                         : "border-black/20 dark:border-white/20 bg-white dark:bg-[#1e1e1e] hover:border-black"
                     }`}
                   >
-                    {isSaved ? <CheckCircle size={13} /> : <Save size={13} />}
+                    {isSaved ? <CheckCircle size={14} className="text-emerald-600" /> : <Save size={14} />}
                     <span>{isSaving ? "Menyimpan..." : isSaved ? "Tersimpan" : "Simpan Sesi"}</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    className="py-2 px-3 border-2 border-black/20 dark:border-white/20 font-bold text-xs flex items-center gap-1.5 bg-white dark:bg-[#1e1e1e] hover:border-black transition-colors cursor-pointer"
+                    onClick={() => setIsExportModalOpen(true)}
+                    className="flex-1 sm:flex-initial justify-center px-4 sm:px-5 py-2 bg-black text-white dark:bg-white dark:text-black font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2 text-xs sm:text-sm shrink-0 whitespace-nowrap shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-[1px] active:translate-y-[1px] cursor-pointer"
                   >
-                    <Printer size={13} /> Cetak
+                    <Download size={15} /> Ekspor / Bagikan
                   </button>
                 </div>
               </div>
@@ -1790,8 +1767,42 @@ export default function AutoKoreksiPage() {
                 </div>
               )}
 
-              {/* Bottom Action */}
-              <div className="flex justify-center pt-6 border-t border-black/10 dark:border-white/10">
+              {/* Bottom Action Bar (Sesuai Kiblat Buat Soal) */}
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-8 pb-4 border-t border-black/10 dark:border-white/10 mt-8">
+                <button
+                  type="button"
+                  onClick={handleSaveSesi}
+                  disabled={isSaving || isSaved}
+                  className={`w-full sm:w-auto text-center px-4 py-2.5 border-2 font-bold text-xs sm:text-sm flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-60 whitespace-nowrap ${
+                    isSaved
+                      ? "border-emerald-600 bg-emerald-50 text-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-300"
+                      : "border-black/20 dark:border-white/20 bg-white dark:bg-[#1e1e1e] hover:border-black"
+                  }`}
+                >
+                  {isSaved ? <CheckCircle size={14} className="text-emerald-600" /> : <Save size={14} />}
+                  <span>{isSaving ? "Menyimpan..." : isSaved ? "Sesi Tersimpan" : "Simpan ke Sesi"}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(true)}
+                  className="w-full sm:w-auto justify-center px-5 py-2.5 bg-black dark:bg-white text-white dark:text-black font-semibold hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors flex items-center gap-2 text-xs sm:text-sm shrink-0 whitespace-nowrap shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none cursor-pointer"
+                >
+                  <Download size={16} /> Ekspor / Bagikan Hasil
+                </button>
+              </div>
+
+              <div className="flex items-center justify-center gap-4 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setKoreksiResult(null);
+                    setStep(2);
+                  }}
+                  className="text-xs sm:text-sm font-medium text-gray-500 dark:text-gray-400 hover:text-black dark:hover:text-white underline transition-colors cursor-pointer"
+                >
+                  Edit Jawaban Siswa
+                </button>
+                <span className="text-gray-300 dark:text-gray-600">•</span>
                 <button
                   type="button"
                   onClick={() => {
@@ -1807,6 +1818,149 @@ export default function AutoKoreksiPage() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* ────────────────── MODAL EXPORT & SHARE HUB ────────────────── */}
+      <AnimatePresence>
+        {isExportModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsExportModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-lg bg-white dark:bg-[#1e1e1e] border-2 sm:border-3 border-black dark:border-white/20 shadow-[6px_6px_0px_0px_#000] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden flex flex-col max-h-[88vh]"
+            >
+              {/* Header Modal */}
+              <div className="flex items-center justify-between p-3.5 sm:p-5 border-b-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#252525]">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 text-black dark:text-white">
+                    <Download size={18} className="text-gray-500 dark:text-gray-400" /> Ekspor &amp; Bagikan Laporan
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-xs mt-0.5">
+                    Pilih format penyajian hasil koreksi sesuai kebutuhan Anda.
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsExportModalOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body Modal */}
+              <div className="p-3.5 sm:p-5 space-y-4 overflow-y-auto">
+                {/* 01 Dokumen & Spreadsheet */}
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider">
+                      01
+                    </span>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Dokumen Rekap &amp; Cetak
+                    </h4>
+                  </div>
+
+                  {/* Excel Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportKoreksiExcel();
+                      setIsExportModalOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-emerald-300 dark:border-emerald-800">
+                        <FileSpreadsheet size={17} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                          Microsoft Excel (.xlsx)
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                          Tabel rekap nilai lengkap, status KKM, dan evaluasi kelas
+                        </div>
+                      </div>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+
+                  {/* Print / Cetak PDF Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsExportModalOpen(false);
+                      setTimeout(() => window.print(), 200);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-gray-300 dark:border-gray-700">
+                        <Printer size={17} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                          Cetak Dokumen Fisik / Simpan PDF
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                          Buka jendela pratinjau cetak browser resmi siap print
+                        </div>
+                      </div>
+                    </div>
+                    <Printer size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+                </div>
+
+                {/* 02 Komunikasi Guru & Wali Murid */}
+                <div className="space-y-2 pt-2 border-t border-black/5 dark:border-white/5">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider">
+                      02
+                    </span>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Komunikasi Langsung
+                    </h4>
+                  </div>
+
+                  {/* Salin WhatsApp Button */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleShareKoreksiWhatsApp();
+                      setIsExportModalOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-emerald-300 dark:border-emerald-800">
+                        <Share2 size={17} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                          Salin Format WhatsApp
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                          Salin ringkasan nilai rapi siap tempel ke grup WhatsApp
+                        </div>
+                      </div>
+                    </div>
+                    <Share2 size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
