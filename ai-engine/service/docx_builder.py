@@ -7,7 +7,7 @@ Mengutamakan kerapian tipografi standar kedinasan Indonesia, hanging indent, dan
 import io
 import re
 import datetime
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Tuple
 
 import docx
 from docx import Document
@@ -18,13 +18,39 @@ from docx.oxml import parse_xml, OxmlElement
 from docx.oxml.ns import nsdecls, qn
 
 
+def clean_subject_name(text: str) -> str:
+    """Membersihkan prompt AI atau teks kotor agar menjadi nama mata pelajaran resmi."""
+    if not text:
+        return "Mata Pelajaran Umum"
+    t = str(text).strip()
+    # Hapus instruksi prompt AI umum
+    t = re.sub(
+        r"^(tolong\s+)?(buatkan|buat|bikin|generate|susunkan|susun|carikan)\s+(\d+\s+)?soal\s+(tentang\s+|mengenai\s+|untuk\s+|materi\s+)?",
+        "",
+        t,
+        flags=re.I
+    )
+    t = re.sub(r"^(materi|topik|bab|pelajaran|soal)\s*[:=]\s*", "", t, flags=re.I)
+    t = re.sub(r"\s+", " ", t).strip()
+    if not t or len(t) < 2:
+        return "Mata Pelajaran Umum"
+    # Format Title Case rapi
+    return t[:55].title()
+
+
+def contains_arabic(text: str) -> bool:
+    """Mendeteksi apakah teks mengandung karakter Arab / Hijaiyah."""
+    if not text:
+        return False
+    return bool(re.search(r"[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]", str(text)))
+
+
 def clean_latex_math(text: str) -> str:
     """Membersihkan atau menormalisasi notasi LaTeX dasar agar terbaca natural di Word."""
     if not text:
         return ""
     
     t = str(text)
-    # Ganti simbol matematika umum
     replacements = [
         (r"\\times", "×"),
         (r"\t+imes", "×"),
@@ -57,8 +83,10 @@ def clean_latex_math(text: str) -> str:
     # Hapus delimiter math $$ atau $
     t = re.sub(r"\$\$([^$]+)\$\$", r"\1", t)
     t = re.sub(r"\$([^$]+)\$", r"\1", t)
-    # Bersihkan sisa backslash berlebih
+    # Bersihkan sisa escape
     t = t.replace(r"\_", "_").replace(r"\%", "%").replace(r"\&", "&")
+    # Perbaiki tanda kutip di sekitar teks Arab yang sering terbalik
+    t = re.sub(r'\"([^\"]*[\u0600-\u06FF][^\"]*)\"', r'«\1»', t)
     return t.strip()
 
 
@@ -69,7 +97,7 @@ def set_cell_background(cell, hex_color: str):
     tcPr.append(shd)
 
 
-def set_cell_margins(cell, top=100, bottom=100, left=150, right=150):
+def set_cell_margins(cell, top=80, bottom=80, left=100, right=100):
     """Mengatur padding internal sel tabel (dalam dxa, 1 pt = 20 dxa)."""
     tcPr = cell._tc.get_or_add_tcPr()
     tcMar = parse_xml(
@@ -112,12 +140,11 @@ def set_table_borders_thin(table, color="CCCCCC", sz="4"):
 
 
 def add_official_kop(doc: Document, nama_sekolah: str):
-    """Membuat Kop Surat Resmi Sekolah bergaris ganda (Double-Line) khas dinas pendidikan."""
+    """Membuat Kop Surat Resmi Sekolah bergaris ganda (Double-Line) khas naskah dinas pendidikan."""
     sekolah_clean = (nama_sekolah or "LEMBAGA PENDIDIKAN").strip().upper()
-    if sekolah_clean == "EDUCRAFT AI":
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN"):
         sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
 
-    # Paragraf Kop Terpusat
     p_kop = doc.add_paragraph()
     p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_kop.paragraph_format.space_before = Pt(0)
@@ -131,145 +158,168 @@ def add_official_kop(doc: Document, nama_sekolah: str):
 
     r2 = p_kop.add_run(f"{sekolah_clean}\n")
     r2.font.name = "Times New Roman"
-    r2.font.size = Pt(14)
+    r2.font.size = Pt(13.5)
     r2.font.bold = True
 
     current_year = datetime.datetime.now().year
-    r3 = p_kop.add_run(f"PENILAIAN AKHIR SEMESTER • TAHUN AJARAN {current_year}/{current_year + 1}\n")
+    r3 = p_kop.add_run(f"ASESMEN SUMATIF AKHIR SEMESTER • TAHUN AJARAN {current_year}/{current_year + 1}\n")
     r3.font.name = "Times New Roman"
     r3.font.size = Pt(10)
     r3.font.bold = True
 
-    r4 = p_kop.add_run("Jl. Pendidikan Karakter Bangsa No. 01 • Telp: (021) 789012 • Email: info@sekolah.sch.id")
+    r4 = p_kop.add_run("Jl. Pendidikan Karakter Bangsa No. 01 • Telp: (021) 789012 • Website: saitech.co.id")
     r4.font.name = "Times New Roman"
     r4.font.size = Pt(8.5)
     r4.font.italic = True
-    r4.font.color.rgb = RGBColor(100, 100, 100)
+    r4.font.color.rgb = RGBColor(90, 90, 90)
 
     # Garis ganda resmi (Word XML Paragraph Border Double)
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        r'<w:bottom w:val="double" w:sz="12" w:space="4" w:color="000000"/>'
+        r'<w:bottom w:val="double" w:sz="12" w:space="5" w:color="000000"/>'
         r'</w:pBdr>'
     )
     p_kop._p.get_or_add_pPr().append(pBdr)
 
 
 def add_exam_metadata_table(doc: Document, header_data: Dict[str, Any]):
-    """Membuat tabel identitas ujian 2 kolom berdampingan dengan kotak nilai siswa."""
-    t_meta = doc.add_table(rows=1, cols=3)
+    """
+    Membuat tabel identitas ujian 4 kolom simetris berbingkai atas-bawah (Ruled Header Table).
+    Menghilangkan kotak 'Nilai' yang timpang dan menggantinya dengan isian resmi ujian sekolah.
+    """
+    t_meta = doc.add_table(rows=3, cols=4)
     t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
-    set_table_borders_none(t_meta)
-
-    # Kolom 1 (Info Kiri)
-    cell_kiri = t_meta.rows[0].cells[0]
-    cell_kiri.width = Inches(2.9)
-    p_kiri = cell_kiri.paragraphs[0]
-    p_kiri.paragraph_format.line_spacing = 1.15
-    p_kiri.paragraph_format.space_after = Pt(0)
     
-    mapel = header_data.get("mata_pelajaran") or "Mata Pelajaran Umum"
-    kelas = header_data.get("kelas") or "Semua Kelas"
-    
-    r_kiri = p_kiri.add_run(
-        f"Mata Pelajaran\t: {mapel}\n"
-        f"Kelas / Fase\t: {kelas}\n"
-        f"Kurikulum\t: Kurikulum Merdeka"
+    # Border garis atas & bawah tebal (formal exam ruled table)
+    tblPr = t_meta._tbl.tblPr
+    bdr = parse_xml(
+        f'<w:tblBorders {nsdecls("w")}>'
+        f'<w:top w:val="single" w:sz="6" w:color="000000"/>'
+        f'<w:bottom w:val="single" w:sz="6" w:color="000000"/>'
+        f'<w:left w:val="none"/>'
+        f'<w:right w:val="none"/>'
+        f'<w:insideH w:val="single" w:sz="4" w:color="E5E7EB"/>'
+        f'<w:insideV w:val="none"/>'
+        f'</w:tblBorders>'
     )
-    r_kiri.font.name = "Times New Roman"
-    r_kiri.font.size = Pt(9.5)
-    r_kiri.font.bold = False
+    tblPr.append(bdr)
 
-    # Kolom 2 (Info Kanan)
-    cell_kanan = t_meta.rows[0].cells[1]
-    cell_kanan.width = Inches(2.5)
-    p_kanan = cell_kanan.paragraphs[0]
-    p_kanan.paragraph_format.line_spacing = 1.15
-    p_kanan.paragraph_format.space_after = Pt(0)
-
-    tanggal = header_data.get("tanggal") or datetime.date.today().strftime("%d/%m/%Y")
+    raw_mapel = header_data.get("mata_pelajaran", "")
+    mapel = clean_subject_name(raw_mapel)
+    kelas = header_data.get("kelas") or "Semua Kelas"
+    tanggal = header_data.get("tanggal") or datetime.date.today().strftime("%d %B %Y")
     durasi = header_data.get("durasi") or "60 Menit"
 
-    r_kanan = p_kanan.add_run(
-        f"Hari / Tanggal\t: {tanggal}\n"
-        f"Alokasi Waktu\t: {durasi}\n"
-        f"Bentuk Soal\t: PG & Uraian"
+    meta_grid = [
+        [("Mata Pelajaran", f": {mapel}"), ("Hari / Tanggal", f": {tanggal}")],
+        [("Kelas / Fase", f": {kelas}"), ("Alokasi Waktu", f": {durasi}")],
+        [("Nama Peserta", ": ................................................"), ("No. Peserta / Ruang", ": ...................................")],
+    ]
+
+    col_widths = [Inches(1.25), Inches(2.2), Inches(1.35), Inches(1.9)]
+
+    for r_idx, row_pairs in enumerate(meta_grid):
+        row = t_meta.rows[r_idx]
+        
+        # Kolom Kiri
+        c0, c1 = row.cells[0], row.cells[1]
+        set_cell_margins(c0, top=45, bottom=45, left=40, right=20)
+        set_cell_margins(c1, top=45, bottom=45, left=20, right=40)
+        
+        p0 = c0.paragraphs[0]
+        p0.paragraph_format.space_after = Pt(0)
+        p0.paragraph_format.line_spacing = 1.15
+        r_lbl0 = p0.add_run(row_pairs[0][0])
+        r_lbl0.font.name = "Times New Roman"
+        r_lbl0.font.size = Pt(9.5)
+        r_lbl0.font.bold = True
+
+        p1 = c1.paragraphs[0]
+        p1.paragraph_format.space_after = Pt(0)
+        p1.paragraph_format.line_spacing = 1.15
+        r_val0 = p1.add_run(row_pairs[0][1])
+        r_val0.font.name = "Times New Roman"
+        r_val0.font.size = Pt(9.5)
+        if r_idx == 0:
+            r_val0.font.bold = True
+
+        # Kolom Kanan
+        c2, c3 = row.cells[2], row.cells[3]
+        set_cell_margins(c2, top=45, bottom=45, left=40, right=20)
+        set_cell_margins(c3, top=45, bottom=45, left=20, right=40)
+
+        p2 = c2.paragraphs[0]
+        p2.paragraph_format.space_after = Pt(0)
+        p2.paragraph_format.line_spacing = 1.15
+        r_lbl1 = p2.add_run(row_pairs[1][0])
+        r_lbl1.font.name = "Times New Roman"
+        r_lbl1.font.size = Pt(9.5)
+        r_lbl1.font.bold = True
+
+        p3 = c3.paragraphs[0]
+        p3.paragraph_format.space_after = Pt(0)
+        p3.paragraph_format.line_spacing = 1.15
+        r_val1 = p3.add_run(row_pairs[1][1])
+        r_val1.font.name = "Times New Roman"
+        r_val1.font.size = Pt(9.5)
+
+        for col_i, cell_i in enumerate(row.cells):
+            cell_i.width = col_widths[col_i]
+
+
+def add_compact_instructions(doc: Document):
+    """
+    Menampilkan Petunjuk Umum dalam format grid 2 kolom ringkas (hanya memakan 3 baris).
+    Menghilangkan kotak abu-abu tunggal yang memotong ritme membaca.
+    """
+    p_hdr = doc.add_paragraph()
+    p_hdr.paragraph_format.space_before = Pt(6)
+    p_hdr.paragraph_format.space_after = Pt(2)
+    r_hdr = p_hdr.add_run("PETUNJUK UMUM:")
+    r_hdr.font.name = "Times New Roman"
+    r_hdr.font.size = Pt(9)
+    r_hdr.font.bold = True
+
+    t_inst = doc.add_table(rows=2, cols=2)
+    t_inst.alignment = WD_TABLE_ALIGNMENT.CENTER
+    set_table_borders_none(t_inst)
+
+    instructions = [
+        ("1. Berdoalah sebelum mulai mengerjakan soal.", "3. Dahulukan menjawab soal yang dianggap mudah."),
+        ("2. Periksa dan bacalah lembar soal dengan teliti.", "4. Teliti kembali pekerjaan sebelum diserahkan.")
+    ]
+
+    for r_idx, (col1, col2) in enumerate(instructions):
+        r = t_inst.rows[r_idx]
+        for c_idx, text in enumerate([col1, col2]):
+            c = r.cells[c_idx]
+            c.width = Inches(3.35)
+            set_cell_margins(c, top=20, bottom=20, left=40, right=40)
+            p = c.paragraphs[0]
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.line_spacing = 1.1
+            run = p.add_run(text)
+            run.font.name = "Times New Roman"
+            run.font.size = Pt(8.5)
+            run.font.color.rgb = RGBColor(70, 70, 70)
+
+    # Garis pemisah tipis sebelum masuk ke butir soal
+    p_div = doc.add_paragraph()
+    p_div.paragraph_format.space_before = Pt(3)
+    p_div.paragraph_format.space_after = Pt(2)
+    pBdr = parse_xml(
+        r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        r'<w:bottom w:val="single" w:sz="4" w:space="2" w:color="CCCCCC"/>'
+        r'</w:pBdr>'
     )
-    r_kanan.font.name = "Times New Roman"
-    r_kanan.font.size = Pt(9.5)
-
-    # Kolom 3 (Kotak Identitas Siswa Mini)
-    cell_box = t_meta.rows[0].cells[2]
-    cell_box.width = Inches(1.3)
-    set_cell_background(cell_box, "F9FAFB")
-    set_cell_margins(cell_box, top=60, bottom=60, left=80, right=80)
-    
-    # Border tipis di kotak nilai
-    tcPr = cell_box._tc.get_or_add_tcPr()
-    tcBorders = parse_xml(
-        f'<w:tcBorders {nsdecls("w")}>'
-        f'<w:top w:val="single" w:sz="6" w:color="000000"/>'
-        f'<w:left w:val="single" w:sz="6" w:color="000000"/>'
-        f'<w:bottom w:val="single" w:sz="6" w:color="000000"/>'
-        f'<w:right w:val="single" w:sz="6" w:color="000000"/>'
-        f'</w:tcBorders>'
-    )
-    tcPr.append(tcBorders)
-
-    p_box = cell_box.paragraphs[0]
-    p_box.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    r_box = p_box.add_run("NILAI / PARAF\n\n\n")
-    r_box.font.name = "Times New Roman"
-    r_box.font.size = Pt(8)
-    r_box.font.bold = True
-
-
-def add_callout_instructions(doc: Document):
-    """Membuat kotak petunjuk umum berbingkai tipis dan hemat ruang."""
-    tbl = doc.add_table(rows=1, cols=1)
-    tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-    cell = tbl.rows[0].cells[0]
-    cell.width = Inches(6.7)
-    set_cell_background(cell, "F8F9FA")
-    set_cell_margins(cell, top=80, bottom=80, left=140, right=140)
-
-    tcPr = cell._tc.get_or_add_tcPr()
-    tcBdr = parse_xml(
-        f'<w:tcBorders {nsdecls("w")}>'
-        f'<w:top w:val="single" w:sz="4" w:color="D1D5DB"/>'
-        f'<w:left w:val="single" w:sz="4" w:color="D1D5DB"/>'
-        f'<w:bottom w:val="single" w:sz="4" w:color="D1D5DB"/>'
-        f'<w:right w:val="single" w:sz="4" w:color="D1D5DB"/>'
-        f'</w:tcBorders>'
-    )
-    tcPr.append(tcBdr)
-
-    p = cell.paragraphs[0]
-    p.paragraph_format.line_spacing = 1.15
-    p.paragraph_format.space_before = Pt(0)
-    p.paragraph_format.space_after = Pt(0)
-
-    r_title = p.add_run("PETUNJUK UMUM PENGERJAAN SOAL:\n")
-    r_title.font.name = "Times New Roman"
-    r_title.font.size = Pt(8.5)
-    r_title.font.bold = True
-
-    r_body = p.add_run(
-        "1. Berdoalah sebelum mulai mengerjakan soal.  "
-        "2. Tuliskan nama dan nomor peserta pada lembar jawaban.  "
-        "3. Dahulukan menjawab soal-soal yang Anda anggap mudah.  "
-        "4. Periksa kembali seluruh pekerjaan Anda sebelum diserahkan kepada pengawas ujian."
-    )
-    r_body.font.name = "Times New Roman"
-    r_body.font.size = Pt(8.5)
-    r_body.font.italic = True
+    p_div._p.get_or_add_pPr().append(pBdr)
 
 
 def add_section_header(doc: Document, title: str, subtitle: str):
     """Membuat separator bagian soal (Bagian I / II / III) dengan bar rapi."""
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(12)
-    p.paragraph_format.space_after = Pt(3)
+    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_after = Pt(1)
     p.paragraph_format.line_spacing = 1.15
 
     r = p.add_run(title.upper())
@@ -279,17 +329,34 @@ def add_section_header(doc: Document, title: str, subtitle: str):
 
     p_sub = doc.add_paragraph()
     p_sub.paragraph_format.space_before = Pt(0)
-    p_sub.paragraph_format.space_after = Pt(6)
+    p_sub.paragraph_format.space_after = Pt(5)
     p_sub.paragraph_format.line_spacing = 1.1
     r_sub = p_sub.add_run(subtitle)
     r_sub.font.name = "Times New Roman"
-    r_sub.font.size = Pt(9.5)
+    r_sub.font.size = Pt(9)
     r_sub.font.italic = True
     r_sub.font.color.rgb = RGBColor(90, 90, 90)
 
 
+def render_question_text_with_runs(paragraph, text: str, is_arabic: bool = False):
+    """Menambahkan teks soal ke paragraf dengan penanganan proporsional untuk teks Arab."""
+    cleaned = clean_latex_math(text)
+    run = paragraph.add_run(cleaned)
+    run.font.name = "Times New Roman"
+    if is_arabic:
+        # Font Arab harus lebih besar agar harakat jelas
+        run.font.size = Pt(12.5)
+    else:
+        run.font.size = Pt(10.5)
+
+
 def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]], start_num: int = 1):
-    """Merender butir-butir soal Pilihan Ganda dengan hanging indent dan opsi hemat kertas."""
+    """
+    Merender butir-butir soal Pilihan Ganda dengan hanging indent dan 3-Mode Opsi Adaptif:
+    1. Mode 4 Kolom: Jika semua opsi pendek (<= 16 karakter, 1 kata), disusun 1 baris penuh!
+    2. Mode 2 Kolom: Jika opsi sedang (<= 42 karakter), disusun 2x2.
+    3. Mode 1 Kolom: Jika opsi kalimat panjang (> 42 karakter), disusun vertikal.
+    """
     add_section_header(
         doc,
         "I. PILIHAN GANDA",
@@ -297,9 +364,10 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
     )
 
     for i, q in enumerate(pg_list, start=start_num):
-        teks_soal = clean_latex_math(q.get("teks", q.get("teks_soal", q.get("text", ""))))
-        
-        # Paragraf Soal dengan Hanging Indent
+        raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
+        is_q_arabic = contains_arabic(raw_teks)
+
+        # Paragraf Soal dengan Hanging Indent Presisi
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
         p_q.paragraph_format.first_line_indent = Inches(-0.28)
@@ -312,67 +380,94 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
         r_num.font.size = Pt(10.5)
         r_num.font.bold = True
 
-        r_text = p_q.add_run(teks_soal)
-        r_text.font.name = "Times New Roman"
-        r_text.font.size = Pt(10.5)
+        render_question_text_with_runs(p_q, raw_teks, is_arabic=is_q_arabic)
 
         # Opsi Jawaban
         opsi_list = q.get("opsi", q.get("options", []))
         if not opsi_list:
             continue
 
-        # Normalisasi opsi
         normalized_options = []
         for o in opsi_list:
             label = str(o.get("label", o.get("label_opsi", ""))).strip()
             text_o = clean_latex_math(o.get("teks", o.get("teks_opsi", o.get("text", ""))))
-            normalized_options.append((label, text_o))
+            normalized_options.append((label, text_o, contains_arabic(text_o)))
 
-        # Cek apakah opsi sangat pendek (bisa 2 kolom untuk hemat kertas)
-        max_opt_len = max([len(t) for _, t in normalized_options]) if normalized_options else 0
-        
-        if len(normalized_options) == 4 and max_opt_len <= 38:
-            # Layout Hemat Kertas: Tabel 2x2 Tanpa Border
+        max_len = max([len(t) for _, t, _ in normalized_options]) if normalized_options else 0
+        has_any_arabic = any([is_ar for _, _, is_ar in normalized_options])
+
+        # ── MODE 1: OPSI SANGAT PENDEK / 1 KATA (SEJAJAR 4 KOLOM DALAM 1 BARIS) ──
+        if len(normalized_options) == 4 and max_len <= 18:
+            t_opt = doc.add_table(rows=1, cols=4)
+            t_opt.alignment = WD_TABLE_ALIGNMENT.CENTER
+            set_table_borders_none(t_opt)
+            col_w = Inches(1.6)
+
+            for col_i, (lbl, txt, is_ar) in enumerate(normalized_options):
+                cell = t_opt.rows[0].cells[col_i]
+                cell.width = col_w
+                set_cell_margins(cell, top=15, bottom=15, left=30, right=30)
+                p = cell.paragraphs[0]
+                p.paragraph_format.line_spacing = 1.1
+                p.paragraph_format.space_after = Pt(0)
+                
+                r_lbl = p.add_run(f"{lbl}. ")
+                r_lbl.font.name = "Times New Roman"
+                r_lbl.font.size = Pt(10)
+                r_lbl.font.bold = True
+
+                r_val = p.add_run(txt)
+                r_val.font.name = "Times New Roman"
+                r_val.font.size = Pt(12.5 if is_ar else 10)
+
+        # ── MODE 2: OPSI SEDANG (GRID 2 KOLOM 2 BARIS) ──
+        elif len(normalized_options) == 4 and max_len <= 45:
             t_opt = doc.add_table(rows=2, cols=2)
             t_opt.alignment = WD_TABLE_ALIGNMENT.CENTER
             set_table_borders_none(t_opt)
-            
+            col_w = Inches(3.2)
+
             # Baris 1: A dan B
-            for col_idx, opt_idx in enumerate([0, 1]):
-                cell = t_opt.rows[0].cells[col_idx]
-                cell.width = Inches(3.2)
-                set_cell_margins(cell, top=20, bottom=20, left=40, right=40)
+            for col_i, opt_i in enumerate([0, 1]):
+                cell = t_opt.rows[0].cells[col_i]
+                cell.width = col_w
+                set_cell_margins(cell, top=20, bottom=20, left=35, right=35)
                 p = cell.paragraphs[0]
                 p.paragraph_format.line_spacing = 1.1
                 p.paragraph_format.space_after = Pt(0)
-                lbl, txt = normalized_options[opt_idx]
+                lbl, txt, is_ar = normalized_options[opt_i]
+
                 r_lbl = p.add_run(f"{lbl}. ")
                 r_lbl.font.name = "Times New Roman"
                 r_lbl.font.size = Pt(10)
                 r_lbl.font.bold = True
+
                 r_val = p.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(10)
+                r_val.font.size = Pt(12.5 if is_ar else 10)
 
             # Baris 2: C dan D
-            for col_idx, opt_idx in enumerate([2, 3]):
-                cell = t_opt.rows[1].cells[col_idx]
-                cell.width = Inches(3.2)
-                set_cell_margins(cell, top=20, bottom=20, left=40, right=40)
+            for col_i, opt_i in enumerate([2, 3]):
+                cell = t_opt.rows[1].cells[col_i]
+                cell.width = col_w
+                set_cell_margins(cell, top=20, bottom=20, left=35, right=35)
                 p = cell.paragraphs[0]
                 p.paragraph_format.line_spacing = 1.1
                 p.paragraph_format.space_after = Pt(0)
-                lbl, txt = normalized_options[opt_idx]
+                lbl, txt, is_ar = normalized_options[opt_i]
+
                 r_lbl = p.add_run(f"{lbl}. ")
                 r_lbl.font.name = "Times New Roman"
                 r_lbl.font.size = Pt(10)
                 r_lbl.font.bold = True
+
                 r_val = p.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(10)
+                r_val.font.size = Pt(12.5 if is_ar else 10)
+
+        # ── MODE 3: OPSI PANJANG (1 KOLOM VERTIKAL) ──
         else:
-            # Layout 1 Kolom (Opsi Panjang)
-            for lbl, txt in normalized_options:
+            for lbl, txt, is_ar in normalized_options:
                 p_o = doc.add_paragraph()
                 p_o.paragraph_format.left_indent = Inches(0.48)
                 p_o.paragraph_format.first_line_indent = Inches(-0.2)
@@ -387,7 +482,7 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
 
                 r_val = p_o.add_run(txt)
                 r_val.font.name = "Times New Roman"
-                r_val.font.size = Pt(10)
+                r_val.font.size = Pt(12.5 if is_ar else 10)
 
 
 def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]], start_num: int = 1):
@@ -399,7 +494,8 @@ def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]
     )
 
     for i, q in enumerate(isian_list, start=start_num):
-        teks_soal = clean_latex_math(q.get("teks", q.get("teks_soal", q.get("text", ""))))
+        raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
+        is_ar = contains_arabic(raw_teks)
 
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
@@ -413,23 +509,20 @@ def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]
         r_num.font.size = Pt(10.5)
         r_num.font.bold = True
 
-        r_text = p_q.add_run(teks_soal)
-        r_text.font.name = "Times New Roman"
-        r_text.font.size = Pt(10.5)
+        render_question_text_with_runs(p_q, raw_teks, is_arabic=is_ar)
 
-        # Ruang Jawaban Isian
         p_ans = doc.add_paragraph()
         p_ans.paragraph_format.left_indent = Inches(0.28)
         p_ans.paragraph_format.space_before = Pt(1)
         p_ans.paragraph_format.space_after = Pt(4)
-        r_dot = p_ans.add_run("Jawaban: " + "." * 60)
+        r_dot = p_ans.add_run("Jawaban: " + "." * 55)
         r_dot.font.name = "Times New Roman"
         r_dot.font.size = Pt(9.5)
         r_dot.font.color.rgb = RGBColor(120, 120, 120)
 
 
 def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], start_num: int = 1):
-    """Merender butir-butir soal Essay / Uraian dengan garis berjarak untuk jawaban siswa."""
+    """Merender butir-butir soal Essay / Uraian dengan garis berjarak rapi untuk jawaban siswa."""
     add_section_header(
         doc,
         "III. ESSAY / URAIAN",
@@ -437,7 +530,8 @@ def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], star
     )
 
     for i, q in enumerate(essay_list, start=start_num):
-        teks_soal = clean_latex_math(q.get("teks", q.get("teks_soal", q.get("text", ""))))
+        raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
+        is_ar = contains_arabic(raw_teks)
 
         p_q = doc.add_paragraph()
         p_q.paragraph_format.left_indent = Inches(0.28)
@@ -451,31 +545,23 @@ def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], star
         r_num.font.size = Pt(10.5)
         r_num.font.bold = True
 
-        r_text = p_q.add_run(teks_soal + " ")
-        r_text.font.name = "Times New Roman"
-        r_text.font.size = Pt(10.5)
+        render_question_text_with_runs(p_q, raw_teks, is_arabic=is_ar)
 
-        # Indikator skor
-        r_score = p_q.add_run("[Skor Maks: 10]")
+        r_score = p_q.add_run("  [Skor Maks: 10]")
         r_score.font.name = "Times New Roman"
-        r_score.font.size = Pt(9)
+        r_score.font.size = Pt(8.5)
         r_score.font.italic = True
         r_score.font.bold = True
-        r_score.font.color.rgb = RGBColor(70, 70, 70)
+        r_score.font.color.rgb = RGBColor(90, 90, 90)
 
-        # Ruang Tulis Siswa (Kotak Garis Tipis atau Garis-Garis Rapi)
+        # Ruang Jawaban Bergaris Rapi
         tbl_space = doc.add_table(rows=3, cols=1)
         tbl_space.alignment = WD_TABLE_ALIGNMENT.CENTER
         set_table_borders_thin(tbl_space, color="E5E7EB", sz="2")
         for r_idx in range(3):
             c = tbl_space.rows[r_idx].cells[0]
             c.width = Inches(6.5)
-            set_cell_margins(c, top=80, bottom=80, left=80, right=80)
-            p_s = c.paragraphs[0]
-            p_s.paragraph_format.space_before = Pt(0)
-            p_s.paragraph_format.space_after = Pt(0)
-            r_sp = p_s.add_run()
-            r_sp.font.size = Pt(8)
+            set_cell_margins(c, top=70, bottom=70, left=70, right=70)
 
 
 def render_teacher_master_key(
@@ -487,7 +573,6 @@ def render_teacher_master_key(
     """Membuat halaman kunci jawaban dan pembahasan khusus pegangan guru (terpisah via Page Break)."""
     doc.add_page_break()
 
-    # Header Lembar Guru
     p_top = doc.add_paragraph()
     p_top.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_top.paragraph_format.space_before = Pt(4)
@@ -505,13 +590,12 @@ def render_teacher_master_key(
     r_k2.font.italic = True
     r_k2.font.color.rgb = RGBColor(180, 50, 50)
 
-    mapel = header_data.get("mata_pelajaran") or "Mata Pelajaran Umum"
+    mapel = clean_subject_name(header_data.get("mata_pelajaran", ""))
     kelas = header_data.get("kelas") or "Semua Kelas"
     r_k3 = p_top.add_run(f"Mata Pelajaran: {mapel} • Kelas: {kelas}")
     r_k3.font.name = "Times New Roman"
     r_k3.font.size = Pt(9.5)
 
-    # Garis pemisah
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
         r'<w:bottom w:val="single" w:sz="8" w:space="3" w:color="000000"/>'
@@ -520,7 +604,7 @@ def render_teacher_master_key(
     p_top._p.get_or_add_pPr().append(pBdr)
 
     # 1. Matriks Kunci Cepat Pilihan Ganda (Quick Key Grid)
-    pg_items = [q for q in all_questions if q.get("tipe", q.get("type", "pg")) == "pg"]
+    pg_items = [q for q in all_questions if str(q.get("tipe", q.get("type", "pg"))).strip().lower() in ("pg", "pilihan ganda", "pilihan_ganda", "benar/salah", "benar_salah")]
     if pg_items:
         p_m = doc.add_paragraph()
         p_m.paragraph_format.space_before = Pt(10)
@@ -530,7 +614,6 @@ def render_teacher_master_key(
         r_m.font.size = Pt(10)
         r_m.font.bold = True
 
-        # Susun tabel 5 kolom per baris
         num_cols = min(5, len(pg_items))
         num_rows = (len(pg_items) + num_cols - 1) // num_cols
         
@@ -554,7 +637,6 @@ def render_teacher_master_key(
             r_num = p.add_run(f"No. {idx + 1}: ")
             r_num.font.name = "Times New Roman"
             r_num.font.size = Pt(9.5)
-            r_num.font.bold = False
 
             r_key = p.add_run(f"[{kunci}]")
             r_key.font.name = "Times New Roman"
@@ -579,21 +661,19 @@ def render_teacher_master_key(
             bloom = q.get("level_bloom", "")
             diff = q.get("kesulitan", "")
 
-            # Kotak pembahasan per nomor
             t_box = doc.add_table(rows=1, cols=1)
             t_box.alignment = WD_TABLE_ALIGNMENT.CENTER
             cell = t_box.rows[0].cells[0]
             cell.width = Inches(6.7)
             set_cell_background(cell, "FAFAFA")
-            set_cell_margins(cell, top=70, bottom=70, left=100, right=100)
+            set_cell_margins(cell, top=60, bottom=60, left=90, right=90)
             set_table_borders_thin(t_box, color="E2E8F0", sz="4")
 
             p = cell.paragraphs[0]
             p.paragraph_format.line_spacing = 1.15
             p.paragraph_format.space_after = Pt(0)
 
-            # Header nomor & badge
-            r_n = p.add_run(f"Soal Nomor {i} ({tipe.upper()})\n")
+            r_n = p.add_run(f"Soal Nomor {i} ({str(tipe).upper()})\n")
             r_n.font.name = "Times New Roman"
             r_n.font.size = Pt(9.5)
             r_n.font.bold = True
@@ -602,7 +682,7 @@ def render_teacher_master_key(
             if bloom:
                 meta_str.append(f"Level: {bloom}")
             if diff:
-                meta_str.append(f"Kesulitan: {diff.capitalize()}")
+                meta_str.append(f"Kesulitan: {str(diff).capitalize()}")
             if meta_str:
                 r_meta = p.add_run(f"[{' • '.join(meta_str)}]\n")
                 r_meta.font.name = "Times New Roman"
@@ -610,7 +690,6 @@ def render_teacher_master_key(
                 r_meta.font.italic = True
                 r_meta.font.color.rgb = RGBColor(100, 100, 100)
 
-            # Kunci
             r_klabel = p.add_run("Kunci Jawaban: ")
             r_klabel.font.name = "Times New Roman"
             r_klabel.font.size = Pt(9.5)
@@ -622,7 +701,6 @@ def render_teacher_master_key(
             r_kval.font.bold = True
             r_kval.font.color.rgb = RGBColor(16, 120, 60)
 
-            # Pembahasan
             r_plabel = p.add_run("Pembahasan: ")
             r_plabel.font.name = "Times New Roman"
             r_plabel.font.size = Pt(9.5)
@@ -632,7 +710,6 @@ def render_teacher_master_key(
             r_pval.font.name = "Times New Roman"
             r_pval.font.size = Pt(9.5)
 
-            # Jeda antar kotak
             p_gap = doc.add_paragraph()
             p_gap.paragraph_format.space_before = Pt(0)
             p_gap.paragraph_format.space_after = Pt(2)
@@ -653,13 +730,12 @@ def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_c
     r1.font.bold = True
 
     sekolah = header_data.get("nama_sekolah") or "SATUAN PENDIDIKAN"
-    mapel = header_data.get("mata_pelajaran") or "-"
+    mapel = clean_subject_name(header_data.get("mata_pelajaran", ""))
     r2 = p_top.add_run(f"{sekolah.upper()} • MATA PELAJARAN: {mapel.upper()}")
     r2.font.name = "Times New Roman"
     r2.font.size = Pt(9.5)
     r2.font.bold = True
 
-    # Garis pemisah
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
         r'<w:bottom w:val="single" w:sz="6" w:space="3" w:color="000000"/>'
@@ -667,7 +743,6 @@ def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_c
     )
     p_top._p.get_or_add_pPr().append(pBdr)
 
-    # Identitas Siswa Form Isian
     t_id = doc.add_table(rows=2, cols=2)
     t_id.alignment = WD_TABLE_ALIGNMENT.CENTER
     set_table_borders_thin(t_id, color="CCCCCC", sz="4")
@@ -683,14 +758,13 @@ def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_c
         c_i = idx % 2
         cell = t_id.rows[r_i].cells[c_i]
         cell.width = Inches(3.3)
-        set_cell_margins(cell, top=60, bottom=60, left=80, right=80)
+        set_cell_margins(cell, top=50, bottom=50, left=80, right=80)
         p = cell.paragraphs[0]
         p.paragraph_format.space_after = Pt(0)
         r = p.add_run(f"{label}: {val}")
         r.font.name = "Times New Roman"
         r.font.size = Pt(9)
 
-    # Tabel Lembar Silang A B C D (maksimal 50 nomor)
     limit_soal = min(max(pg_count, 10), 50)
     p_ljk = doc.add_paragraph()
     p_ljk.paragraph_format.space_before = Pt(8)
@@ -700,10 +774,7 @@ def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_c
     r_pet.font.size = Pt(8.5)
     r_pet.font.italic = True
 
-    # 2 Kolom grup nomor (1-25 dan 26-50)
-    cols_per_row = 2
     per_col = (limit_soal + 1) // 2
-    
     t_grid = doc.add_table(rows=per_col, cols=2)
     t_grid.alignment = WD_TABLE_ALIGNMENT.CENTER
     set_table_borders_thin(t_grid, color="D1D5DB", sz="2")
@@ -718,7 +789,7 @@ def render_student_answer_sheet(doc: Document, header_data: Dict[str, Any], pg_c
         
         cell = t_grid.rows[r_idx].cells[c_idx]
         cell.width = Inches(3.3)
-        set_cell_margins(cell, top=30, bottom=30, left=60, right=60)
+        set_cell_margins(cell, top=25, bottom=25, left=60, right=60)
         p = cell.paragraphs[0]
         p.paragraph_format.space_after = Pt(0)
         r_row = p.add_run(f"No. {n:02d}\t[ A ]   [ B ]   [ C ]   [ D ]")
@@ -736,7 +807,6 @@ def generate_exam_docx(
     """Fungsi utama untuk membangun dokumen .docx siap cetak secara murni."""
     doc = Document()
 
-    # Setup Kertas A4 & Margin Standar Ujian (2 cm = 0.75 in)
     section = doc.sections[0]
     section.page_width = Inches(8.27)
     section.page_height = Inches(11.69)
@@ -749,11 +819,11 @@ def generate_exam_docx(
     nama_sekolah = header_data.get("nama_sekolah", "")
     add_official_kop(doc, nama_sekolah)
 
-    # 2. Tabel Identitas Ujian & Siswa
+    # 2. Tabel Identitas Ujian & Siswa (Symmetric 4-col ruled table)
     add_exam_metadata_table(doc, header_data)
 
-    # 3. Callout Box Petunjuk Umum
-    add_callout_instructions(doc)
+    # 3. Petunjuk Pengerjaan Ringkas 2 Kolom
+    add_compact_instructions(doc)
 
     # 4. Filter Soal Berdasarkan Tipe
     pg_list = []
@@ -796,7 +866,6 @@ def generate_exam_docx(
     if sertakan_ljk and pg_list:
         render_student_answer_sheet(doc, header_data, len(pg_list))
 
-    # Simpan ke stream BytesIO
     output_stream = io.BytesIO()
     doc.save(output_stream)
     output_stream.seek(0)

@@ -324,7 +324,12 @@ export default function CreateQuestionWizard() {
     const toastId = toast.loading(`Sedang memproses dokumen ${format.toUpperCase()}...`);
 
     try {
-      const subject = topicText || saveBankTitle || "Materi Pelajaran";
+      let rawSubject = topicText || saveBankTitle || "Materi Pelajaran";
+      const subject = rawSubject
+        .replace(/^(tolong\s+)?(buatkan|buat|bikin|generate|susunkan|susun|carikan)\s+(\d+\s+)?soal\s+(tentang\s+|mengenai\s+|untuk\s+|materi\s+)?/i, "")
+        .replace(/^(materi|topik|bab|pelajaran|soal)\s*[:=]\s*/i, "")
+        .trim() || "Materi Pelajaran";
+
       const payload = {
         soal: generatedQuestions,
         header: {
