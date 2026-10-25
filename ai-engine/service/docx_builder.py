@@ -991,6 +991,11 @@ def render_teacher_master_key(
                 if "benar" in texts and "salah" in texts:
                     is_bs = True
 
+            is_essay = tipe in ("essay", "uraian")
+            is_isian = tipe in ("isian", "short_answer", "isian_singkat")
+            is_pg = tipe in ("pg", "pilihan_ganda", "multiple_choice")
+
+            label_prefix = "Kunci"
             if is_bs:
                 if "benar" in kunci.lower() or kunci.upper() == "A":
                     kunci_display = "Benar"
@@ -998,12 +1003,28 @@ def render_teacher_master_key(
                     kunci_display = "Salah"
                 else:
                     kunci_display = kunci
-            elif len(kunci) <= 3:
-                kunci_display = kunci.upper()
+            elif is_pg:
+                kunci_display = kunci.upper() if len(kunci) <= 3 else kunci
+            elif is_isian:
+                # Isian singkat: WAJIB menampilkan teks kunci asli (misal: "BGE-M3", "Redis", dsb), bukan "Uraian"!
+                kunci_display = kunci
+            elif is_essay:
+                if kunci and kunci.lower() not in ("-", "uraian", "essay", ""):
+                    if len(kunci) <= 80:
+                        kunci_display = kunci
+                        label_prefix = "Pedoman Kunci"
+                    else:
+                        kunci_display = "Lihat Pembahasan / Rubrik di Bawah"
+                        label_prefix = "Pedoman Jawaban"
+                        if not pembahasan or pembahasan.strip() in ("-", ""):
+                            pembahasan = kunci
+                else:
+                    kunci_display = "Lihat Pembahasan / Rubrik di Bawah"
+                    label_prefix = "Pedoman Jawaban"
             else:
-                kunci_display = "Uraian"
+                kunci_display = kunci
 
-            r_ans = p_item.add_run(f"Kunci: {kunci_display}")
+            r_ans = p_item.add_run(f"{label_prefix}: {kunci_display}")
             r_ans.font.name = "Times New Roman"
             r_ans.font.size = Pt(10)
             r_ans.font.bold = True
