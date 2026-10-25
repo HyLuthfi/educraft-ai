@@ -320,12 +320,29 @@ def add_compact_instructions(doc: Document):
     p_div._p.get_or_add_pPr().append(pBdr)
 
 
-def add_section_header(doc: Document, title: str, subtitle: str):
-    """Membuat separator bagian soal (Bagian I / II / III) dengan bar rapi."""
+def add_section_header(doc: Document, title: str, subtitle: str, has_top_divider: bool = False):
+    """
+    Membuat separator bagian soal (Bagian I / II / III) dengan bar rapi.
+    Jika has_top_divider=True, diberi garis pemisah seksi elegan di atasnya untuk membatasi tipe soal sebelumnya.
+    Dilengkapi keep_with_next=True agar judul bagian tidak pernah tertinggal sendirian di akhir halaman (orphan).
+    """
+    if has_top_divider:
+        p_div = doc.add_paragraph()
+        p_div.paragraph_format.space_before = Pt(14)
+        p_div.paragraph_format.space_after = Pt(8)
+        p_div.paragraph_format.keep_with_next = True
+        pBdr = parse_xml(
+            r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            r'<w:bottom w:val="single" w:sz="6" w:space="4" w:color="CCCCCC"/>'
+            r'</w:pBdr>'
+        )
+        p_div._p.get_or_add_pPr().append(pBdr)
+
     p = doc.add_paragraph()
-    p.paragraph_format.space_before = Pt(8)
+    p.paragraph_format.space_before = Pt(6) if has_top_divider else Pt(8)
     p.paragraph_format.space_after = Pt(2)
     p.paragraph_format.line_spacing = 1.15
+    p.paragraph_format.keep_with_next = True
 
     r = p.add_run(title.upper())
     r.font.name = "Times New Roman"
@@ -336,11 +353,46 @@ def add_section_header(doc: Document, title: str, subtitle: str):
     p_sub.paragraph_format.space_before = Pt(0)
     p_sub.paragraph_format.space_after = Pt(6)
     p_sub.paragraph_format.line_spacing = 1.15
+    p_sub.paragraph_format.keep_with_next = True
     r_sub = p_sub.add_run(subtitle)
     r_sub.font.name = "Times New Roman"
     r_sub.font.size = Pt(9)
     r_sub.font.italic = True
     r_sub.font.color.rgb = RGBColor(90, 90, 90)
+
+
+def should_break_page_for_new_section(
+    accumulated_height: float,
+    new_section_type: str,
+    new_items_count: int
+) -> bool:
+    """
+    Menghitung sisa ruang vertikal di halaman saat ini.
+    Jika ruang tersisa 'nanggung' (hanya muat judul atau < 2 soal),
+    maka otomatis dialihkan ke lembar baru (doc.add_page_break()).
+    Jika masih lega (cukup muat minimal 2-3 soal bersama judulnya),
+    maka digabung di lembar yang sama dengan garis pemisah seksi yang rapi.
+    """
+    PAGE_1_CAPACITY = 7.5      # Kapasitas sisa Halaman 1 setelah Kop (inci)
+    OTHER_PAGE_CAPACITY = 10.0 # Kapasitas halaman 2 dst (inci)
+
+    if accumulated_height <= PAGE_1_CAPACITY:
+        rem_space = PAGE_1_CAPACITY - accumulated_height
+    else:
+        rem_space = OTHER_PAGE_CAPACITY - ((accumulated_height - PAGE_1_CAPACITY) % OTHER_PAGE_CAPACITY)
+
+    # Kebutuhan tinggi minimal agar tidak nanggung:
+    # Header seksi + minimal 2 soal
+    # Jika soal essay: header (0.8 in) + 2 butir essay (2 x 1.7 in = 3.4 in) = 4.2 in
+    # Jika soal isian: header (0.8 in) + 2 butir isian (2 x 0.7 in = 1.4 in) = 2.2 in
+    if new_section_type == "essay":
+        needed_threshold = 4.0 if new_items_count >= 2 else 2.5
+    elif new_section_type == "isian":
+        needed_threshold = 2.4 if new_items_count >= 2 else 1.8
+    else:
+        needed_threshold = 2.2
+
+    return rem_space < needed_threshold
 
 
 def render_question_text_with_runs(paragraph, text: str, is_arabic: bool = False):
@@ -355,18 +407,26 @@ def render_question_text_with_runs(paragraph, text: str, is_arabic: bool = False
         run.font.size = Pt(10.5)
 
 
-def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]], start_num: int = 1):
+def render_multiple_choice_questions(
+    doc: Document,
+    pg_list: List[Dict[str, Any]],
+    start_num: int = 1,
+    has_top_divider: bool = False
+) -> float:
     """
     Merender butir-butir soal Pilihan Ganda dengan hanging indent dan 3-Mode Opsi Adaptif:
     1. Mode 4 Kolom: Jika semua opsi pendek (<= 16 karakter, 1 kata), disusun 1 baris penuh!
     2. Mode 2 Kolom: Jika opsi sedang (<= 42 karakter), disusun 2x2.
     3. Mode 1 Kolom: Jika opsi kalimat panjang (> 42 karakter), disusun vertikal.
+    Mengembalikan estimasi tinggi vertikal (dalam inci) untuk kalkulasi pagination.
     """
     add_section_header(
         doc,
         "I. PILIHAN GANDA",
-        "Petunjuk: Pilihlah salah satu jawaban yang paling tepat dengan menyilang (X) huruf A, B, C, atau D!"
+        "Petunjuk: Pilihlah salah satu jawaban yang paling tepat dengan menyilang (X) huruf A, B, C, atau D!",
+        has_top_divider=has_top_divider
     )
+    accum_h = 0.8  # Header section
 
     for i, q in enumerate(pg_list, start=start_num):
         raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
@@ -390,6 +450,7 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
         # Opsi Jawaban
         opsi_list = q.get("opsi", q.get("options", []))
         if not opsi_list:
+            accum_h += 0.35
             continue
 
         normalized_options = []
@@ -403,6 +464,7 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
 
         # ── MODE 1: OPSI SANGAT PENDEK / 1 KATA (SEJAJAR 4 KOLOM, INDENT KE KANAN) ──
         if len(normalized_options) == 4 and max_len <= 18:
+            accum_h += 0.55
             t_opt = doc.add_table(rows=1, cols=4)
             t_opt.alignment = WD_TABLE_ALIGNMENT.LEFT
             set_table_borders_none(t_opt)
@@ -432,6 +494,7 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
 
         # ── MODE 2: OPSI SEDANG (GRID 2 KOLOM 2 BARIS, INDENT KE KANAN) ──
         elif len(normalized_options) == 4 and max_len <= 45:
+            accum_h += 0.75
             t_opt = doc.add_table(rows=2, cols=2)
             t_opt.alignment = WD_TABLE_ALIGNMENT.LEFT
             set_table_borders_none(t_opt)
@@ -482,6 +545,7 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
 
         # ── MODE 3: OPSI PANJANG (1 KOLOM VERTIKAL, INDENT KE KANAN) ──
         else:
+            accum_h += 0.35 + (len(normalized_options) * 0.22)
             for lbl, txt, is_ar in normalized_options:
                 p_o = doc.add_paragraph()
                 p_o.paragraph_format.left_indent = Inches(0.55)
@@ -499,16 +563,26 @@ def render_multiple_choice_questions(doc: Document, pg_list: List[Dict[str, Any]
                 r_val.font.name = "Times New Roman"
                 r_val.font.size = Pt(12.5 if is_ar else 10)
 
+    return accum_h
 
-def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]], start_num: int = 1):
-    """Merender butir-butir soal Isian Singkat."""
+
+def render_short_answer_questions(
+    doc: Document,
+    isian_list: List[Dict[str, Any]],
+    start_num: int = 1,
+    has_top_divider: bool = False
+) -> float:
+    """Merender butir-butir soal Isian Singkat. Mengembalikan estimasi tinggi vertikal."""
     add_section_header(
         doc,
         "II. ISIAN SINGKAT",
-        "Petunjuk: Isilah titik-titik di bawah ini dengan jawaban yang singkat, tepat, dan benar!"
+        "Petunjuk: Isilah titik-titik di bawah ini dengan jawaban yang singkat, tepat, dan benar!",
+        has_top_divider=has_top_divider
     )
+    accum_h = 0.8
 
     for i, q in enumerate(isian_list, start=start_num):
+        accum_h += 0.65
         raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
         is_ar = contains_arabic(raw_teks)
 
@@ -518,6 +592,8 @@ def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]
         p_q.paragraph_format.space_before = Pt(4 if i == start_num else 12)
         p_q.paragraph_format.space_after = Pt(2)
         p_q.paragraph_format.line_spacing = 1.15
+        if i == start_num:
+            p_q.paragraph_format.keep_with_next = True
 
         r_num = p_q.add_run(f"{i}.\t")
         r_num.font.name = "Times New Roman"
@@ -535,16 +611,26 @@ def render_short_answer_questions(doc: Document, isian_list: List[Dict[str, Any]
         r_dot.font.size = Pt(9.5)
         r_dot.font.color.rgb = RGBColor(120, 120, 120)
 
+    return accum_h
 
-def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], start_num: int = 1):
+
+def render_essay_questions(
+    doc: Document,
+    essay_list: List[Dict[str, Any]],
+    start_num: int = 1,
+    has_top_divider: bool = False
+) -> float:
     """Merender butir-butir soal Essay / Uraian dengan garis berjarak rapi untuk jawaban siswa."""
     add_section_header(
         doc,
         "III. ESSAY / URAIAN",
-        "Petunjuk: Jawablah pertanyaan-pertanyaan berikut secara komprehensif, runtut, dan jelas!"
+        "Petunjuk: Jawablah pertanyaan-pertanyaan berikut secara komprehensif, runtut, dan jelas!",
+        has_top_divider=has_top_divider
     )
+    accum_h = 0.8
 
     for i, q in enumerate(essay_list, start=start_num):
+        accum_h += 1.7
         raw_teks = q.get("teks", q.get("teks_soal", q.get("text", "")))
         is_ar = contains_arabic(raw_teks)
 
@@ -554,6 +640,8 @@ def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], star
         p_q.paragraph_format.space_before = Pt(6 if i == start_num else 14)
         p_q.paragraph_format.space_after = Pt(4)
         p_q.paragraph_format.line_spacing = 1.15
+        if i == start_num:
+            p_q.paragraph_format.keep_with_next = True
 
         r_num = p_q.add_run(f"{i}.\t")
         r_num.font.name = "Times New Roman"
@@ -581,6 +669,8 @@ def render_essay_questions(doc: Document, essay_list: List[Dict[str, Any]], star
             c = tbl_space.rows[r_idx].cells[0]
             c.width = Inches(6.2)
             set_cell_margins(c, top=65, bottom=65, left=60, right=60)
+
+    return accum_h
 
 
 def render_teacher_master_key(
@@ -858,19 +948,50 @@ def generate_exam_docx(
         else:
             essay_list.append(s)
 
-    # 5. Render Butir Soal Berurutan
+    # 5. Render Butir Soal Berurutan dengan Logika Cerdas Pemisah Seksi & Anti-Nanggung
     running_number = 1
+    total_content_height = 0.0  # Tinggi vertikal akumulatif (dalam inci)
+    rendered_sections_count = 0
+
     if pg_list:
-        render_multiple_choice_questions(doc, pg_list, start_num=running_number)
+        h = render_multiple_choice_questions(doc, pg_list, start_num=running_number, has_top_divider=False)
         running_number += len(pg_list)
+        total_content_height += h
+        rendered_sections_count += 1
 
     if isian_list:
-        render_short_answer_questions(doc, isian_list, start_num=running_number)
+        has_prev = rendered_sections_count > 0
+        need_break = False
+        if has_prev:
+            need_break = should_break_page_for_new_section(total_content_height, "isian", len(isian_list))
+
+        if need_break:
+            doc.add_page_break()
+            total_content_height = 0.0  # Mulai segar di lembar baru
+            h = render_short_answer_questions(doc, isian_list, start_num=running_number, has_top_divider=False)
+        else:
+            h = render_short_answer_questions(doc, isian_list, start_num=running_number, has_top_divider=has_prev)
+
         running_number += len(isian_list)
+        total_content_height += h
+        rendered_sections_count += 1
 
     if essay_list:
-        render_essay_questions(doc, essay_list, start_num=running_number)
+        has_prev = rendered_sections_count > 0
+        need_break = False
+        if has_prev:
+            need_break = should_break_page_for_new_section(total_content_height, "essay", len(essay_list))
+
+        if need_break:
+            doc.add_page_break()
+            total_content_height = 0.0  # Mulai segar di lembar baru
+            h = render_essay_questions(doc, essay_list, start_num=running_number, has_top_divider=False)
+        else:
+            h = render_essay_questions(doc, essay_list, start_num=running_number, has_top_divider=has_prev)
+
         running_number += len(essay_list)
+        total_content_height += h
+        rendered_sections_count += 1
 
     # 6. Kunci Jawaban & Pembahasan Pegangan Guru (Jika diminta)
     if sertakan_jawaban or sertakan_pembahasan:
