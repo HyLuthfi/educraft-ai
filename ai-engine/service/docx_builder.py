@@ -140,18 +140,10 @@ def set_table_borders_thin(table, color="CCCCCC", sz="4"):
 
 
 def add_official_kop(doc: Document, nama_sekolah: str):
-    """Membuat Kop Surat Resmi bergaris ganda (Double-Line) khas naskah profesional berbasis identitas SAI Tech."""
-    sekolah_input = (nama_sekolah or "").strip().upper()
-    is_custom = bool(
-        sekolah_input
-        and sekolah_input not in (
-            "EDUCRAFT AI",
-            "LEMBAGA PENDIDIKAN",
-            "SAI TECH",
-            "PT SOLUSI AGEN INDONESIA",
-            "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
-        )
-    )
+    """Membuat Kop Surat Resmi Sekolah bergaris ganda (Double-Line) khas naskah dinas pendidikan."""
+    sekolah_clean = (nama_sekolah or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
 
     p_kop = doc.add_paragraph()
     p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
@@ -159,50 +151,27 @@ def add_official_kop(doc: Document, nama_sekolah: str):
     p_kop.paragraph_format.space_after = Pt(2)
     p_kop.paragraph_format.line_spacing = 1.1
 
+    r1 = p_kop.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
+    r1.font.name = "Times New Roman"
+    r1.font.size = Pt(11)
+    r1.font.bold = True
+
+    r2 = p_kop.add_run(f"{sekolah_clean}\n")
+    r2.font.name = "Times New Roman"
+    r2.font.size = Pt(13.5)
+    r2.font.bold = True
+
     current_year = datetime.datetime.now().year
+    r3 = p_kop.add_run(f"ASESMEN SUMATIF AKHIR SEMESTER • TAHUN AJARAN {current_year}/{current_year + 1}\n")
+    r3.font.name = "Times New Roman"
+    r3.font.size = Pt(10)
+    r3.font.bold = True
 
-    if is_custom:
-        r1 = p_kop.add_run("NASKAH ASESMEN PEMBELAJARAN\n")
-        r1.font.name = "Times New Roman"
-        r1.font.size = Pt(11)
-        r1.font.bold = True
-
-        r2 = p_kop.add_run(f"{sekolah_input}\n")
-        r2.font.name = "Times New Roman"
-        r2.font.size = Pt(13.5)
-        r2.font.bold = True
-
-        r3 = p_kop.add_run(f"ASESMEN SUMATIF AKHIR SEMESTER • TAHUN AJARAN {current_year}/{current_year + 1}\n")
-        r3.font.name = "Times New Roman"
-        r3.font.size = Pt(10)
-        r3.font.bold = True
-
-        r4 = p_kop.add_run("Disusun Melalui Platform EduCraft AI • saitech.co.id")
-        r4.font.name = "Times New Roman"
-        r4.font.size = Pt(8.5)
-        r4.font.italic = True
-        r4.font.color.rgb = RGBColor(90, 90, 90)
-    else:
-        r1 = p_kop.add_run("PT SOLUSI AGEN INDONESIA (SAI TECH)\n")
-        r1.font.name = "Times New Roman"
-        r1.font.size = Pt(11)
-        r1.font.bold = True
-
-        r2 = p_kop.add_run("SAI TECH • EDUCRAFT AI\n")
-        r2.font.name = "Times New Roman"
-        r2.font.size = Pt(13.5)
-        r2.font.bold = True
-
-        r3 = p_kop.add_run(f"ASESMEN SUMATIF AKHIR SEMESTER • TAHUN AJARAN {current_year}/{current_year + 1}\n")
-        r3.font.name = "Times New Roman"
-        r3.font.size = Pt(10)
-        r3.font.bold = True
-
-        r4 = p_kop.add_run("Website: saitech.co.id • Portal: educraft.saitech.co.id • Email: saitech.officialid@gmail.com")
-        r4.font.name = "Times New Roman"
-        r4.font.size = Pt(8.5)
-        r4.font.italic = True
-        r4.font.color.rgb = RGBColor(90, 90, 90)
+    r4 = p_kop.add_run("Saitech AI Solutions • Website: saitech.co.id")
+    r4.font.name = "Times New Roman"
+    r4.font.size = Pt(8.5)
+    r4.font.italic = True
+    r4.font.color.rgb = RGBColor(90, 90, 90)
 
     # Garis ganda resmi (Word XML Paragraph Border Double)
     pBdr = parse_xml(
