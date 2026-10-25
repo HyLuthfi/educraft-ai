@@ -87,63 +87,80 @@ def _tipe_rank(item) -> int:
     return 5
 
 
+import urllib.parse
+from fastapi.responses import StreamingResponse
+
 @router.post("/generate")
 async def generate_soal(req: RequestGenerate):
+    """
+    Generator soal dengan HTTP Streaming & Heartbeat Keepalive.
+    1. Memproses 1 KESATUAN UTUH per tipe soal (bebas dari duplikasi / pertanyaan mirip).
+    2. Mengalirkan SSE heartbeat setiap detik agar koneksi Cloudflare tidak pernah kena Timeout 524.
+    3. Mengembalikan seluruh butir soal terurut rapi ke frontend.
+    """
     # 1. Urutkan konfigurasi blok: PG -> Isian -> Benar/Salah -> Essay
     sorted_blocks = sorted(req.config.blocks, key=_tipe_rank)
 
-    # 2. Pecah blok besar menjadi micro-chunks agar pemrosesan paralel super cepat (anti Cloudflare 524 Timeout!)
-    # Max per chunk: 5 soal untuk PG/Isian/Benar-Salah, 3 soal untuk Essay
-    tasks = []
+    async def event_stream():
+        # Kirim sinyal awal bahwa server aktif meracik
+        yield f"event: progress\ndata: {json.dumps({'message': 'Menganalisis materi & merumuskan naskah soal...', 'percent': 15})}\n\n"
 
-    for b in sorted_blocks:
-        t_lower = str(b.tipe).strip().lower()
-        max_chunk = 3 if ("essay" in t_lower or "uraian" in t_lower) else 5
+        async def eksekusi_semua_blok():
+            semua = []
+            for b in sorted_blocks:
+                prompt = buat_user_prompt(
+                    konten_materi=req.konten_materi,
+                    blocks=[b],
+                    level_bloom=req.config.level_bloom,
+                    mata_pelajaran=req.config.mata_pelajaran,
+                    jenjang=req.config.jenjang,
+                    bahasa=req.config.bahasa,
+                    instruksi_khusus=req.config.instruksi_khusus,
+                    mode="gambar" if b.image_count > 0 else "reguler"
+                )
+                soal_blok = await eksekusi_ai_dengan_retry(prompt)
+                semua.extend(soal_blok)
 
-        total_count = max(b.count, 1)
-        remaining = total_count
-        chunk_idx = 0
+            # Tambahkan image_url otomatis jika ada prompt gambar
+            for s in semua:
+                p_img = s.get("image_prompt", "")
+                if p_img and str(p_img).strip():
+                    encoded = urllib.parse.quote(str(p_img).strip())
+                    s["image_url"] = f"https://image.pollinations.ai/prompt/{encoded}?width=800&height=400&nologo=true&seed=42"
 
-        while remaining > 0:
-            current_c = min(remaining, max_chunk)
-            chunk_block = BlockSoal(
-                tipe=b.tipe,
-                level=b.level,
-                count=current_c,
-                image_count=b.image_count if chunk_idx == 0 else 0
-            )
+            return semua
 
-            # Berikan variasi instruksi agar soal antar-chunk tidak menduplikasi topik yang sama persis
-            sub_instruction = req.config.instruksi_khusus or ""
-            if total_count > max_chunk:
-                sub_instruction += f" (Bagian {chunk_idx + 1}: buat variasi konsep/aspek yang berbeda dari bagian lainnya)."
+        task = asyncio.create_task(eksekusi_semua_blok())
 
-            prompt = buat_user_prompt(
-                konten_materi=req.konten_materi,
-                blocks=[chunk_block],
-                level_bloom=req.config.level_bloom,
-                mata_pelajaran=req.config.mata_pelajaran,
-                jenjang=req.config.jenjang,
-                bahasa=req.config.bahasa,
-                instruksi_khusus=sub_instruction.strip(),
-                mode="gambar" if chunk_block.image_count > 0 else "reguler"
-            )
+        # Loop streaming heartbeat setiap 1 detik agar Cloudflare tidak memutus koneksi
+        counter = 0
+        while not task.done():
+            done, _ = await asyncio.wait([task], timeout=1.0)
+            if not done:
+                counter += 1
+                pct = min(15 + counter * 2, 92)
+                # Kirim data progress SSE dan komentar keepalive
+                yield f": keepalive {counter}\n\n"
+                if counter % 3 == 0:
+                    yield f"event: progress\ndata: {json.dumps({'message': f'Menyusun butir soal & pembahasan ({counter}s)...', 'percent': pct})}\n\n"
 
-            tasks.append(eksekusi_ai_dengan_retry(prompt))
-            remaining -= current_c
-            chunk_idx += 1
+        try:
+            semua_soal = await task
+            semua_soal_terurut = sorted(semua_soal, key=_tipe_rank)
+            yield f"event: complete\ndata: {json.dumps({'soal': semua_soal_terurut})}\n\n"
+        except Exception as e:
+            logger.error(f"Error saat generate soal: {e}")
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
 
-    # 3. Jalankan semua micro-chunks secara paralel konkuren (10-15s untuk 50 soal!)
-    hasil_chunks = await asyncio.gather(*tasks)
-
-    semua_soal = []
-    for chunk_res in hasil_chunks:
-        semua_soal.extend(chunk_res)
-
-    # 4. Urutkan hasil akhir mutlak: PG -> Isian -> Benar/Salah -> Essay
-    semua_soal_terurut = sorted(semua_soal, key=_tipe_rank)
-
-    return {"soal": semua_soal_terurut}
+    return StreamingResponse(
+        event_stream(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache, no-transform",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        }
+    )
 
 
 @router.post("/regenerate")

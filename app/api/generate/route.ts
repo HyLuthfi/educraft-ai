@@ -68,7 +68,7 @@ export async function POST(req: Request) {
         }
       } catch {
         if (errorText.includes("<html") || errorText.includes("<!DOCTYPE") || errorText.includes("524") || errorText.includes("Cloudflare")) {
-          pesanError = "Waktu pemrosesan melebihi batas (Cloudflare Timeout 524). Sistem telah diperbarui ke mode paralel, silakan coba kembali.";
+          pesanError = "Waktu pemrosesan melebihi batas (Cloudflare Timeout 524). Silakan coba lagi.";
         } else {
           pesanError = errorText || pesanError;
         }
@@ -79,37 +79,19 @@ export async function POST(req: Request) {
       );
     }
 
-    const data = await res.json();
-
-    // Set image_url langsung ke URL Pollinations (tanpa download+upload blocking).
-    // Server balas instan; client render gambar secara lazy.
-    if (data.soal && Array.isArray(data.soal)) {
-      const typeRank = (item: any) => {
-        const s = (item?.tipe || "").toLowerCase().trim();
-        const opsi = item?.opsi || [];
-        let isBS = s.includes("benar") || s.includes("salah") || s === "bs" || s.includes("true_false") || s.includes("tf");
-        if (!isBS && Array.isArray(opsi) && opsi.length === 2) {
-          const texts = opsi.map((o: any) => (o?.teks || "").toLowerCase().trim());
-          if (texts.includes("benar") && texts.includes("salah")) {
-            isBS = true;
-          }
-        }
-        if (isBS) return 3;
-        if (s === "pg" || s.includes("pilihan")) return 1;
-        if (s.includes("isian")) return 2;
-        if (s.includes("essay") || s.includes("uraian")) return 4;
-        return 5;
-      };
-      data.soal.sort((a: any, b: any) => typeRank(a) - typeRank(b));
-
-      for (const soalItem of data.soal) {
-        if (soalItem.image_prompt && soalItem.image_prompt.trim() !== "") {
-          const promptEncoded = encodeURIComponent(soalItem.image_prompt);
-          soalItem.image_url = `https://image.pollinations.ai/prompt/${promptEncoded}?width=800&height=400&nologo=true&seed=42`;
-        }
-      }
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("text/event-stream")) {
+      return new Response(res.body, {
+        headers: {
+          "Content-Type": "text/event-stream; charset=utf-8",
+          "Cache-Control": "no-cache, no-transform",
+          "Connection": "keep-alive",
+          "X-Accel-Buffering": "no",
+        },
+      });
     }
 
+    const data = await res.json();
     return NextResponse.json(data);
   } catch (error: any) {
     console.error("Next.js Proxy Error:", error.message);

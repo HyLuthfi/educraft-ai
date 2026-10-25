@@ -58,6 +58,7 @@ export default function CreateQuestionWizard() {
   const [isMounted, setIsMounted] = useState(false);
   const [generatingSeconds, setGeneratingSeconds] = useState(0);
   const [generatingStageIdx, setGeneratingStageIdx] = useState(0);
+  const [generatingLiveStatus, setGeneratingLiveStatus] = useState<string | null>(null);
 
   const TAHAP_PENYUSUNAN = [
     "Membaca & mengekstrak konsep kunci dari materi...",
@@ -464,6 +465,7 @@ export default function CreateQuestionWizard() {
     }
 
     setIsGenerating(true);
+    setGeneratingLiveStatus(null);
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(new DOMException("timeout", "AbortError")), 240000);
@@ -512,9 +514,61 @@ export default function CreateQuestionWizard() {
         }
         throw new Error(errMessage);
       }
-      
-      const data = await res.json();
-      const rawSoal = data.soal || [];
+
+      // Membaca aliran data SSE secara real-time
+      let finalSoalList: any[] = [];
+      const contentType = res.headers.get("content-type") || "";
+
+      if (contentType.includes("text/event-stream") && res.body) {
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buffer = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+          const parts = buffer.split("\n\n");
+          buffer = parts.pop() || "";
+
+          for (const part of parts) {
+            const trimmed = part.trim();
+            if (!trimmed || trimmed.startsWith(":")) continue; // Keepalive ping
+
+            if (trimmed.startsWith("event: complete")) {
+              const dataLine = trimmed.split("\n").find(l => l.startsWith("data: "));
+              if (dataLine) {
+                const parsed = JSON.parse(dataLine.replace(/^data:\s*/, ""));
+                finalSoalList = parsed.soal || [];
+              }
+            } else if (trimmed.startsWith("event: error")) {
+              const dataLine = trimmed.split("\n").find(l => l.startsWith("data: "));
+              if (dataLine) {
+                const parsed = JSON.parse(dataLine.replace(/^data:\s*/, ""));
+                throw new Error(parsed.error || "Gagal menghasilkan soal.");
+              }
+            } else if (trimmed.startsWith("event: progress")) {
+              const dataLine = trimmed.split("\n").find(l => l.startsWith("data: "));
+              if (dataLine) {
+                try {
+                  const parsed = JSON.parse(dataLine.replace(/^data:\s*/, ""));
+                  if (parsed.message) {
+                    setGeneratingLiveStatus(parsed.message);
+                  }
+                } catch {
+                  // no-op
+                }
+              }
+            }
+          }
+        }
+      } else {
+        const data = await res.json();
+        finalSoalList = data.soal || [];
+      }
+
+      const rawSoal = finalSoalList;
       const typeRank = (item: any) => {
         const s = (item?.tipe || "").toLowerCase().trim();
         const opsi = item?.opsi || [];
@@ -1259,14 +1313,14 @@ export default function CreateQuestionWizard() {
                   <Loader2 size={15} className="animate-spin text-black dark:text-white shrink-0 mt-0.5" />
                   <AnimatePresence mode="wait">
                     <motion.span
-                      key={generatingStageIdx}
+                      key={generatingLiveStatus || generatingStageIdx}
                       initial={{ opacity: 0, y: 4 }}
                       animate={{ opacity: 1, y: 0 }}
                       exit={{ opacity: 0, y: -4 }}
                       transition={{ duration: 0.25 }}
                       className="leading-snug"
                     >
-                      {TAHAP_PENYUSUNAN[generatingStageIdx]}
+                      {generatingLiveStatus || TAHAP_PENYUSUNAN[generatingStageIdx]}
                     </motion.span>
                   </AnimatePresence>
                 </div>
