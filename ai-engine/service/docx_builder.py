@@ -657,21 +657,35 @@ def render_essay_questions(
         r_score.font.bold = True
         r_score.font.color.rgb = RGBColor(90, 90, 90)
 
-        # Ruang Jawaban Bergaris Rapi (Indent ke kanan)
-        tbl_space = doc.add_table(rows=3, cols=1)
-        tbl_space.alignment = WD_TABLE_ALIGNMENT.LEFT
-        tblPr = tbl_space._tbl.tblPr
+        # 5 Garis Horizontal Rapi untuk Jawaban Siswa (Seperti buku tulis bergaris, tanpa kotak samping)
+        tbl_lines = doc.add_table(rows=5, cols=1)
+        tbl_lines.alignment = WD_TABLE_ALIGNMENT.LEFT
+        tblPr = tbl_lines._tbl.tblPr
         tblInd = parse_xml(f'<w:tblInd {nsdecls("w")} w:w="560" w:type="dxa"/>')
         tblPr.append(tblInd)
 
-        set_table_borders_thin(tbl_space, color="E5E7EB", sz="2")
-        for r_idx in range(3):
-            row = tbl_space.rows[r_idx]
+        tblBorders = parse_xml(
+            f'<w:tblBorders {nsdecls("w")}>'
+            f'<w:top w:val="none"/>'
+            f'<w:left w:val="none"/>'
+            f'<w:bottom w:val="single" w:sz="4" w:space="0" w:color="D1D5DB"/>'
+            f'<w:right w:val="none"/>'
+            f'<w:insideH w:val="single" w:sz="4" w:space="0" w:color="D1D5DB"/>'
+            f'<w:insideV w:val="none"/>'
+            f'</w:tblBorders>'
+        )
+        tblPr.append(tblBorders)
+
+        for r_idx in range(5):
+            row = tbl_lines.rows[r_idx]
             trPr = row._tr.get_or_add_trPr()
             trPr.append(parse_xml(f'<w:cantSplit {nsdecls("w")}/>'))
             c = row.cells[0]
             c.width = Inches(6.2)
-            set_cell_margins(c, top=65, bottom=65, left=60, right=60)
+            p_cell = c.paragraphs[0]
+            p_cell.paragraph_format.space_before = Pt(6)
+            p_cell.paragraph_format.space_after = Pt(6)
+            p_cell.paragraph_format.line_spacing = 1.0
 
     return accum_h
 
