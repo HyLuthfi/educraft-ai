@@ -60,10 +60,10 @@ def buat_user_prompt(
         
         instruksi_gambar = ""
         instruksi_tipe = ""
-        if str(tipe).strip().lower() in ("benar/salah", "benar salah", "benar_salah", "bs"):
+        if str(tipe).strip().lower() in ("benar/salah", "benar salah", "benar_salah", "bs", "true_false", "tf"):
             instruksi_tipe = (
-                " (Ini soal BENAR/SALAH: buat sebagai tipe 'pg' dengan TEPAT 2 opsi "
-                "[{label:'A',teks:'Benar'},{label:'B',teks:'Salah'}], teks soal berupa pernyataan yang dinilai benar atau salah.)"
+                " (Ini soal BENAR/SALAH: isi field 'tipe' dengan 'benar/salah' dan sediakan TEPAT 2 opsi "
+                "[{label:'A',teks:'Benar'},{label:'B',teks:'Salah'}], salah satunya benar. Teks soal berupa pernyataan faktual yang dinilai benar atau salah.)"
             )
 
         if mode == "gambar":

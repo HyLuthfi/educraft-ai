@@ -80,13 +80,23 @@ export async function POST(req: Request) {
     // Set image_url langsung ke URL Pollinations (tanpa download+upload blocking).
     // Server balas instan; client render gambar secara lazy.
     if (data.soal && Array.isArray(data.soal)) {
-      const typeRank = (t: string) => {
-        const s = (t || "").toLowerCase();
-        if (s.includes("pg") || s.includes("pilihan") || s.includes("benar")) return 1;
+      const typeRank = (item: any) => {
+        const s = (item?.tipe || "").toLowerCase().trim();
+        const opsi = item?.opsi || [];
+        let isBS = s.includes("benar") || s.includes("salah") || s === "bs" || s.includes("true_false") || s.includes("tf");
+        if (!isBS && Array.isArray(opsi) && opsi.length === 2) {
+          const texts = opsi.map((o: any) => (o?.teks || "").toLowerCase().trim());
+          if (texts.includes("benar") && texts.includes("salah")) {
+            isBS = true;
+          }
+        }
+        if (isBS) return 3;
+        if (s === "pg" || s.includes("pilihan")) return 1;
         if (s.includes("isian")) return 2;
-        return 3;
+        if (s.includes("essay") || s.includes("uraian")) return 4;
+        return 5;
       };
-      data.soal.sort((a: any, b: any) => typeRank(a.tipe) - typeRank(b.tipe));
+      data.soal.sort((a: any, b: any) => typeRank(a) - typeRank(b));
 
       for (const soalItem of data.soal) {
         if (soalItem.image_prompt && soalItem.image_prompt.trim() !== "") {

@@ -511,13 +511,23 @@ export default function CreateQuestionWizard() {
       
       const data = await res.json();
       const rawSoal = data.soal || [];
-      const typeRank = (t: string) => {
-        const s = (t || "").toLowerCase();
-        if (s.includes("pg") || s.includes("pilihan") || s.includes("benar")) return 1;
+      const typeRank = (item: any) => {
+        const s = (item?.tipe || "").toLowerCase().trim();
+        const opsi = item?.opsi || [];
+        let isBS = s.includes("benar") || s.includes("salah") || s === "bs" || s.includes("true_false") || s.includes("tf");
+        if (!isBS && Array.isArray(opsi) && opsi.length === 2) {
+          const texts = opsi.map((o: any) => (o?.teks || "").toLowerCase().trim());
+          if (texts.includes("benar") && texts.includes("salah")) {
+            isBS = true;
+          }
+        }
+        if (isBS) return 3;
+        if (s === "pg" || s.includes("pilihan")) return 1;
         if (s.includes("isian")) return 2;
-        return 3;
+        if (s.includes("essay") || s.includes("uraian")) return 4;
+        return 5;
       };
-      const sortedSoal = [...rawSoal].sort((a, b) => typeRank(a.tipe) - typeRank(b.tipe));
+      const sortedSoal = [...rawSoal].sort((a, b) => typeRank(a) - typeRank(b));
       setGeneratedQuestions(sortedSoal);
       setStep(3);
     } catch(err: any) {

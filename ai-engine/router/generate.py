@@ -58,33 +58,61 @@ async def eksekusi_ai_dengan_retry(user_prompt: str) -> list:
     return []
 
 def _tipe_rank(item) -> int:
-    """Urutan standar resmi naskah soal: 1. PG -> 2. Isian -> 3. Essay."""
-    t = str(getattr(item, "tipe", None) or item.get("tipe", item.get("type", "pg"))).strip().lower()
-    if t in ("pg", "pilihan ganda", "pilihan_ganda", "benar/salah", "benar_salah", "bs"):
+    """Urutan hierarki standar yang diminta Ken:
+    1. PG (Pilihan Ganda)
+    2. Isian (Isian Singkat)
+    3. Benar/Salah
+    4. Essay (Uraian)
+    """
+    raw_t = getattr(item, "tipe", None) if not isinstance(item, dict) else (item.get("tipe") or item.get("type"))
+    t = str(raw_t or "pg").strip().lower()
+    
+    # Deteksi Benar/Salah dari tipe atau opsi 2 (Benar & Salah)
+    is_bs = t in ("benar/salah", "benar salah", "benar_salah", "bs", "true_false", "tf")
+    if not is_bs and isinstance(item, dict):
+        opsi = item.get("opsi") or []
+        if len(opsi) == 2:
+            teks_opsi = [str(o.get("teks", "")).strip().lower() for o in opsi]
+            if "benar" in teks_opsi and "salah" in teks_opsi:
+                is_bs = True
+
+    if is_bs:
+        return 3
+    if t in ("pg", "pilihan ganda", "pilihan_ganda", "pilihan"):
         return 1
     if t in ("isian", "isian singkat", "isian_singkat"):
         return 2
-    return 3
+    if t in ("essay", "uraian"):
+        return 4
+    return 5
 
 
 @router.post("/generate")
 async def generate_soal(req: RequestGenerate):
-    semua_soal = []
-
-    # Sort blocks agar AI men-generate sesuai urutan standar: PG -> Isian -> Essay
+    # 1. Urutkan konfigurasi blok: PG -> Isian -> Benar/Salah -> Essay
     sorted_blocks = sorted(req.config.blocks, key=_tipe_rank)
 
-    for b in sorted_blocks:
+    # 2. Eksekusi request TERPISAH per-blok/tipe soal secara konkuren ke LLM
+    async def proses_satu_blok(b):
         prompt = buat_user_prompt(
-            konten_materi=req.konten_materi, blocks=[b],
-            level_bloom=req.config.level_bloom, mata_pelajaran=req.config.mata_pelajaran,
-            jenjang=req.config.jenjang, bahasa=req.config.bahasa,
+            konten_materi=req.konten_materi,
+            blocks=[b],
+            level_bloom=req.config.level_bloom,
+            mata_pelajaran=req.config.mata_pelajaran,
+            jenjang=req.config.jenjang,
+            bahasa=req.config.bahasa,
             instruksi_khusus=req.config.instruksi_khusus,
             mode="gambar" if b.image_count > 0 else "reguler"
         )
-        semua_soal.extend(await eksekusi_ai_dengan_retry(prompt))
+        return await eksekusi_ai_dengan_retry(prompt)
 
-    # Pastikan hasil akhir terurut mutlak: Semua PG dulu, lalu Isian, lalu Essay
+    hasil_per_blok = await asyncio.gather(*[proses_satu_blok(b) for b in sorted_blocks])
+
+    semua_soal = []
+    for hasil in hasil_per_blok:
+        semua_soal.extend(hasil)
+
+    # 3. Urutkan hasil akhir mutlak: PG -> Isian -> Benar/Salah -> Essay
     semua_soal_terurut = sorted(semua_soal, key=_tipe_rank)
 
     return {"soal": semua_soal_terurut}

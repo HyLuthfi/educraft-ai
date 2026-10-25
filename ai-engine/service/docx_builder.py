@@ -422,7 +422,9 @@ def render_multiple_choice_questions(
     doc: Document,
     pg_list: List[Dict[str, Any]],
     start_num: int = 1,
-    has_top_divider: bool = False
+    has_top_divider: bool = False,
+    title: str = "I. PILIHAN GANDA",
+    subtitle: str = "Petunjuk: Pilihlah salah satu jawaban yang paling tepat dengan menyilang (X) huruf A, B, C, atau D!"
 ) -> float:
     """
     Merender butir-butir soal Pilihan Ganda dengan hanging indent dan 3-Mode Opsi Adaptif:
@@ -433,8 +435,8 @@ def render_multiple_choice_questions(
     """
     add_section_header(
         doc,
-        "I. PILIHAN GANDA",
-        "Petunjuk: Pilihlah salah satu jawaban yang paling tepat dengan menyilang (X) huruf A, B, C, atau D!",
+        title,
+        subtitle,
         has_top_divider=has_top_divider
     )
     accum_h = 0.8  # Header section
@@ -592,13 +594,15 @@ def render_short_answer_questions(
     doc: Document,
     isian_list: List[Dict[str, Any]],
     start_num: int = 1,
-    has_top_divider: bool = False
+    has_top_divider: bool = False,
+    title: str = "II. ISIAN SINGKAT",
+    subtitle: str = "Petunjuk: Isilah titik-titik di bawah ini dengan jawaban yang singkat, tepat, dan benar!"
 ) -> float:
     """Merender butir-butir soal Isian Singkat. Mengembalikan estimasi tinggi vertikal."""
     add_section_header(
         doc,
-        "II. ISIAN SINGKAT",
-        "Petunjuk: Isilah titik-titik di bawah ini dengan jawaban yang singkat, tepat, dan benar!",
+        title,
+        subtitle,
         has_top_divider=has_top_divider
     )
     accum_h = 0.8
@@ -640,13 +644,15 @@ def render_essay_questions(
     doc: Document,
     essay_list: List[Dict[str, Any]],
     start_num: int = 1,
-    has_top_divider: bool = False
+    has_top_divider: bool = False,
+    title: str = "III. ESSAY / URAIAN",
+    subtitle: str = "Petunjuk: Jawablah pertanyaan-pertanyaan berikut secara komprehensif, runtut, dan jelas!"
 ) -> float:
     """Merender butir-butir soal Essay / Uraian dengan garis berjarak rapi untuk jawaban siswa."""
     add_section_header(
         doc,
-        "III. ESSAY / URAIAN",
-        "Petunjuk: Jawablah pertanyaan-pertanyaan berikut secara komprehensif, runtut, dan jelas!",
+        title,
+        subtitle,
         has_top_divider=has_top_divider
     )
     accum_h = 0.8
@@ -894,14 +900,25 @@ def generate_exam_docx(
     # 3. Petunjuk Pengerjaan Ringkas 2 Kolom
     add_compact_instructions(doc)
 
-    # 4. Filter Soal Berdasarkan Tipe
+    # 4. Filter Soal Berdasarkan Tipe Sesuai Hierarki Standar (PG -> Isian -> Benar/Salah -> Essay)
     pg_list = []
     isian_list = []
+    bs_list = []
     essay_list = []
 
     for s in soal_list:
         tipe = str(s.get("tipe", s.get("type", "pg"))).strip().lower()
-        if tipe in ("pg", "pilihan ganda", "pilihan_ganda", "benar/salah", "benar_salah"):
+        is_bs = tipe in ("benar/salah", "benar salah", "benar_salah", "bs", "true_false", "tf")
+        if not is_bs:
+            opsi = s.get("opsi") or []
+            if len(opsi) == 2:
+                teks_opsi = [str(o.get("teks", "")).strip().lower() for o in opsi]
+                if "benar" in teks_opsi and "salah" in teks_opsi:
+                    is_bs = True
+
+        if is_bs:
+            bs_list.append(s)
+        elif tipe in ("pg", "pilihan ganda", "pilihan_ganda", "pilihan"):
             pg_list.append(s)
         elif tipe in ("isian", "isian singkat", "isian_singkat"):
             isian_list.append(s)
@@ -909,28 +926,63 @@ def generate_exam_docx(
             essay_list.append(s)
 
     # 5. Render Butir Soal Berurutan dengan Aliran Alami & Garis Pembatas Seksi
+    ROMAN_NUMS = ["I", "II", "III", "IV", "V", "VI"]
     running_number = 1
     rendered_sections_count = 0
 
+    # 1. Pilihan Ganda
     if pg_list:
-        render_multiple_choice_questions(doc, pg_list, start_num=running_number, has_top_divider=False)
+        roman = ROMAN_NUMS[rendered_sections_count]
+        render_multiple_choice_questions(
+            doc, pg_list, start_num=running_number,
+            title=f"{roman}. PILIHAN GANDA",
+            subtitle="Petunjuk: Pilihlah salah satu jawaban yang paling tepat dengan menyilang (X) huruf A, B, C, atau D!",
+            has_top_divider=False
+        )
         running_number += len(pg_list)
         rendered_sections_count += 1
 
+    # 2. Isian Singkat
     if isian_list:
         has_prev = rendered_sections_count > 0
-        render_short_answer_questions(doc, isian_list, start_num=running_number, has_top_divider=has_prev)
+        roman = ROMAN_NUMS[rendered_sections_count]
+        render_short_answer_questions(
+            doc, isian_list, start_num=running_number,
+            title=f"{roman}. ISIAN SINGKAT",
+            subtitle="Petunjuk: Isilah titik-titik di bawah ini dengan jawaban yang singkat, tepat, dan benar!",
+            has_top_divider=has_prev
+        )
         running_number += len(isian_list)
         rendered_sections_count += 1
 
+    # 3. Benar / Salah
+    if bs_list:
+        has_prev = rendered_sections_count > 0
+        roman = ROMAN_NUMS[rendered_sections_count]
+        render_multiple_choice_questions(
+            doc, bs_list, start_num=running_number,
+            title=f"{roman}. BENAR / SALAH",
+            subtitle="Petunjuk: Pilihlah jawaban Benar (A) atau Salah (B) untuk setiap butir pernyataan berikut!",
+            has_top_divider=has_prev
+        )
+        running_number += len(bs_list)
+        rendered_sections_count += 1
+
+    # 4. Essay / Uraian
     if essay_list:
         has_prev = rendered_sections_count > 0
-        render_essay_questions(doc, essay_list, start_num=running_number, has_top_divider=has_prev)
+        roman = ROMAN_NUMS[rendered_sections_count]
+        render_essay_questions(
+            doc, essay_list, start_num=running_number,
+            title=f"{roman}. ESSAY / URAIAN",
+            subtitle="Petunjuk: Jawablah pertanyaan-pertanyaan berikut secara komprehensif, runtut, dan jelas!",
+            has_top_divider=has_prev
+        )
         running_number += len(essay_list)
         rendered_sections_count += 1
 
-    # Gabungkan seluruh soal berurutan: PG dulu, lalu Isian, lalu Essay
-    ordered_all_questions = pg_list + isian_list + essay_list
+    # Gabungkan seluruh soal berurutan: PG -> Isian -> Benar/Salah -> Essay
+    ordered_all_questions = pg_list + isian_list + bs_list + essay_list
 
     # 6. Kunci Jawaban & Pembahasan Pegangan Guru (Jika diminta)
     if sertakan_jawaban or sertakan_pembahasan:
