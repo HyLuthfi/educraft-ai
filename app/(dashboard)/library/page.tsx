@@ -834,9 +834,10 @@ export default function LibraryPage() {
                 ))}
               </div>
 
-              {/* Modal Footer Controls (Tata Letak Lega & Gagah, Tanpa Salin) */}
-              <div className="p-3.5 sm:p-4 bg-white dark:bg-[#202020] border-t-2 border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-2.5">
-                <div className="flex items-center gap-2">
+              {/* Modal Footer Controls (Baris 1: WA, Edit, Unduh; Baris 2: Koreksi Center) */}
+              <div className="p-3.5 sm:p-4 bg-white dark:bg-[#202020] border-t-2 border-black/10 dark:border-white/10 flex flex-col gap-2.5">
+                {/* Baris Atas: WhatsApp, Edit Butir, Unduh sejajar */}
+                <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
                   <button
                     onClick={() => handleCopyWhatsApp(activeDoc)}
                     className="px-3 py-1.5 border-2 border-black/15 dark:border-white/15 font-bold text-xs hover:border-black flex items-center gap-1.5 cursor-pointer active:translate-y-0.5"
@@ -868,24 +869,26 @@ export default function LibraryPage() {
                       </>
                     )}
                   </button>
-                </div>
-
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  <button
-                    onClick={() => handleBridgeToKoreksi(activeDoc)}
-                    className="flex-1 sm:flex-initial px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5 whitespace-nowrap"
-                  >
-                    <ClipboardCheck size={14} /> <span>Koreksi Jawaban Murid</span>
-                  </button>
 
                   <button
                     onClick={() => {
                       setIsViewModalOpen(false);
                       openDownloadModal(activeDoc);
                     }}
-                    className="px-3.5 py-2 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/30 text-black dark:text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5 whitespace-nowrap"
+                    className="px-3 py-1.5 bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/15 text-black dark:text-white font-bold text-xs hover:border-black flex items-center gap-1.5 cursor-pointer active:translate-y-0.5"
+                    title="Unduh Naskah Soal (Word / PDF)"
                   >
-                    <Download size={14} /> <span>Unduh</span>
+                    <Download size={13} /> <span>Unduh</span>
+                  </button>
+                </div>
+
+                {/* Baris Bawah: Koreksi Jawaban Murid di-centerin */}
+                <div className="flex items-center justify-center w-full pt-0.5">
+                  <button
+                    onClick={() => handleBridgeToKoreksi(activeDoc)}
+                    className="w-full sm:w-auto sm:min-w-[280px] px-5 py-2.5 bg-black text-white dark:bg-white dark:text-black font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5"
+                  >
+                    <ClipboardCheck size={15} /> <span>Koreksi Jawaban Murid</span>
                   </button>
                 </div>
               </div>
