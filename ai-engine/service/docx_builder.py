@@ -1257,6 +1257,70 @@ def is_redundant_catatan(catatan: str, kunci: str = "", jawaban_siswa: str = "")
     return False
 
 
+def parse_analitik_into_matrix_rows(text: str) -> List[Tuple[str, List[str]]]:
+    """Menguraikan teks analitik kelas AI menjadi baris matriks terstruktur berstandar kedinasan."""
+    if not text:
+        return []
+    lines = text.strip().splitlines()
+    categories = []
+    current_cat = None
+    current_items = []
+
+    for l in lines:
+        l_str = l.strip()
+        if not l_str:
+            continue
+        if re.match(r"^berikut (adalah|analisis|ini).*", l_str, re.I):
+            continue
+
+        # Header bernomor: *1. ...**, **1. ...**, 1. ...
+        m_head = re.match(r"^[\*#\s]*(\d+)[\.\)]\s*([^\*#\n\r]+)[\*#\s]*$", l_str)
+        if m_head:
+            if current_cat and current_items:
+                categories.append((current_cat, current_items))
+                current_items = []
+            raw_title = m_head.group(2).strip()
+            raw_title = re.sub(r"^[\*#\s]+|[\*#\s]+$", "", raw_title).strip()
+            current_cat = raw_title
+            continue
+
+        # Sub-header tanpa nomor (e.g. **Materi Terlemah:**)
+        m_sub = re.match(r"^\*+([^\*\n\r:]+)[:\*]+$", l_str)
+        if m_sub and len(l_str) < 50:
+            if current_cat and current_items:
+                categories.append((current_cat, current_items))
+                current_items = []
+            current_cat = m_sub.group(1).strip()
+            continue
+
+        # Baris item reguler
+        clean_item = re.sub(r"^[-*•]\s*", "", l_str).strip()
+        clean_item = re.sub(r"^\*+|\*+$", "", clean_item).strip()
+        if clean_item:
+            current_items.append(clean_item)
+
+    if current_cat and current_items:
+        categories.append((current_cat, current_items))
+    elif current_items:
+        categories.append(("Catatan Evaluasi Pembelajaran", current_items))
+
+    # Normalisasi judul kategori ke istilah formal kedinasan
+    normalized_rows = []
+    for cat_name, items in categories:
+        c_lower = cat_name.lower()
+        if any(w in c_lower for w in ["rata-rata", "kelulusan", "ketuntasan", "capaian"]):
+            norm_title = "Capaian & Ketuntasan Kelas"
+        elif any(w in c_lower for w in ["materi", "kompetensi", "terlemah", "rawan", "kesalahan"]):
+            norm_title = "Kompetensi Rawan Salah / Terlemah"
+        elif any(w in c_lower for w in ["saran", "tindak lanjut", "pengajaran", "rekomendasi", "pedagogis"]):
+            norm_title = "Rencana Tindak Lanjut Pedagogis"
+        else:
+            norm_title = cat_name.title()
+        normalized_rows.append((norm_title, items))
+
+    return normalized_rows
+
+
 def extract_options_from_soal_text(soal_text: str, nomor: int) -> List[Dict[str, str]]:
     """Mengekstrak opsi pilihan ganda A, B, C, D dari teks naskah soal jika tidak ada dalam payload."""
     if not soal_text:
@@ -1489,7 +1553,7 @@ def generate_koreksi_report_docx(
                 r.font.bold = True
                 r.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
 
-    # 4. Bagian II: EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS
+    # 4. Bagian II: EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS (Tabel Matriks Berkolom Resmi)
     analitik = koreksi_data.get("analitik_kelas", "")
     if analitik:
         p_sec2 = doc.add_paragraph()
@@ -1501,34 +1565,99 @@ def generate_koreksi_report_docx(
         r_s2.font.size = Pt(10.5)
         r_s2.font.bold = True
 
-        for line in analitik.strip().splitlines():
-            line_str = line.strip()
-            if not line_str:
-                continue
-            clean_line = re.sub(r"^[-*•]\s*", "", line_str)
-            p_al = doc.add_paragraph()
-            p_al.paragraph_format.left_indent = Inches(0.2)
-            p_al.paragraph_format.space_before = Pt(0)
-            p_al.paragraph_format.space_after = Pt(2)
-            p_al.paragraph_format.line_spacing = 1.15
-            p_al.paragraph_format.keep_with_next = True
+        categories = parse_analitik_into_matrix_rows(analitik)
 
-            r_bullet = p_al.add_run("•  ")
-            r_bullet.font.name = "Times New Roman"
-            r_bullet.font.size = Pt(9.5)
-            r_bullet.font.bold = True
+        col_an_dxa = [2300, 7737]
+        col_an_w = [Inches(1.6), Inches(5.37)]
 
-            parts = re.split(r"(\*\*.*?\*\*)", clean_line)
-            for part in parts:
-                if part.startswith("**") and part.endswith("**"):
-                    r = p_al.add_run(part[2:-2])
-                    r.font.name = "Times New Roman"
-                    r.font.size = Pt(9.5)
-                    r.font.bold = True
+        t_sec2 = doc.add_table(rows=1, cols=2)
+        t_sec2.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_sec2.autofit = False
+        set_table_borders_thin(t_sec2, color="CBD5E1", sz="4")
+        set_table_width_and_grid(t_sec2, col_an_dxa)
+
+        hdr_an = t_sec2.rows[0]
+        hdr_an._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        hdr_an._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+
+        for c_i, h in enumerate(["Aspek Analisis Evaluasi", "Uraian Diagnostik & Rencana Tindak Lanjut Guru"]):
+            c = hdr_an.cells[c_i]
+            c.width = col_an_w[c_i]
+            set_cell_background(c, "F1F5F9")
+            set_cell_margins(c, top=80, bottom=80, left=100, right=100)
+            c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = c.paragraphs[0]
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.line_spacing = 1.15
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_i == 0 else WD_ALIGN_PARAGRAPH.LEFT
+            r = p.add_run(h)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+            r.font.bold = True
+
+        for cat_name, items in categories:
+            row_an = t_sec2.add_row()
+            row_an._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+
+            c_lbl = row_an.cells[0]
+            c_lbl.width = col_an_w[0]
+            set_cell_background(c_lbl, "F8FAFC")
+            set_cell_margins(c_lbl, top=70, bottom=70, left=100, right=100)
+            c_lbl.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p_l = c_lbl.paragraphs[0]
+            p_l.paragraph_format.space_after = Pt(0)
+            p_l.paragraph_format.line_spacing = 1.15
+            p_l.alignment = WD_ALIGN_PARAGRAPH.LEFT
+            r_l = p_l.add_run(cat_name)
+            r_l.font.name = "Times New Roman"
+            r_l.font.size = Pt(9.5)
+            r_l.font.bold = True
+
+            c_val = row_an.cells[1]
+            c_val.width = col_an_w[1]
+            set_cell_margins(c_val, top=70, bottom=70, left=100, right=100)
+            c_val.vertical_alignment = WD_ALIGN_VERTICAL.TOP
+
+            for it_idx, item_str in enumerate(items):
+                p_v = c_val.paragraphs[0] if it_idx == 0 else c_val.add_paragraph()
+                p_v.paragraph_format.space_after = Pt(2 if it_idx < len(items) - 1 else 0)
+                p_v.paragraph_format.line_spacing = 1.15
+
+                if item_str.endswith(":") and len(item_str) < 40:
+                    p_v.paragraph_format.space_before = Pt(3)
+                    r_sh = p_v.add_run(item_str)
+                    r_sh.font.name = "Times New Roman"
+                    r_sh.font.size = Pt(9.5)
+                    r_sh.font.bold = True
+                    continue
+
+                colon_match = re.match(r"^([^:]{2,35}):\s*(.*)$", item_str)
+                if colon_match:
+                    key_part = colon_match.group(1).strip()
+                    val_part = colon_match.group(2).strip()
+
+                    r_bullet = p_v.add_run("•  ")
+                    r_bullet.font.name = "Times New Roman"
+                    r_bullet.font.size = Pt(9.5)
+                    r_bullet.font.bold = True
+
+                    r_key = p_v.add_run(f"{key_part}: ")
+                    r_key.font.name = "Times New Roman"
+                    r_key.font.size = Pt(9.5)
+                    r_key.font.bold = True
+
+                    r_val = p_v.add_run(val_part)
+                    r_val.font.name = "Times New Roman"
+                    r_val.font.size = Pt(9.5)
                 else:
-                    r = p_al.add_run(part)
-                    r.font.name = "Times New Roman"
-                    r.font.size = Pt(9.5)
+                    r_bullet = p_v.add_run("•  ")
+                    r_bullet.font.name = "Times New Roman"
+                    r_bullet.font.size = Pt(9.5)
+                    r_bullet.font.bold = True
+
+                    r_val = p_v.add_run(item_str)
+                    r_val.font.name = "Times New Roman"
+                    r_val.font.size = Pt(9.5)
 
     # 5. Lembar Pengesahan Kelas (Tanda Tangan Guru & Kepala Sekolah di akhir Rekap Kelas)
     t_sig = doc.add_table(rows=1, cols=2)
