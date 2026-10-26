@@ -2,7 +2,9 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import Dict, Any, Optional
 import io
+from service.pdf_builder import generate_koreksi_report_pdf
 
 try:
     from fpdf import FPDF
@@ -215,3 +217,44 @@ async def export_pdf(req: RequestExportPdf):
     except Exception as e:
         logger.error(f"Export PDF gagal: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+class RequestExportKoreksiPdf(BaseModel):
+    header: Optional[Dict[str, Any]] = None
+    koreksi: Dict[str, Any]
+    soal_text: Optional[str] = ""
+
+
+@router.post("/export/koreksi-pdf")
+async def export_koreksi_pdf(req: RequestExportKoreksiPdf):
+    try:
+        header_dict = req.header or {}
+        header_dict.setdefault("nama_sekolah", "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL")
+        header_dict.setdefault("mata_pelajaran", "Laporan Hasil Koreksi Ujian")
+        header_dict.setdefault("kelas", "Semua Kelas")
+        header_dict.setdefault("tanggal", "")
+        header_dict.setdefault("kkm", 75)
+        header_dict.setdefault("skala", "100")
+
+        pdf_stream = generate_koreksi_report_pdf(
+            header_data=header_dict,
+            koreksi_data=req.koreksi,
+            soal_text=req.soal_text or ""
+        )
+
+        filename = "Laporan_Hasil_Koreksi.pdf"
+        mapel = header_dict.get("mata_pelajaran")
+        if mapel:
+            sanitized = "".join(c for c in mapel if c.isalnum() or c in (" ", "-", "_")).strip()
+            if sanitized:
+                filename = f"Laporan_Koreksi_{sanitized.replace(' ', '_')}.pdf"
+
+        return StreamingResponse(
+            pdf_stream,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Export Koreksi PDF gagal: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal generate dokumen PDF: {str(e)}")
+

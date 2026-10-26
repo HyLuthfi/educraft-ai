@@ -904,6 +904,83 @@ export default function AutoKoreksiPage() {
     }
   };
 
+  const handleExportKoreksiPdf = async () => {
+    if (!koreksiResult || !koreksiResult.hasil || koreksiResult.hasil.length === 0) {
+      toast.error("Belum ada data hasil koreksi untuk diekspor.");
+      return;
+    }
+
+    const toastId = toast.loading("Menyiapkan dokumen PDF Laporan Koreksi...");
+
+    try {
+      let mapel = "Hasil Evaluasi Pembelajaran";
+      const matchMapel = soalText.match(new RegExp("MATA PELAJARAN\\s*:\\s*([^\\n\
+]+)", "i"));
+      if (matchMapel) mapel = matchMapel[1].trim();
+
+      let kelas = "Semua Kelas";
+      const matchKelas = soalText.match(new RegExp("KELAS\\s*:\\s*([^\\n\
+]+)", "i"));
+      if (matchKelas) kelas = matchKelas[1].trim();
+
+      const payload = {
+        header: {
+          nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
+          mata_pelajaran: mapel,
+          kelas: kelas,
+          tanggal: new Date().toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          kkm: scoringConfig.kkm,
+          skala: scoringConfig.skala,
+        },
+        koreksi: {
+          ...koreksiResult,
+          hasil: (koreksiResult.hasil || []).map((h: any) => ({
+            ...h,
+            detail_koreksi: (h.detail_koreksi || []).map((d: any) => ({
+              ...d,
+              opsi:
+                d.opsi && d.opsi.length >= 2
+                  ? d.opsi
+                  : extractOptionsForQuestion(soalText, d.nomor),
+            })),
+          })),
+        },
+        soal_text: soalText || "",
+      };
+
+      const res = await fetch("/api/export/koreksi-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Gagal mengunduh dokumen PDF");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Laporan_Hasil_Koreksi_${new Date().toISOString().split("T")[0]}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Dokumen PDF Laporan Koreksi berhasil diunduh!", { id: toastId });
+      setIsExportModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Gagal mengekspor dokumen PDF.", { id: toastId });
+    }
+  };
+
   const handleExportKoreksiExcel = () => {
     if (
       !koreksiResult ||
@@ -2090,7 +2167,36 @@ export default function AutoKoreksiPage() {
                     </h4>
                   </div>
 
-                  {/* Microsoft Word Button (Format Kedinasan Resmi Standar Buat Soal) */}
+                  {/* PDF Button (100% Identik Word Siap Cetak) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportKoreksiPdf();
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 rounded flex items-center justify-center font-bold text-xs shrink-0 border border-red-300 dark:border-red-800">
+                        PDF
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                            Dokumen PDF (.pdf)
+                          </span>
+                          <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Resmi Dinas
+                          </span>
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Format resmi identik Word siap cetak
+                        </div>
+                      </div>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+
+                  {/* Microsoft Word Button */}
                   <button
                     type="button"
                     onClick={() => {
@@ -2103,16 +2209,11 @@ export default function AutoKoreksiPage() {
                         W
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
-                            Microsoft Word (.docx)
-                          </span>
-                          <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                            Resmi Dinas
-                          </span>
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                          Microsoft Word (.docx)
                         </div>
-                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
-                          Buku Nilai, Analitik AI, Lembar Evaluasi Siswa Per Halaman &amp; Tanda Tangan
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Dokumen resmi dapat diedit di Word &amp; Docs
                         </div>
                       </div>
                     </div>
@@ -2133,11 +2234,11 @@ export default function AutoKoreksiPage() {
                         <FileSpreadsheet size={17} />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
                           Microsoft Excel (.xlsx)
                         </div>
-                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
-                          Tabel rekap nilai lengkap, status KKM, dan evaluasi kelas
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Rekap nilai lengkap &amp; status KKM kelas
                         </div>
                       </div>
                     </div>
@@ -2170,11 +2271,11 @@ export default function AutoKoreksiPage() {
                         <Share2 size={17} />
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
-                          Salin Format WhatsApp
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                          Salin Pesan WhatsApp
                         </div>
-                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
-                          Salin ringkasan nilai rapi siap tempel ke grup WhatsApp
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Ringkasan nilai siap kirim ke wali murid
                         </div>
                       </div>
                     </div>

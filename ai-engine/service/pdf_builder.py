@@ -1,0 +1,609 @@
+import io
+import re
+import datetime
+from typing import Dict, Any, List, Tuple
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.units import inch
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.platypus import (
+    SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak, HRFlowable
+)
+
+# Helpers from docx_builder
+def clean_subject_name(text: str) -> str:
+    if not text:
+        return "Mata Pelajaran Umum"
+    t = str(text).strip()
+    t = re.sub(
+        r"^(tolong\s+)?(buatkan|buat|bikin|generate|susunkan|susun|carikan)\s+(\d+\s+)?soal\s+(tentang\s+|mengenai\s+|untuk\s+|materi\s+)?",
+        "",
+        t,
+        flags=re.I
+    )
+    t = re.sub(r"^(materi|topik|bab|pelajaran|soal)\s*[:=]\s*", "", t, flags=re.I)
+    t = re.sub(r"\s+", " ", t).strip()
+    if not t or len(t) < 2:
+        return "Mata Pelajaran Umum"
+    res = t[:55].title()
+    for abbr in ["IPA", "IPS", "PPKN", "TIK", "BK", "PJOK", "PAI", "SBK", "PMR", "SMP", "SMA", "SMK", "SD", "MI", "MTS", "MA"]:
+        res = re.sub(rf"\b{abbr}\b", abbr, res, flags=re.I)
+    return res
+
+def clean_latex_math(text: str) -> str:
+    if not text:
+        return ""
+    t = str(text)
+    replacements = [
+        (r"\\times", "×"), (r"\\div", "÷"), (r"\\pm", "±"),
+        (r"\\le(q)?", "≤"), (r"\\ge(q)?", "≥"), (r"\\neq", "≠"),
+        (r"\\approx", "≈"), (r"\\degree", "°"), (r"\\circ", "°"),
+        (r"\\alpha", "α"), (r"\\beta", "β"), (r"\\pi", "π"),
+        (r"\\theta", "θ"), (r"\\Delta", "Δ"), (r"\\lambda", "λ"),
+        (r"\\mu", "μ"), (r"\\sigma", "σ"), (r"\\infty", "∞"),
+        (r"\\rightarrow", "→"), (r"\\leftarrow", "←"),
+    ]
+    for pattern, repl in replacements:
+        t = re.sub(pattern, repl, t)
+    t = re.sub(r"\$([^\$]+)\$", r"\1", t)
+    t = re.sub(r"\\\((.+?)\\\)", r"\1", t)
+    t = re.sub(r"\\\[(.+?)\\\]", r"\1", t)
+    return t.strip()
+
+def is_redundant_catatan(catatan: str, kunci: str = "", jawaban_siswa: str = "") -> bool:
+    if not catatan:
+        return True
+    c_lower = catatan.lower().strip()
+    redundant_patterns = [
+        r"^jawaban (benar|tepat|sesuai).*$",
+        r"^jawaban (salah|keliru)\.?\s*(kunci (jawaban )?(adalah )?.*|pernyataan tersebut adalah.*)?$",
+        r"^tepat\.?$",
+        r"^benar\.?$",
+        r"^salah\.?$",
+        r"^sesuai kunci.*$",
+    ]
+    for pat in redundant_patterns:
+        if re.match(pat, c_lower):
+            return True
+    return False
+
+def parse_analitik_into_matrix_rows(text: str) -> List[Tuple[str, List[str]]]:
+    if not text:
+        return []
+    lines = text.strip().splitlines()
+    categories = []
+    current_cat = None
+    current_items = []
+
+    for l in lines:
+        l_str = l.strip()
+        if not l_str:
+            continue
+        if re.match(r"^berikut (adalah|analisis|ini).*", l_str, re.I):
+            continue
+
+        m_head = re.match(r"^[\*#\s]*(\d+)[\.\)]\s*([^\*#\n\r]+)[\*#\s]*$", l_str)
+        if m_head:
+            if current_cat and current_items:
+                categories.append((current_cat, current_items))
+                current_items = []
+            raw_title = m_head.group(2).strip()
+            raw_title = re.sub(r"^[\*#\s]+|[\\*#\\s]+$", "", raw_title).strip()
+            current_cat = raw_title
+            continue
+
+        m_sub = re.match(r"^\*+([^\*\n\r:]+)[:\*]+$", l_str)
+        if m_sub and len(l_str) < 50:
+            if current_cat and current_items:
+                categories.append((current_cat, current_items))
+                current_items = []
+            current_cat = m_sub.group(1).strip()
+            continue
+
+        clean_item = re.sub(r"^[-*•]\s*", "", l_str).strip()
+        clean_item = re.sub(r"^\*+|\*+$", "", clean_item).strip()
+        if clean_item:
+            current_items.append(clean_item)
+
+    if current_cat and current_items:
+        categories.append((current_cat, current_items))
+    elif current_items:
+        categories.append(("Catatan Evaluasi Pembelajaran", current_items))
+
+    normalized_rows = []
+    for cat_name, items in categories:
+        c_lower = cat_name.lower()
+        if any(w in c_lower for w in ["rata-rata", "kelulusan", "ketuntasan", "capaian"]):
+            norm_title = "Capaian & Ketuntasan Kelas"
+        elif any(w in c_lower for w in ["materi", "kompetensi", "terlemah", "rawan", "kesalahan"]):
+            norm_title = "Kompetensi Rawan Salah / Terlemah"
+        elif any(w in c_lower for w in ["saran", "tindak lanjut", "pengajaran", "rekomendasi", "pedagogis"]):
+            norm_title = "Rencana Tindak Lanjut Pedagogis"
+        else:
+            norm_title = cat_name.title()
+        normalized_rows.append((norm_title, items))
+
+    return normalized_rows
+
+
+def generate_koreksi_report_pdf(
+    header_data: Dict[str, Any],
+    koreksi_data: Dict[str, Any],
+    soal_text: str = ""
+) -> io.BytesIO:
+    """Membangun dokumen PDF resmi Laporan Hasil Koreksi Ujian Siswa 100% identik dengan versi Word."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=0.65 * inch,
+        rightMargin=0.65 * inch,
+        topMargin=0.65 * inch,
+        bottomMargin=0.65 * inch
+    )
+
+    styles = getSampleStyleSheet()
+
+    # Custom styles matching Times New Roman hierarchy
+    style_kop_instansi = ParagraphStyle(
+        "KopInstansi",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=11,
+        leading=13,
+        alignment=1, # Center
+        textColor=colors.black
+    )
+    style_kop_sekolah = ParagraphStyle(
+        "KopSekolah",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=13,
+        leading=16,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_kop_judul = ParagraphStyle(
+        "KopJudul",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=10,
+        leading=12,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_kop_footer = ParagraphStyle(
+        "KopFooter",
+        parent=styles["Normal"],
+        fontName="Times-Italic",
+        fontSize=9,
+        leading=11,
+        alignment=1,
+        textColor=colors.HexColor("#555555")
+    )
+
+    style_sec_title = ParagraphStyle(
+        "SectionTitle",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=10.5,
+        leading=13,
+        textColor=colors.black,
+        spaceBefore=10,
+        spaceAfter=4,
+        keepWithNext=True
+    )
+    style_cell = ParagraphStyle(
+        "TableCell",
+        parent=styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.black
+    )
+    style_cell_bold = ParagraphStyle(
+        "TableCellBold",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.black
+    )
+    style_cell_center = ParagraphStyle(
+        "TableCellCenter",
+        parent=styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=9,
+        leading=11.5,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_cell_center_bold = ParagraphStyle(
+        "TableCellCenterBold",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11.5,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_cell_right_bold = ParagraphStyle(
+        "TableCellRightBold",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11.5,
+        alignment=2,
+        textColor=colors.black
+    )
+    style_student_title = ParagraphStyle(
+        "StudentTitle",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=11,
+        leading=13,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_student_sub = ParagraphStyle(
+        "StudentSub",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11,
+        alignment=1,
+        textColor=colors.HexColor("#555555"),
+        spaceAfter=4
+    )
+
+    story = []
+
+    # 1. KOP SURAT
+    sekolah_clean = (header_data.get("nama_sekolah") or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+
+    current_year = datetime.datetime.now().year
+    story.append(Paragraph("DINAS PENDIDIKAN DAN KEBUDAYAAN", style_kop_instansi))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(sekolah_clean, style_kop_sekolah))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(f"LAPORAN REKAPITULASI HASIL KOREKSI UJIAN • TAHUN AJARAN {current_year}/{current_year + 1}", style_kop_judul))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph("Saitech AI Solutions • Website: saitech.co.id", style_kop_footer))
+    story.append(Spacer(1, 4))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceBefore=0, spaceAfter=1))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.black, spaceBefore=0, spaceAfter=8))
+
+    # Data Calculation
+    hasil_list = koreksi_data.get("hasil", [])
+    total_siswa = len(hasil_list)
+    kkm = header_data.get("kkm", 75)
+    skala = str(header_data.get("skala", "100")).upper()
+    tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
+    mapel = clean_subject_name(header_data.get("mata_pelajaran", "Hasil Evaluasi Pembelajaran"))
+    kelas = header_data.get("kelas", "Semua Kelas")
+
+    valid_scores = []
+    for s in hasil_list:
+        v = s.get("nilai_akhir")
+        try:
+            valid_scores.append(float(v))
+        except (ValueError, TypeError):
+            pass
+
+    avg_str = f"{sum(valid_scores)/len(valid_scores):.1f}" if valid_scores else "-"
+    tuntas_count = sum(1 for s in hasil_list if str(s.get("status_kelulusan", "")).lower() == "tuntas")
+    pct_tuntas = f"{(tuntas_count / total_siswa * 100):.0f}%" if total_siswa > 0 else "-"
+
+    # 2. TABEL METADATA KELAS (4 Kolom, Ruled Borders)
+    meta_table_data = [
+        [
+            Paragraph("<b>Mata Pelajaran</b>", style_cell), Paragraph(f":  {mapel}", style_cell),
+            Paragraph("<b>Tanggal Koreksi</b>", style_cell), Paragraph(f":  {tanggal}", style_cell)
+        ],
+        [
+            Paragraph("<b>Kelas / Fase</b>", style_cell), Paragraph(f":  {kelas}", style_cell),
+            Paragraph("<b>Standar KKM</b>", style_cell), Paragraph(f":  {kkm}", style_cell)
+        ],
+        [
+            Paragraph("<b>Rata-rata Kelas</b>", style_cell), Paragraph(f":  <b>{avg_str}</b>", style_cell),
+            Paragraph("<b>Ketuntasan KKM</b>", style_cell), Paragraph(f":  <b>{pct_tuntas} ({tuntas_count}/{total_siswa} Siswa)</b>", style_cell)
+        ],
+    ]
+    t_meta = Table(meta_table_data, colWidths=[1.4 * inch, 2.2 * inch, 1.4 * inch, 1.97 * inch])
+    t_meta.setStyle(TableStyle([
+        ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.black),
+        ("LINEBELOW", (0, -1), (-1, -1), 1.0, colors.black),
+        ("LINEBELOW", (0, 0), (-1, -2), 0.5, colors.HexColor("#E5E7EB")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(t_meta)
+
+    # 3. BAGIAN I: BUKU NILAI & REKAPITULASI KELAS
+    story.append(Paragraph("I. BUKU NILAI & REKAPITULASI KELAS", style_sec_title))
+
+    rekap_data = [[
+        Paragraph("<b>No</b>", style_cell_center),
+        Paragraph("<b>Nama Siswa</b>", style_cell),
+        Paragraph("<b>Nilai Akhir</b>", style_cell_center),
+        Paragraph("<b>Status KKM</b>", style_cell_center),
+        Paragraph("<b>Catatan & Rekomendasi Guru</b>", style_cell)
+    ]]
+
+    for s_i, s in enumerate(hasil_list, 1):
+        is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
+        status_color = "#166534" if is_tuntas else "#B91C1C"
+        status_txt = "TUNTAS" if is_tuntas else "REMEDIAL"
+        catatan_singkat = s.get("rekomendasi") or s.get("catatan") or "-"
+
+        rekap_data.append([
+            Paragraph(str(s_i), style_cell_center_bold),
+            Paragraph(s.get("nama_siswa", f"Siswa {s_i}"), style_cell),
+            Paragraph(f"<b>{s.get('nilai_akhir', '-')}</b>", style_cell_center),
+            Paragraph(f"<font color='{status_color}'><b>{status_txt}</b></font>", style_cell_center),
+            Paragraph(catatan_singkat, style_cell)
+        ])
+
+    t_rekap = Table(rekap_data, colWidths=[0.4 * inch, 2.2 * inch, 0.95 * inch, 1.15 * inch, 2.27 * inch])
+    t_rekap_style = [
+        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F1F5F9")),
+        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+        ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+        ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+        ("LEFTPADDING", (0, 0), (-1, -1), 4),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+    ]
+    for r_idx in range(1, len(rekap_data)):
+        if r_idx % 2 == 0:
+            t_rekap_style.append(("BACKGROUND", (0, r_idx), (-1, r_idx), colors.HexColor("#F8FAFC")))
+    t_rekap.setStyle(TableStyle(t_rekap_style))
+    story.append(t_rekap)
+
+    # 4. BAGIAN II: EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS (Tabel Matriks 2 Kolom)
+    analitik = koreksi_data.get("analitik_kelas", "")
+    if analitik:
+        story.append(Paragraph("II. EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS", style_sec_title))
+        categories = parse_analitik_into_matrix_rows(analitik)
+
+        sec2_data = [[
+            Paragraph("<b>Aspek Analisis Evaluasi</b>", style_cell_center),
+            Paragraph("<b>Uraian Diagnostik & Rencana Tindak Lanjut Guru</b>", style_cell)
+        ]]
+
+        for cat_name, items in categories:
+            items_paragraphs = []
+            for item_str in items:
+                if item_str.endswith(":") and len(item_str) < 40:
+                    items_paragraphs.append(Paragraph(f"<b>{item_str}</b>", style_cell))
+                    continue
+                colon_m = re.match(r"^([^:]{2,35}):\s*(.*)$", item_str)
+                if colon_m:
+                    k_pt = colon_m.group(1).strip()
+                    v_pt = colon_m.group(2).strip()
+                    items_paragraphs.append(Paragraph(f"•  <b>{k_pt}:</b> {v_pt}", style_cell))
+                else:
+                    items_paragraphs.append(Paragraph(f"•  {item_str}", style_cell))
+
+            sec2_data.append([
+                Paragraph(f"<b>{cat_name}</b>", style_cell),
+                items_paragraphs
+            ])
+
+        t_sec2 = Table(sec2_data, colWidths=[1.6 * inch, 5.37 * inch])
+        t_sec2_style = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F1F5F9")),
+            ("BACKGROUND", (0, 1), (0, -1), colors.HexColor("#F8FAFC")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            ("VALIGN", (0, 1), (0, -1), "MIDDLE"),
+            ("VALIGN", (1, 1), (1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ]
+        t_sec2.setStyle(TableStyle(t_sec2_style))
+        story.append(t_sec2)
+
+    # 5. LEMBAR PENGESAHAN KELAS
+    sig_data = [[
+        Paragraph(
+            "Mengetahui,<br/>Kepala Sekolah<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ...........................................................",
+            style_cell
+        ),
+        Paragraph(
+            f"{tanggal}<br/>Guru Mata Pelajaran<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ...........................................................",
+            style_cell
+        )
+    ]]
+    t_sig = Table(sig_data, colWidths=[3.48 * inch, 3.48 * inch])
+    t_sig.setStyle(TableStyle([
+        ("VALIGN", (0, 0), (-1, -1), "TOP"),
+        ("TOPPADDING", (0, 0), (-1, -1), 8),
+        ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+        ("LEFTPADDING", (0, 0), (-1, -1), 5),
+        ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+    ]))
+    story.append(t_sig)
+
+    # ─────────────────────────────────────────────────────────────────
+    # 6. LEMBAR PER SISWA (Halaman 2+)
+    # ─────────────────────────────────────────────────────────────────
+    for s_idx, s in enumerate(hasil_list, 1):
+        story.append(PageBreak())
+
+        # Judul Lembar
+        story.append(Paragraph("LEMBAR HASIL EVALUASI ASESMEN SISWA", style_student_title))
+        story.append(Paragraph(f"TAHUN AJARAN {current_year}/{current_year + 1}", style_student_sub))
+
+        is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
+        status_label = "TUNTAS KKM" if is_tuntas else "REMEDIAL (Belum Tuntas)"
+        status_color = "#166534" if is_tuntas else "#B91C1C"
+
+        nilai_raw = str(s.get("nilai_akhir", "-")).strip()
+        if str(skala).lower() in ("huruf", "predikat"):
+            nilai_display = f"{nilai_raw} (Predikat Huruf)"
+        else:
+            nilai_display = f"{nilai_raw} / {skala}"
+
+        # Tabel Metadata Siswa
+        stu_meta_data = [
+            [
+                Paragraph("<b>Nama Siswa</b>", style_cell), Paragraph(f":  <b>{s.get('nama_siswa', 'Siswa')}</b>", style_cell),
+                Paragraph("<b>Mata Pelajaran</b>", style_cell), Paragraph(f":  {mapel}", style_cell)
+            ],
+            [
+                Paragraph("<b>No. Urut / ID</b>", style_cell), Paragraph(f":  Siswa #{s_idx:02d}", style_cell),
+                Paragraph("<b>Kelas / Fase</b>", style_cell), Paragraph(f":  {kelas}", style_cell)
+            ],
+            [
+                Paragraph("<b>Status KKM</b>", style_cell), Paragraph(f":  <font color='{status_color}'><b>{status_label}</b></font>", style_cell),
+                Paragraph("<b>Nilai Akhir</b>", style_cell), Paragraph(f":  <font color='{status_color}'><b>{nilai_display}</b></font>", style_cell)
+            ],
+        ]
+        t_stu_meta = Table(stu_meta_data, colWidths=[1.3 * inch, 2.3 * inch, 1.35 * inch, 2.02 * inch])
+        t_stu_meta.setStyle(TableStyle([
+            ("LINEABOVE", (0, 0), (-1, 0), 1.0, colors.black),
+            ("LINEBELOW", (0, -1), (-1, -1), 1.0, colors.black),
+            ("LINEBELOW", (0, 0), (-1, -2), 0.5, colors.HexColor("#E5E7EB")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(t_stu_meta)
+
+        # Sub-header Tabel Evaluasi
+        story.append(Paragraph("TABEL EVALUASI & ANALISIS BUTIR ASESMEN:", style_sec_title))
+
+        detail_items = s.get("detail_koreksi", [])
+        total_skor_diperoleh = 0.0
+
+        eval_data = [[
+            Paragraph("<b>No</b>", style_cell_center),
+            Paragraph("<b>Butir Pertanyaan</b>", style_cell),
+            Paragraph("<b>Jawaban Siswa</b>", style_cell),
+            Paragraph("<b>Kunci Acuan</b>", style_cell),
+            Paragraph("<b>Skor / Status</b>", style_cell_center),
+            Paragraph("<b>Catatan Evaluasi</b>", style_cell)
+        ]]
+
+        for item in detail_items:
+            nomor = item.get("nomor", 1)
+            pertanyaan = clean_latex_math(item.get("pertanyaan", ""))
+            status = str(item.get("status", "benar")).lower()
+            try:
+                nilai = float(item.get("nilai", 0))
+            except (ValueError, TypeError):
+                nilai = 0.0
+            kunci = str(item.get("kunci_jawaban", "")).strip()
+            jawaban_siswa = str(item.get("jawaban_siswa", "")).strip()
+            catatan = item.get("catatan", "")
+
+            total_skor_diperoleh += nilai
+
+            if status == "benar":
+                st_badge = f"<b>{nilai:g}</b><br/><font color='#166534'><b>[✓ Benar]</b></font>"
+            elif status == "setengah":
+                st_badge = f"<b>{nilai:g}</b><br/><font color='#B45309'><b>[Sebagian]</b></font>"
+            else:
+                st_badge = f"<b>{nilai:g}</b><br/><font color='#B91C1C'><b>[✗ Salah]</b></font>"
+
+            if not catatan or is_redundant_catatan(catatan, kunci, jawaban_siswa):
+                catatan_clean = "-"
+            else:
+                catatan_clean = catatan
+
+            jwb_color = "#B91C1C" if status == "salah" else "#000000"
+
+            eval_data.append([
+                Paragraph(f"<b>{nomor}</b>", style_cell_center),
+                Paragraph(pertanyaan, style_cell),
+                Paragraph(f"<font color='{jwb_color}'>{jawaban_siswa or '(Kosong)'}</font>", style_cell),
+                Paragraph(kunci, style_cell),
+                Paragraph(st_badge, style_cell_center),
+                Paragraph(catatan_clean, style_cell)
+            ])
+
+        # Summary Row (Total Skor)
+        if detail_items:
+            score_total_str = f"<b>{total_skor_diperoleh:g} / {len(detail_items):g}</b>"
+            st_class_str = f"<font color='{status_color}'><b>{status_label.split()[0]} KKM</b></font>"
+            eval_data.append([
+                Paragraph("<b>TOTAL PEROLEHAN SKOR / STATUS KELULUSAN</b>", style_cell_right_bold),
+                "", "", "",
+                Paragraph(score_total_str, style_cell_center),
+                Paragraph(st_class_str, style_cell)
+            ])
+
+        # Catatan Guru Row (Integrated)
+        catatan_guru = s.get("rekomendasi") or s.get("catatan")
+        if catatan_guru and not is_redundant_catatan(catatan_guru):
+            eval_data.append([
+                Paragraph(f"<b>Catatan & Rekomendasi Guru:</b> <i>{catatan_guru}</i>", style_cell),
+                "", "", "", "", ""
+            ])
+
+        t_eval = Table(eval_data, colWidths=[0.35 * inch, 2.32 * inch, 1.25 * inch, 1.25 * inch, 0.80 * inch, 1.00 * inch])
+        t_eval_style = [
+            ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#F1F5F9")),
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#CBD5E1")),
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("VALIGN", (0, 0), (-1, 0), "MIDDLE"),
+            ("TOPPADDING", (0, 0), (-1, -1), 3.5),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 3.5),
+            ("LEFTPADDING", (0, 0), (-1, -1), 4),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+        ]
+
+        if detail_items:
+            # Span for summary row
+            sum_idx = len(detail_items) + 1
+            t_eval_style.extend([
+                ("SPAN", (0, sum_idx), (3, sum_idx)),
+                ("BACKGROUND", (0, sum_idx), (-1, sum_idx), colors.HexColor("#F8FAFC")),
+                ("VALIGN", (0, sum_idx), (-1, sum_idx), "MIDDLE"),
+            ])
+
+        if catatan_guru and not is_redundant_catatan(catatan_guru):
+            note_idx = len(eval_data) - 1
+            t_eval_style.extend([
+                ("SPAN", (0, note_idx), (5, note_idx)),
+                ("BACKGROUND", (0, note_idx), (-1, note_idx), colors.HexColor("#F8FAFC")),
+                ("VALIGN", (0, note_idx), (-1, note_idx), "MIDDLE"),
+            ])
+
+        t_eval.setStyle(TableStyle(t_eval_style))
+        story.append(t_eval)
+
+        # Tanda Tangan Siswa
+        sig_stu_data = [[
+            Paragraph(
+                "Mengetahui,<br/>Orang Tua / Wali Siswa<br/><br/><br/><br/>( ................................................................ )",
+                style_cell
+            ),
+            Paragraph(
+                f"{tanggal}<br/>Guru Pemeriksa<br/><br/><br/><br/>( ................................................................ )",
+                style_cell
+            )
+        ]]
+        t_stu_sig = Table(sig_stu_data, colWidths=[3.48 * inch, 3.48 * inch])
+        t_stu_sig.setStyle(TableStyle([
+            ("VALIGN", (0, 0), (-1, -1), "TOP"),
+            ("TOPPADDING", (0, 0), (-1, -1), 8),
+            ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+            ("LEFTPADDING", (0, 0), (-1, -1), 5),
+            ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+        ]))
+        story.append(t_stu_sig)
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
