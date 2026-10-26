@@ -831,6 +831,61 @@ export default function AutoKoreksiPage() {
     }
   };
 
+  const handleExportKoreksiDocx = async () => {
+    if (!koreksiResult || !koreksiResult.hasil || koreksiResult.hasil.length === 0) {
+      toast.error("Belum ada data hasil koreksi untuk diekspor.");
+      return;
+    }
+
+    const toastId = toast.loading("Menyiapkan dokumen Word Laporan Koreksi...");
+
+    try {
+      const payload = {
+        header: {
+          nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
+          mata_pelajaran: "Laporan Hasil Koreksi Ujian",
+          kelas: "Semua Kelas",
+          tanggal: new Date().toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          kkm: scoringConfig.kkm,
+          skala: scoringConfig.skala,
+        },
+        koreksi: koreksiResult,
+        soal_text: soalText || "",
+      };
+
+      const res = await fetch("/api/export/koreksi-docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errText = await res.text();
+        throw new Error(errText || "Gagal mengunduh dokumen Word");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Laporan_Hasil_Koreksi_${new Date().toISOString().split("T")[0]}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      toast.success("Dokumen Word Laporan Koreksi berhasil diunduh!", { id: toastId });
+      setIsExportModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Gagal mengekspor dokumen Word.", { id: toastId });
+    }
+  };
+
   const handleExportKoreksiExcel = () => {
     if (
       !koreksiResult ||
@@ -2016,6 +2071,30 @@ export default function AutoKoreksiPage() {
                       Dokumen Rekap &amp; Cetak
                     </h4>
                   </div>
+
+                  {/* Microsoft Word Button (Format Kedinasan Resmi Standar Buat Soal) */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      handleExportKoreksiDocx();
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-blue-300 dark:border-blue-800">
+                        W
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                          Microsoft Word (.docx)
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
+                          Format resmi standar dinas (Buku Nilai, Evaluasi AI, Lembar Siswa &amp; Tanda Tangan)
+                        </div>
+                      </div>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
 
                   {/* Excel Button */}
                   <button

@@ -5,7 +5,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ format:
     const { format } = await params; // "pdf" or "docx"
     const body = await req.json();
     
-    if (format !== "pdf" && format !== "docx") {
+    if (format !== "pdf" && format !== "docx" && format !== "koreksi-docx") {
       return NextResponse.json({ error: "Format tidak didukung" }, { status: 400 });
     }
 
@@ -36,6 +36,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ format:
     if (format === "pdf") {
       headers.set("Content-Type", "application/pdf");
       headers.set("Content-Disposition", "attachment; filename=soal-educraft.pdf");
+    } else if (format === "koreksi-docx") {
+      headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      headers.set("Content-Disposition", "attachment; filename=Laporan_Hasil_Koreksi.docx");
     } else {
       headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
       headers.set("Content-Disposition", "attachment; filename=soal-educraft.docx");

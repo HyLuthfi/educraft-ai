@@ -1174,3 +1174,467 @@ def generate_exam_docx(
     doc.save(output_stream)
     output_stream.seek(0)
     return output_stream
+
+
+def add_koreksi_kop(doc: Document, nama_sekolah: str = ""):
+    """Kop Surat Resmi Kedinasan untuk Laporan Hasil Koreksi Ujian."""
+    sekolah_clean = (nama_sekolah or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+
+    p_kop = doc.add_paragraph()
+    p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_kop.paragraph_format.space_before = Pt(0)
+    p_kop.paragraph_format.space_after = Pt(2)
+    p_kop.paragraph_format.line_spacing = 1.1
+
+    r1 = p_kop.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
+    r1.font.name = "Times New Roman"
+    r1.font.size = Pt(11)
+    r1.font.bold = True
+
+    r2 = p_kop.add_run(f"{sekolah_clean}\n")
+    r2.font.name = "Times New Roman"
+    r2.font.size = Pt(13.5)
+    r2.font.bold = True
+
+    current_year = datetime.datetime.now().year
+    r3 = p_kop.add_run(f"LAPORAN REKAPITULASI HASIL KOREKSI UJIAN • TAHUN AJARAN {current_year}/{current_year + 1}\n")
+    r3.font.name = "Times New Roman"
+    r3.font.size = Pt(10)
+    r3.font.bold = True
+
+    r4 = p_kop.add_run("Saitech AI Solutions • Website: saitech.co.id")
+    r4.font.name = "Times New Roman"
+    r4.font.size = Pt(8.5)
+    r4.font.italic = True
+    r4.font.color.rgb = RGBColor(90, 90, 90)
+
+    pBdr = parse_xml(
+        r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        r'<w:bottom w:val="double" w:sz="12" w:space="6" w:color="000000"/>'
+        r'</w:pBdr>'
+    )
+    p_kop._p.get_or_add_pPr().append(pBdr)
+
+    p_sp = doc.add_paragraph()
+    p_sp.paragraph_format.space_before = Pt(6)
+    p_sp.paragraph_format.space_after = Pt(2)
+
+
+def generate_koreksi_report_docx(
+    header_data: Dict[str, Any],
+    koreksi_data: Dict[str, Any],
+    soal_text: str = ""
+) -> io.BytesIO:
+    """Membangun dokumen Word (.docx) resmi Laporan Hasil Koreksi Ujian Siswa."""
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_width = Inches(8.27)
+    sec.page_height = Inches(11.69)
+    sec.top_margin = Inches(0.75)
+    sec.bottom_margin = Inches(0.75)
+    sec.left_margin = Inches(0.75)
+    sec.right_margin = Inches(0.75)
+
+    # 1. Kop Kedinasan
+    add_koreksi_kop(doc, header_data.get("nama_sekolah", ""))
+
+    # Hitung metrik kelas
+    hasil_list = koreksi_data.get("hasil", [])
+    total_siswa = len(hasil_list)
+    kkm = header_data.get("kkm", 75)
+    skala = str(header_data.get("skala", "100")).upper()
+    tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
+    mapel = clean_subject_name(header_data.get("mata_pelajaran", "Hasil Evaluasi Pembelajaran"))
+    kelas = header_data.get("kelas", "Semua Kelas")
+
+    valid_scores = []
+    for s in hasil_list:
+        v = s.get("nilai_akhir")
+        try:
+            valid_scores.append(float(v))
+        except (ValueError, TypeError):
+            pass
+
+    avg_str = f"{sum(valid_scores)/len(valid_scores):.1f}" if valid_scores else "-"
+    tuntas_count = sum(1 for s in hasil_list if str(s.get("status_kelulusan", "")).lower() == "tuntas")
+    pct_tuntas = f"{(tuntas_count / total_siswa * 100):.0f}%" if total_siswa > 0 else "-"
+
+    # 2. Tabel Metadata Ujian (4 kolom x 4 baris)
+    t_meta = doc.add_table(rows=4, cols=4)
+    t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
+    tblPr = t_meta._tbl.tblPr
+    borders = parse_xml(
+        r'<w:tblBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        r'<w:top w:val="double" w:sz="12" w:space="0" w:color="000000"/>'
+        r'<w:bottom w:val="double" w:sz="12" w:space="0" w:color="000000"/>'
+        r'<w:left w:val="none"/><w:right w:val="none"/>'
+        r'<w:insideH w:val="none"/><w:insideV w:val="none"/>'
+        r'</w:tblBorders>'
+    )
+    tblPr.append(borders)
+
+    meta_rows = [
+        ("Mata Pelajaran", f":  {mapel}", "Tanggal Koreksi", f":  {tanggal}"),
+        ("Kelas / Fase", f":  {kelas}", "Standar KKM", f":  {kkm}"),
+        ("Skala Penilaian", f":  Skala {skala}", "Total Peserta", f":  {total_siswa} Siswa"),
+        ("Rata-rata Kelas", f":  {avg_str}", "Tingkat Ketuntasan", f":  {pct_tuntas} ({tuntas_count}/{total_siswa})"),
+    ]
+
+    col_widths = [Inches(1.5), Inches(2.3), Inches(1.5), Inches(1.47)]
+    for r_idx, (k1, v1, k2, v2) in enumerate(meta_rows):
+        row = t_meta.rows[r_idx]
+        for c_idx, width in enumerate(col_widths):
+            cell = row.cells[c_idx]
+            cell.width = width
+            set_cell_margins(cell, top=30, bottom=30, left=40, right=40)
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+        # K1
+        p0 = row.cells[0].paragraphs[0]
+        p0.paragraph_format.line_spacing = 1.05
+        p0.paragraph_format.space_after = Pt(1)
+        r = p0.add_run(k1)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+        # V1
+        p1 = row.cells[1].paragraphs[0]
+        p1.paragraph_format.line_spacing = 1.05
+        p1.paragraph_format.space_after = Pt(1)
+        r = p1.add_run(v1)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        if r_idx == 3:
+            r.font.bold = True
+
+        # K2
+        p2 = row.cells[2].paragraphs[0]
+        p2.paragraph_format.line_spacing = 1.05
+        p2.paragraph_format.space_after = Pt(1)
+        r = p2.add_run(k2)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+        # V2
+        p3 = row.cells[3].paragraphs[0]
+        p3.paragraph_format.line_spacing = 1.05
+        p3.paragraph_format.space_after = Pt(1)
+        r = p3.add_run(v2)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        if r_idx == 3:
+            r.font.bold = True
+
+    # 3. Bagian I: BUKU NILAI & REKAPITULASI KELAS
+    p_sec1 = doc.add_paragraph()
+    p_sec1.paragraph_format.space_before = Pt(14)
+    p_sec1.paragraph_format.space_after = Pt(4)
+    p_sec1.paragraph_format.keep_with_next = True
+    r_s1 = p_sec1.add_run("I. BUKU NILAI & REKAPITULASI KELAS")
+    r_s1.font.name = "Times New Roman"
+    r_s1.font.size = Pt(10.5)
+    r_s1.font.bold = True
+
+    # Tabel Rekap Siswa
+    t_siswa = doc.add_table(rows=len(hasil_list) + 1, cols=5)
+    t_siswa.alignment = WD_TABLE_ALIGNMENT.CENTER
+    set_table_borders_thin(t_siswa, color="CBD5E1", sz="4")
+
+    headers_siswa = ["No", "Nama Siswa", "Nilai Akhir", "Status KKM", "Catatan & Rekomendasi Guru"]
+    widths_siswa = [Inches(0.4), Inches(2.2), Inches(0.9), Inches(1.1), Inches(2.17)]
+
+    # Header Row
+    hdr_row = t_siswa.rows[0]
+    hdr_row._tr.get_or_add_trPr().append(parse_xml(r'<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'))
+    for c_i, h_text in enumerate(headers_siswa):
+        cell = hdr_row.cells[c_i]
+        cell.width = widths_siswa[c_i]
+        set_cell_background(cell, "F1F5F9")
+        set_cell_margins(cell, top=60, bottom=60, left=60, right=60)
+        p = cell.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_i in (0, 2, 3) else WD_ALIGN_PARAGRAPH.LEFT
+        r = p.add_run(h_text)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9)
+        r.font.bold = True
+
+    for i, s in enumerate(hasil_list, 1):
+        row = t_siswa.rows[i]
+        for c_i in range(5):
+            cell = row.cells[c_i]
+            cell.width = widths_siswa[c_i]
+            set_cell_margins(cell, top=50, bottom=50, left=60, right=60)
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+        # No
+        p0 = row.cells[0].paragraphs[0]
+        p0.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p0.add_run(str(i))
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9)
+
+        # Nama
+        p1 = row.cells[1].paragraphs[0]
+        r = p1.add_run(str(s.get("nama_siswa", f"Siswa {i}")))
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9)
+        r.font.bold = True
+
+        # Nilai Akhir
+        p2 = row.cells[2].paragraphs[0]
+        p2.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p2.add_run(str(s.get("nilai_akhir", "-")))
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+        # Status
+        is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
+        p3 = row.cells[3].paragraphs[0]
+        p3.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        r = p3.add_run("TUNTAS" if is_tuntas else "REMEDIAL")
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(8.5)
+        r.font.bold = True
+        r.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
+
+        # Catatan
+        p4 = row.cells[4].paragraphs[0]
+        rekom = s.get("rekomendasi") or "-"
+        r = p4.add_run(rekom)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(8.5)
+
+    # 4. Bagian II: EVALUASI & ANALITIK PEDAGOGIS KELAS (Jika ada)
+    analitik_text = koreksi_data.get("analitik_kelas", "")
+    if analitik_text and analitik_text.strip():
+        p_sec2 = doc.add_paragraph()
+        p_sec2.paragraph_format.space_before = Pt(16)
+        p_sec2.paragraph_format.space_after = Pt(4)
+        p_sec2.paragraph_format.keep_with_next = True
+        r_s2 = p_sec2.add_run("II. CATATAN EVALUASI & ANALITIK KELAS (AI INSIGHTS)")
+        r_s2.font.name = "Times New Roman"
+        r_s2.font.size = Pt(10.5)
+        r_s2.font.bold = True
+
+        for line in analitik_text.splitlines():
+            line_clean = line.strip()
+            if not line_clean:
+                continue
+            p_line = doc.add_paragraph()
+            p_line.paragraph_format.space_before = Pt(1)
+            p_line.paragraph_format.space_after = Pt(2)
+            p_line.paragraph_format.line_spacing = 1.15
+
+            if line_clean.startswith(("-", "*", "•")):
+                p_line.paragraph_format.left_indent = Inches(0.25)
+                line_clean = line_clean.lstrip("-*• ").strip()
+                r_dot = p_line.add_run("• ")
+                r_dot.font.name = "Times New Roman"
+                r_dot.font.size = Pt(9.5)
+                r_dot.font.bold = True
+            elif re.match(r"^\d+[\.\)]", line_clean):
+                p_line.paragraph_format.left_indent = Inches(0.25)
+
+            # Parse bold markdown **text**
+            parts = re.split(r"(\*\*.*?\*\*)", line_clean)
+            for part in parts:
+                if not part:
+                    continue
+                if part.startswith("**") and part.endswith("**"):
+                    r = p_line.add_run(part[2:-2])
+                    r.font.name = "Times New Roman"
+                    r.font.size = Pt(9.5)
+                    r.font.bold = True
+                else:
+                    r = p_line.add_run(part)
+                    r.font.name = "Times New Roman"
+                    r.font.size = Pt(9.5)
+
+    # 5. Bagian III: RINCIAN LEMBAR JAWABAN PER SISWA
+    p_sec3 = doc.add_paragraph()
+    p_sec3.paragraph_format.space_before = Pt(16)
+    p_sec3.paragraph_format.space_after = Pt(4)
+    p_sec3.paragraph_format.keep_with_next = True
+    r_s3 = p_sec3.add_run("III. RINCIAN LEMBAR JAWABAN SISWA")
+    r_s3.font.name = "Times New Roman"
+    r_s3.font.size = Pt(10.5)
+    r_s3.font.bold = True
+
+    for s_idx, s in enumerate(hasil_list, 1):
+        # Header Siswa
+        p_hdr = doc.add_paragraph()
+        p_hdr.paragraph_format.space_before = Pt(10)
+        p_hdr.paragraph_format.space_after = Pt(2)
+        p_hdr.paragraph_format.keep_with_next = True
+
+        r_num = p_hdr.add_run(f"Siswa #{s_idx}: {s.get('nama_siswa', 'Siswa')}  ")
+        r_num.font.name = "Times New Roman"
+        r_num.font.size = Pt(10)
+        r_num.font.bold = True
+
+        is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
+        r_st = p_hdr.add_run(f"• Nilai: {s.get('nilai_akhir', '-')} • [{('TUNTAS' if is_tuntas else 'REMEDIAL')}]\n")
+        r_st.font.name = "Times New Roman"
+        r_st.font.size = Pt(9)
+        r_st.font.bold = True
+        r_st.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
+
+        if s.get("rekomendasi"):
+            r_rek = p_hdr.add_run(f"Rekomendasi Belajar: {s.get('rekomendasi')}")
+            r_rek.font.name = "Times New Roman"
+            r_rek.font.size = Pt(8.5)
+            r_rek.font.italic = True
+            r_rek.font.color.rgb = RGBColor(90, 90, 90)
+
+        # Loop butir soal
+        for item in s.get("detail_koreksi", []):
+            nomor = item.get("nomor", 1)
+            pertanyaan = clean_latex_math(item.get("pertanyaan", ""))
+            status = str(item.get("status", "benar")).lower()
+            nilai = item.get("nilai", 0)
+            kunci = str(item.get("kunci_jawaban", "")).strip()
+            jawaban_siswa = str(item.get("jawaban_siswa", "")).strip()
+            catatan = item.get("catatan", "")
+            opsi_list = item.get("opsi") or []
+
+            p_q = doc.add_paragraph()
+            p_q.paragraph_format.left_indent = Inches(0.2)
+            p_q.paragraph_format.first_line_indent = Inches(-0.2)
+            p_q.paragraph_format.space_before = Pt(4)
+            p_q.paragraph_format.space_after = Pt(1)
+            p_q.paragraph_format.keep_with_next = True
+
+            r_qn = p_q.add_run(f"{nomor}.\t")
+            r_qn.font.name = "Times New Roman"
+            r_qn.font.size = Pt(9.5)
+            r_qn.font.bold = True
+
+            if pertanyaan:
+                r_qt = p_q.add_run(f"{pertanyaan} ")
+                r_qt.font.name = "Times New Roman"
+                r_qt.font.size = Pt(9.5)
+
+            # Badge status
+            stat_label = "BENAR" if status == "benar" else "SEBAGIAN" if status == "setengah" else "SALAH"
+            r_st = p_q.add_run(f"[{stat_label} • Skor: {nilai}]")
+            r_st.font.name = "Times New Roman"
+            r_st.font.size = Pt(8.5)
+            r_st.font.bold = True
+            r_st.font.color.rgb = RGBColor(22, 101, 52) if status == "benar" else RGBColor(180, 83, 9) if status == "setengah" else RGBColor(185, 28, 28)
+
+            # Opsi PG jika tersedia
+            if opsi_list and len(opsi_list) >= 2:
+                for opt in opsi_list:
+                    opt_lbl = str(opt.get("label", "")).upper()
+                    opt_teks = clean_latex_math(opt.get("teks", ""))
+                    is_kunci = (
+                        kunci.upper() == opt_lbl
+                        or kunci.upper().startswith(opt_lbl + " ")
+                        or kunci.upper().startswith(opt_lbl + ".")
+                    )
+                    is_siswa = (
+                        jawaban_siswa.upper() == opt_lbl
+                        or jawaban_siswa.upper().startswith(opt_lbl + " ")
+                        or jawaban_siswa.upper().startswith(opt_lbl + ".")
+                    )
+
+                    p_opt = doc.add_paragraph()
+                    p_opt.paragraph_format.left_indent = Inches(0.35)
+                    p_opt.paragraph_format.space_before = Pt(0)
+                    p_opt.paragraph_format.space_after = Pt(1)
+                    p_opt.paragraph_format.line_spacing = 1.05
+
+                    r_ol = p_opt.add_run(f"{opt_lbl}.  {opt_teks} ")
+                    r_ol.font.name = "Times New Roman"
+                    r_ol.font.size = Pt(9)
+                    if is_kunci:
+                        r_ol.font.bold = True
+
+                    if is_siswa and is_kunci:
+                        r_m = p_opt.add_run(" [✓ Jawaban Siswa & Kunci Benar]")
+                        r_m.font.name = "Times New Roman"
+                        r_m.font.size = Pt(8)
+                        r_m.font.bold = True
+                        r_m.font.color.rgb = RGBColor(22, 101, 52)
+                    elif is_siswa and not is_kunci:
+                        r_m = p_opt.add_run(" [✗ Jawaban Siswa]")
+                        r_m.font.name = "Times New Roman"
+                        r_m.font.size = Pt(8)
+                        r_m.font.bold = True
+                        r_m.font.color.rgb = RGBColor(185, 28, 28)
+                    elif is_kunci:
+                        r_m = p_opt.add_run(" [Kunci Benar]")
+                        r_m.font.name = "Times New Roman"
+                        r_m.font.size = Pt(8)
+                        r_m.font.bold = True
+                        r_m.font.color.rgb = RGBColor(22, 101, 52)
+            else:
+                p_ans = doc.add_paragraph()
+                p_ans.paragraph_format.left_indent = Inches(0.35)
+                p_ans.paragraph_format.space_before = Pt(0)
+                p_ans.paragraph_format.space_after = Pt(1)
+
+                r_js = p_ans.add_run(f"Jawaban Siswa: {jawaban_siswa or '(Kosong)'}   |   Kunci Acuan: {kunci}")
+                r_js.font.name = "Times New Roman"
+                r_js.font.size = Pt(9)
+                r_js.font.bold = True
+
+            if catatan:
+                p_c = doc.add_paragraph()
+                p_c.paragraph_format.left_indent = Inches(0.35)
+                p_c.paragraph_format.space_before = Pt(0)
+                p_c.paragraph_format.space_after = Pt(3)
+                r_c = p_c.add_run(f"Catatan Guru: {catatan}")
+                r_c.font.name = "Times New Roman"
+                r_c.font.size = Pt(8.5)
+                r_c.font.italic = True
+                r_c.font.color.rgb = RGBColor(80, 80, 80)
+
+    # 6. Lembar Pengesahan (Tanda Tangan Guru & Kepala Sekolah)
+    p_sig_sp = doc.add_paragraph()
+    p_sig_sp.paragraph_format.space_before = Pt(16)
+    p_sig_sp.paragraph_format.keep_with_next = True
+
+    t_sig = doc.add_table(rows=1, cols=2)
+    t_sig.alignment = WD_TABLE_ALIGNMENT.CENTER
+    set_table_borders_none(t_sig)
+
+    cell_kiri = t_sig.rows[0].cells[0]
+    cell_kanan = t_sig.rows[0].cells[1]
+    cell_kiri.width = Inches(3.38)
+    cell_kanan.width = Inches(3.38)
+
+    p_kiri = cell_kiri.paragraphs[0]
+    p_kiri.paragraph_format.line_spacing = 1.15
+    p_kiri.add_run(
+        "Mengetahui,\n"
+        "Kepala Sekolah\n\n\n\n\n"
+        "( ................................................................ )\n"
+        "NIP. ..........................................................."
+    )
+    for r in p_kiri.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+
+    p_kanan = cell_kanan.paragraphs[0]
+    p_kanan.paragraph_format.line_spacing = 1.15
+    p_kanan.add_run(
+        f"{tanggal}\n"
+        "Guru Mata Pelajaran\n\n\n\n\n"
+        "( ................................................................ )\n"
+        "NIP. ..........................................................."
+    )
+    for r in p_kanan.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+
+    output_stream = io.BytesIO()
+    doc.save(output_stream)
+    output_stream.seek(0)
+    return output_stream
+

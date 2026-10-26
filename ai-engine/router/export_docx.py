@@ -2,11 +2,12 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import Optional
 import io
 import os
 import sys
 
-from service.docx_builder import generate_exam_docx
+from service.docx_builder import generate_exam_docx, generate_koreksi_report_docx
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -24,6 +25,11 @@ class RequestExportDocx(BaseModel):
     sertakan_jawaban: bool = Field(default=False)
     sertakan_pembahasan: bool = Field(default=False)
     sertakan_ljk: bool = Field(default=False)
+
+class RequestExportKoreksiDocx(BaseModel):
+    header: Optional[dict] = Field(default_factory=dict)
+    koreksi: dict
+    soal_text: Optional[str] = ""
 
 @router.post("/export/docx")
 async def export_docx(req: RequestExportDocx):
@@ -60,3 +66,38 @@ async def export_docx(req: RequestExportDocx):
     except Exception as e:
         logger.error(f"Export DOCX gagal: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Gagal generate dokumen Word: {str(e)}")
+
+
+@router.post("/export/koreksi-docx")
+async def export_koreksi_docx(req: RequestExportKoreksiDocx):
+    try:
+        header_dict = req.header or {}
+        header_dict.setdefault("nama_sekolah", "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL")
+        header_dict.setdefault("mata_pelajaran", "Laporan Hasil Koreksi Ujian")
+        header_dict.setdefault("kelas", "Semua Kelas")
+        header_dict.setdefault("tanggal", "")
+        header_dict.setdefault("kkm", 75)
+        header_dict.setdefault("skala", "100")
+
+        docx_stream = generate_koreksi_report_docx(
+            header_data=header_dict,
+            koreksi_data=req.koreksi,
+            soal_text=req.soal_text or ""
+        )
+
+        filename = "Laporan_Hasil_Koreksi.docx"
+        mapel = header_dict.get("mata_pelajaran")
+        if mapel:
+            sanitized = "".join(c for c in mapel if c.isalnum() or c in (" ", "-", "_")).strip()
+            if sanitized:
+                filename = f"Laporan_Koreksi_{sanitized.replace(' ', '_')}.docx"
+
+        return StreamingResponse(
+            docx_stream,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Export Koreksi DOCX gagal: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal generate dokumen Word Laporan Koreksi: {str(e)}")
+
