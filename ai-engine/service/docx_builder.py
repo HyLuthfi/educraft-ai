@@ -151,8 +151,8 @@ def add_official_kop(doc: Document, nama_sekolah: str):
     p_kop = doc.add_paragraph()
     p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_kop.paragraph_format.space_before = Pt(0)
-    p_kop.paragraph_format.space_after = Pt(2)
-    p_kop.paragraph_format.line_spacing = 1.1
+    p_kop.paragraph_format.space_after = Pt(6)
+    p_kop.paragraph_format.line_spacing = 1.15
 
     r1 = p_kop.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
     r1.font.name = "Times New Roman"
@@ -1188,8 +1188,8 @@ def add_koreksi_kop(doc: Document, nama_sekolah: str = ""):
     p_kop = doc.add_paragraph()
     p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
     p_kop.paragraph_format.space_before = Pt(0)
-    p_kop.paragraph_format.space_after = Pt(2)
-    p_kop.paragraph_format.line_spacing = 1.1
+    p_kop.paragraph_format.space_after = Pt(6)
+    p_kop.paragraph_format.line_spacing = 1.15
 
     r1 = p_kop.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
     r1.font.name = "Times New Roman"
@@ -1198,7 +1198,7 @@ def add_koreksi_kop(doc: Document, nama_sekolah: str = ""):
 
     r2 = p_kop.add_run(f"{sekolah_clean}\n")
     r2.font.name = "Times New Roman"
-    r2.font.size = Pt(13.5)
+    r2.font.size = Pt(13)
     r2.font.bold = True
 
     current_year = datetime.datetime.now().year
@@ -1209,20 +1209,16 @@ def add_koreksi_kop(doc: Document, nama_sekolah: str = ""):
 
     r4 = p_kop.add_run("Saitech AI Solutions • Website: saitech.co.id")
     r4.font.name = "Times New Roman"
-    r4.font.size = Pt(8.5)
+    r4.font.size = Pt(9)
     r4.font.italic = True
     r4.font.color.rgb = RGBColor(90, 90, 90)
 
     pBdr = parse_xml(
         r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
-        r'<w:bottom w:val="double" w:sz="12" w:space="6" w:color="000000"/>'
+        r'<w:bottom w:val="double" w:sz="12" w:space="8" w:color="000000"/>'
         r'</w:pBdr>'
     )
     p_kop._p.get_or_add_pPr().append(pBdr)
-
-    p_sp = doc.add_paragraph()
-    p_sp.paragraph_format.space_before = Pt(6)
-    p_sp.paragraph_format.space_after = Pt(2)
 
 
 def is_redundant_catatan(catatan: str, kunci: str = "", jawaban_siswa: str = "") -> bool:
@@ -1284,17 +1280,20 @@ def generate_koreksi_report_docx(
     koreksi_data: Dict[str, Any],
     soal_text: str = ""
 ) -> io.BytesIO:
-    """Membangun dokumen Word (.docx) resmi Laporan Hasil Koreksi Ujian Siswa berstandar dinas dan rapi."""
+    """
+    Membangun dokumen Word (.docx) resmi Laporan Hasil Koreksi Ujian Siswa
+    dengan Tipografi & Sistem Spacing Standar Kedinasan yang Rapi, Konsisten, dan Elegan.
+    """
     doc = Document()
     sec = doc.sections[0]
     sec.page_width = Inches(8.27)
     sec.page_height = Inches(11.69)
     sec.top_margin = Inches(0.65)
     sec.bottom_margin = Inches(0.65)
-    sec.left_margin = Inches(0.7)
-    sec.right_margin = Inches(0.7)
+    sec.left_margin = Inches(0.65)
+    sec.right_margin = Inches(0.65)
 
-    # 1. Kop Kedinasan
+    # 1. Kop Kedinasan Resmi
     add_koreksi_kop(doc, header_data.get("nama_sekolah", ""))
 
     # Hitung metrik kelas
@@ -1305,6 +1304,7 @@ def generate_koreksi_report_docx(
     tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
     mapel = clean_subject_name(header_data.get("mata_pelajaran", "Hasil Evaluasi Pembelajaran"))
     kelas = header_data.get("kelas", "Semua Kelas")
+    current_year = datetime.datetime.now().year
 
     valid_scores = []
     for s in hasil_list:
@@ -1318,16 +1318,17 @@ def generate_koreksi_report_docx(
     tuntas_count = sum(1 for s in hasil_list if str(s.get("status_kelulusan", "")).lower() == "tuntas")
     pct_tuntas = f"{(tuntas_count / total_siswa * 100):.0f}%" if total_siswa > 0 else "-"
 
-    # 2. Tabel Metadata Ujian (3 baris x 4 kolom simetris - Ruled Header Table)
+    # 2. Tabel Metadata Ujian Kelas (3 baris x 4 kolom simetris - Ruled Header Table)
     t_meta = doc.add_table(rows=3, cols=4)
     t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_meta.autofit = False
     tblPr = t_meta._tbl.tblPr
     bdr = parse_xml(
         r'''<w:tblBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
             <w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>
             <w:bottom w:val="single" w:sz="8" w:space="0" w:color="000000"/>
             <w:left w:val="none"/><w:right w:val="none"/>
-            <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E2E8F0"/>
+            <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E5E7EB"/>
             <w:insideV w:val="none"/>
         </w:tblBorders>'''
     )
@@ -1339,70 +1340,72 @@ def generate_koreksi_report_docx(
         ("Rata-rata Kelas", f":  {avg_str}", "Ketuntasan KKM", f":  {pct_tuntas} ({tuntas_count}/{total_siswa} Siswa)"),
     ]
 
-    col_widths = [Inches(1.4), Inches(2.2), Inches(1.4), Inches(1.87)]
+    col_meta_w = [Inches(1.4), Inches(2.2), Inches(1.4), Inches(1.97)]
     for r_idx, (k1, v1, k2, v2) in enumerate(meta_rows):
         row = t_meta.rows[r_idx]
-        for c_idx, width in enumerate(col_widths):
+        row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        for c_idx, width in enumerate(col_meta_w):
             cell = row.cells[c_idx]
             cell.width = width
-            set_cell_margins(cell, top=25, bottom=25, left=35, right=35)
+            set_cell_margins(cell, top=70, bottom=70, left=100, right=100)
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
         # K1
         p0 = row.cells[0].paragraphs[0]
-        p0.paragraph_format.line_spacing = 1.05
+        p0.paragraph_format.line_spacing = 1.15
         p0.paragraph_format.space_after = Pt(0)
         r = p0.add_run(k1)
         r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
         r.font.bold = True
 
         # V1
         p1 = row.cells[1].paragraphs[0]
-        p1.paragraph_format.line_spacing = 1.05
+        p1.paragraph_format.line_spacing = 1.15
         p1.paragraph_format.space_after = Pt(0)
         r = p1.add_run(v1)
         r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
         if r_idx == 2:
             r.font.bold = True
 
         # K2
         p2 = row.cells[2].paragraphs[0]
-        p2.paragraph_format.line_spacing = 1.05
+        p2.paragraph_format.line_spacing = 1.15
         p2.paragraph_format.space_after = Pt(0)
         r = p2.add_run(k2)
         r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
         r.font.bold = True
 
         # V2
         p3 = row.cells[3].paragraphs[0]
-        p3.paragraph_format.line_spacing = 1.05
+        p3.paragraph_format.line_spacing = 1.15
         p3.paragraph_format.space_after = Pt(0)
         r = p3.add_run(v2)
         r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
         if r_idx == 2:
             r.font.bold = True
 
     # 3. Bagian I: BUKU NILAI & REKAPITULASI KELAS
     p_sec1 = doc.add_paragraph()
-    p_sec1.paragraph_format.space_before = Pt(10)
-    p_sec1.paragraph_format.space_after = Pt(3)
+    p_sec1.paragraph_format.space_before = Pt(12)
+    p_sec1.paragraph_format.space_after = Pt(4)
     p_sec1.paragraph_format.keep_with_next = True
     r_s1 = p_sec1.add_run("I. BUKU NILAI & REKAPITULASI KELAS")
     r_s1.font.name = "Times New Roman"
-    r_s1.font.size = Pt(10)
+    r_s1.font.size = Pt(10.5)
     r_s1.font.bold = True
 
     # Tabel Rekap Siswa
     t_siswa = doc.add_table(rows=len(hasil_list) + 1, cols=5)
     t_siswa.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_siswa.autofit = False
     set_table_borders_thin(t_siswa, color="CBD5E1", sz="4")
 
     headers_siswa = ["No", "Nama Siswa", "Nilai Akhir", "Status KKM", "Catatan & Rekomendasi Guru"]
-    widths_siswa = [Inches(0.4), Inches(2.2), Inches(0.9), Inches(1.1), Inches(2.27)]
+    widths_siswa = [Inches(0.4), Inches(2.2), Inches(0.95), Inches(1.15), Inches(2.27)]
 
     # Header Row
     hdr_row = t_siswa.rows[0]
@@ -1412,22 +1415,22 @@ def generate_koreksi_report_docx(
         cell = hdr_row.cells[c_i]
         cell.width = widths_siswa[c_i]
         set_cell_background(cell, "F1F5F9")
-        set_cell_margins(cell, top=45, bottom=45, left=50, right=50)
+        set_cell_margins(cell, top=80, bottom=80, left=100, right=100)
+        cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
         p = cell.paragraphs[0]
         p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_i in (0, 2, 3) else WD_ALIGN_PARAGRAPH.LEFT
         p.paragraph_format.space_after = Pt(0)
-        p.paragraph_format.line_spacing = 1.05
+        p.paragraph_format.line_spacing = 1.15
         r = p.add_run(h_text)
         r.font.name = "Times New Roman"
-        r.font.size = Pt(8.5)
+        r.font.size = Pt(9.5)
         r.font.bold = True
 
     # Data Rows
     for s_i, s in enumerate(hasil_list, 1):
         row = t_siswa.rows[s_i]
         row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
-        is_even = s_i % 2 == 0
-        bg_col = "F8FAFC" if is_even else "FFFFFF"
+        bg_col = "FFFFFF" if s_i % 2 == 1 else "F8FAFC"
 
         is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
         status_txt = "TUNTAS" if is_tuntas else "REMEDIAL"
@@ -1445,17 +1448,17 @@ def generate_koreksi_report_docx(
             cell = row.cells[c_i]
             cell.width = widths_siswa[c_i]
             set_cell_background(cell, bg_col)
-            set_cell_margins(cell, top=40, bottom=40, left=50, right=50)
+            set_cell_margins(cell, top=70, bottom=70, left=100, right=100)
             cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_i in (0, 2, 3) else WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.space_after = Pt(0)
-            p.paragraph_format.line_spacing = 1.05
+            p.paragraph_format.line_spacing = 1.15
 
             r = p.add_run(val)
             r.font.name = "Times New Roman"
-            r.font.size = Pt(8.5)
+            r.font.size = Pt(9.5)
 
             if c_i == 2:
                 r.font.bold = True
@@ -1463,65 +1466,61 @@ def generate_koreksi_report_docx(
                 r.font.bold = True
                 r.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
 
-    # 4. Bagian II: EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS (Ringkas & Bersih)
+    # 4. Bagian II: EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS
     analitik = koreksi_data.get("analitik_kelas", "")
     if analitik:
         p_sec2 = doc.add_paragraph()
-        p_sec2.paragraph_format.space_before = Pt(10)
-        p_sec2.paragraph_format.space_after = Pt(2)
+        p_sec2.paragraph_format.space_before = Pt(12)
+        p_sec2.paragraph_format.space_after = Pt(4)
         p_sec2.paragraph_format.keep_with_next = True
         r_s2 = p_sec2.add_run("II. EVALUASI PEMBELAJARAN & TINDAK LANJUT KELAS")
         r_s2.font.name = "Times New Roman"
-        r_s2.font.size = Pt(10)
+        r_s2.font.size = Pt(10.5)
         r_s2.font.bold = True
 
         for line in analitik.strip().splitlines():
             line_str = line.strip()
             if not line_str:
                 continue
-            # Bersihkan prefix bullet yang dobel jika ada
             clean_line = re.sub(r"^[-*•]\s*", "", line_str)
             p_al = doc.add_paragraph()
             p_al.paragraph_format.left_indent = Inches(0.2)
             p_al.paragraph_format.space_before = Pt(0)
-            p_al.paragraph_format.space_after = Pt(1.5)
-            p_al.paragraph_format.line_spacing = 1.08
+            p_al.paragraph_format.space_after = Pt(2)
+            p_al.paragraph_format.line_spacing = 1.15
             p_al.paragraph_format.keep_with_next = True
 
             r_bullet = p_al.add_run("•  ")
             r_bullet.font.name = "Times New Roman"
-            r_bullet.font.size = Pt(8.5)
+            r_bullet.font.size = Pt(9.5)
             r_bullet.font.bold = True
 
-            # Bold markers (**...**)
             parts = re.split(r"(\*\*.*?\*\*)", clean_line)
             for part in parts:
                 if part.startswith("**") and part.endswith("**"):
                     r = p_al.add_run(part[2:-2])
                     r.font.name = "Times New Roman"
-                    r.font.size = Pt(8.5)
+                    r.font.size = Pt(9.5)
                     r.font.bold = True
                 else:
                     r = p_al.add_run(part)
                     r.font.name = "Times New Roman"
-                    r.font.size = Pt(8.5)
+                    r.font.size = Pt(9.5)
 
     # 5. Lembar Pengesahan Kelas (Tanda Tangan Guru & Kepala Sekolah di akhir Rekap Kelas)
-    p_sig_sp = doc.add_paragraph()
-    p_sig_sp.paragraph_format.space_before = Pt(12)
-    p_sig_sp.paragraph_format.space_after = Pt(0)
-    p_sig_sp.paragraph_format.keep_with_next = True
-
     t_sig = doc.add_table(rows=1, cols=2)
     t_sig.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_sig.autofit = False
     set_table_borders_none(t_sig)
     row_sig = t_sig.rows[0]
     row_sig._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
 
     cell_kiri = row_sig.cells[0]
     cell_kanan = row_sig.cells[1]
-    cell_kiri.width = Inches(3.43)
-    cell_kanan.width = Inches(3.43)
+    cell_kiri.width = Inches(3.48)
+    cell_kanan.width = Inches(3.48)
+    set_cell_margins(cell_kiri, top=140, bottom=70, left=100, right=100)
+    set_cell_margins(cell_kanan, top=140, bottom=70, left=100, right=100)
 
     p_kiri = cell_kiri.paragraphs[0]
     p_kiri.paragraph_format.line_spacing = 1.15
@@ -1534,7 +1533,7 @@ def generate_koreksi_report_docx(
     )
     for r in p_kiri.runs:
         r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
 
     p_kanan = cell_kanan.paragraphs[0]
     p_kanan.paragraph_format.line_spacing = 1.15
@@ -1547,7 +1546,7 @@ def generate_koreksi_report_docx(
     )
     for r in p_kanan.runs:
         r.font.name = "Times New Roman"
-        r.font.size = Pt(9)
+        r.font.size = Pt(9.5)
 
     # ─────────────────────────────────────────────────────────────────
     # 6. PER SISWA: LEMBAR EVALUASI INDIVIDUAL (SETIAP SISWA HALAMAN SENDIRI)
@@ -1568,18 +1567,18 @@ def generate_koreksi_report_docx(
         r_t1.font.size = Pt(11)
         r_t1.font.bold = True
 
-        current_year = datetime.datetime.now().year
         r_t2 = p_tit.add_run(f"TAHUN AJARAN {current_year}/{current_year + 1}")
         r_t2.font.name = "Times New Roman"
-        r_t2.font.size = Pt(8.5)
+        r_t2.font.size = Pt(9)
         r_t2.font.bold = True
         r_t2.font.color.rgb = RGBColor(100, 100, 100)
 
         # 2. Tabel Metadata Identitas Siswa (4 Kolom Simetris persis Buat Soal)
-        t_meta = doc.add_table(rows=3, cols=4)
-        t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
-        tblPr = t_meta._tbl.tblPr
-        bdr = parse_xml(
+        t_stu_meta = doc.add_table(rows=3, cols=4)
+        t_stu_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_stu_meta.autofit = False
+        tblPr_sm = t_stu_meta._tbl.tblPr
+        bdr_sm = parse_xml(
             r'''<w:tblBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
                 <w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>
                 <w:bottom w:val="single" w:sz="8" w:space="0" w:color="000000"/>
@@ -1588,7 +1587,7 @@ def generate_koreksi_report_docx(
                 <w:insideV w:val="none"/>
             </w:tblBorders>'''
         )
-        tblPr.append(bdr)
+        tblPr_sm.append(bdr_sm)
 
         is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
         status_label = "TUNTAS KKM" if is_tuntas else "REMEDIAL (Belum Tuntas)"
@@ -1599,20 +1598,20 @@ def generate_koreksi_report_docx(
         else:
             nilai_display = f"{nilai_raw} / {skala}"
 
-        meta_pairs = [
+        stu_meta_rows = [
             [("Nama Siswa", f":  {s.get('nama_siswa', 'Siswa')}"), ("Mata Pelajaran", f":  {mapel}")],
             [("No. Urut / ID", f":  Siswa #{s_idx:02d}"), ("Kelas / Fase", f":  {kelas}")],
             [("Status KKM", f":  {status_label}"), ("Nilai Akhir", f":  {nilai_display}")],
         ]
 
-        col_w = [Inches(1.25), Inches(2.25), Inches(1.35), Inches(2.02)]
-        for r_i, row_pairs in enumerate(meta_pairs):
-            row = t_meta.rows[r_i]
+        col_stu_meta_w = [Inches(1.3), Inches(2.3), Inches(1.35), Inches(2.02)]
+        for r_i, row_pairs in enumerate(stu_meta_rows):
+            row = t_stu_meta.rows[r_i]
             row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
-            for c_i, w in enumerate(col_w):
+            for c_i, w in enumerate(col_stu_meta_w):
                 c = row.cells[c_i]
                 c.width = w
-                set_cell_margins(c, top=35, bottom=35, left=35, right=35)
+                set_cell_margins(c, top=70, bottom=70, left=100, right=100)
                 c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
             # Left pair
@@ -1621,7 +1620,7 @@ def generate_koreksi_report_docx(
             p0.paragraph_format.line_spacing = 1.15
             r0 = p0.add_run(row_pairs[0][0])
             r0.font.name = "Times New Roman"
-            r0.font.size = Pt(9)
+            r0.font.size = Pt(9.5)
             r0.font.bold = True
 
             p1 = row.cells[1].paragraphs[0]
@@ -1629,7 +1628,7 @@ def generate_koreksi_report_docx(
             p1.paragraph_format.line_spacing = 1.15
             r1 = p1.add_run(row_pairs[0][1])
             r1.font.name = "Times New Roman"
-            r1.font.size = Pt(9)
+            r1.font.size = Pt(9.5)
             if r_i == 0:
                 r1.font.bold = True
             elif r_i == 2:
@@ -1642,7 +1641,7 @@ def generate_koreksi_report_docx(
             p2.paragraph_format.line_spacing = 1.15
             r2 = p2.add_run(row_pairs[1][0])
             r2.font.name = "Times New Roman"
-            r2.font.size = Pt(9)
+            r2.font.size = Pt(9.5)
             r2.font.bold = True
 
             p3 = row.cells[3].paragraphs[0]
@@ -1650,23 +1649,23 @@ def generate_koreksi_report_docx(
             p3.paragraph_format.line_spacing = 1.15
             r3 = p3.add_run(row_pairs[1][1])
             r3.font.name = "Times New Roman"
-            r3.font.size = Pt(9)
+            r3.font.size = Pt(9.5)
             if r_i == 2:
                 r3.font.bold = True
                 r3.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
 
         # 3. Sub-header & Tabel Evaluasi Butir Asesmen (Matriks Berkolom Resmi)
-        p_dt = doc.add_paragraph()
-        p_dt.paragraph_format.space_before = Pt(8)
-        p_dt.paragraph_format.space_after = Pt(3)
-        p_dt.paragraph_format.keep_with_next = True
-        r_dt = p_dt.add_run("TABEL EVALUASI & ANALISIS BUTIR ASESMEN:")
-        r_dt.font.name = "Times New Roman"
-        r_dt.font.size = Pt(9.5)
-        r_dt.font.bold = True
+        p_tbl_title = doc.add_paragraph()
+        p_tbl_title.paragraph_format.space_before = Pt(12)
+        p_tbl_title.paragraph_format.space_after = Pt(4)
+        p_tbl_title.paragraph_format.keep_with_next = True
+        r_tt = p_tbl_title.add_run("TABEL EVALUASI & ANALISIS BUTIR ASESMEN:")
+        r_tt.font.name = "Times New Roman"
+        r_tt.font.size = Pt(10.5)
+        r_tt.font.bold = True
 
-        col_w = [Inches(0.35), Inches(2.1), Inches(1.15), Inches(1.15), Inches(0.85), Inches(1.27)]
-        headers = ["No", "Butir Pertanyaan", "Jawaban Siswa", "Kunci Acuan", "Skor / Status", "Catatan Evaluasi"]
+        col_eval_w = [Inches(0.35), Inches(2.32), Inches(1.25), Inches(1.25), Inches(0.80), Inches(1.00)]
+        eval_headers = ["No", "Butir Pertanyaan", "Jawaban Siswa", "Kunci Acuan", "Skor / Status", "Catatan Evaluasi"]
 
         t_eval = doc.add_table(rows=1, cols=6)
         t_eval.alignment = WD_TABLE_ALIGNMENT.CENTER
@@ -1677,19 +1676,19 @@ def generate_koreksi_report_docx(
         hdr._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
         hdr._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
 
-        for c_i, h in enumerate(headers):
+        for c_i, h in enumerate(eval_headers):
             c = hdr.cells[c_i]
-            c.width = col_w[c_i]
+            c.width = col_eval_w[c_i]
             set_cell_background(c, "F1F5F9")
-            set_cell_margins(c, top=45, bottom=45, left=40, right=40)
+            set_cell_margins(c, top=80, bottom=80, left=100, right=100)
             c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             p = c.paragraphs[0]
             p.paragraph_format.space_after = Pt(0)
-            p.paragraph_format.line_spacing = 1.05
+            p.paragraph_format.line_spacing = 1.15
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_i in (0, 4) else WD_ALIGN_PARAGRAPH.LEFT
             r = p.add_run(h)
             r.font.name = "Times New Roman"
-            r.font.size = Pt(8.5)
+            r.font.size = Pt(9.5)
             r.font.bold = True
 
         detail_items = s.get("detail_koreksi", [])
@@ -1737,16 +1736,16 @@ def generate_koreksi_report_docx(
 
             for c_i, val in enumerate(row_vals):
                 c = r_row.cells[c_i]
-                c.width = col_w[c_i]
-                set_cell_margins(c, top=40, bottom=40, left=40, right=40)
+                c.width = col_eval_w[c_i]
+                set_cell_margins(c, top=70, bottom=70, left=100, right=100)
                 c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER if c_i in (0, 4) else WD_ALIGN_VERTICAL.TOP
                 p = c.paragraphs[0]
                 p.paragraph_format.space_after = Pt(0)
-                p.paragraph_format.line_spacing = 1.05
+                p.paragraph_format.line_spacing = 1.15
                 p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_i in (0, 4) else WD_ALIGN_PARAGRAPH.LEFT
                 run = p.add_run(val)
                 run.font.name = "Times New Roman"
-                run.font.size = Pt(8.5)
+                run.font.size = Pt(9.5)
 
                 if c_i == 0:
                     run.font.bold = True
@@ -1770,56 +1769,54 @@ def generate_koreksi_report_docx(
             c_sum_lbl.merge(r_sum.cells[2])
             c_sum_lbl.merge(r_sum.cells[3])
             set_cell_background(c_sum_lbl, "F8FAFC")
-            set_cell_margins(c_sum_lbl, top=45, bottom=45, left=50, right=50)
+            set_cell_margins(c_sum_lbl, top=70, bottom=70, left=100, right=100)
             p_sl = c_sum_lbl.paragraphs[0]
             p_sl.paragraph_format.space_after = Pt(0)
+            p_sl.paragraph_format.line_spacing = 1.15
             p_sl.alignment = WD_ALIGN_PARAGRAPH.RIGHT
             r_sl = p_sl.add_run("TOTAL PEROLEHAN SKOR / STATUS KELULUSAN")
             r_sl.font.name = "Times New Roman"
-            r_sl.font.size = Pt(8.5)
+            r_sl.font.size = Pt(9.5)
             r_sl.font.bold = True
 
             c_sum_val = r_sum.cells[4]
             set_cell_background(c_sum_val, "F8FAFC")
-            set_cell_margins(c_sum_val, top=45, bottom=45, left=40, right=40)
+            set_cell_margins(c_sum_val, top=70, bottom=70, left=100, right=100)
             p_sv = c_sum_val.paragraphs[0]
             p_sv.paragraph_format.space_after = Pt(0)
+            p_sv.paragraph_format.line_spacing = 1.15
             p_sv.alignment = WD_ALIGN_PARAGRAPH.CENTER
             score_display_total = f"{total_skor_diperoleh:g} / {len(detail_items):g}"
             r_sv = p_sv.add_run(score_display_total)
             r_sv.font.name = "Times New Roman"
-            r_sv.font.size = Pt(9)
+            r_sv.font.size = Pt(9.5)
             r_sv.font.bold = True
 
             c_sum_st = r_sum.cells[5]
             set_cell_background(c_sum_st, "F8FAFC")
-            set_cell_margins(c_sum_st, top=45, bottom=45, left=40, right=40)
+            set_cell_margins(c_sum_st, top=70, bottom=70, left=100, right=100)
             p_st = c_sum_st.paragraphs[0]
             p_st.paragraph_format.space_after = Pt(0)
+            p_st.paragraph_format.line_spacing = 1.15
             p_st.alignment = WD_ALIGN_PARAGRAPH.LEFT
             r_st = p_st.add_run("TUNTAS KKM" if is_tuntas else "REMEDIAL")
             r_st.font.name = "Times New Roman"
-            r_st.font.size = Pt(8.5)
+            r_st.font.size = Pt(9.5)
             r_st.font.bold = True
             r_st.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
 
-        # Spasi sebelum catatan guru
-        p_gap = doc.add_paragraph()
-        p_gap.paragraph_format.space_before = Pt(4)
-        p_gap.paragraph_format.space_after = Pt(0)
-        p_gap.paragraph_format.keep_with_next = True
-
-        # Catatan & Rekomendasi Guru di Akhir Lembar Evaluasi
+        # 4. Catatan & Rekomendasi Guru Callout Box (Clean Spaced)
         catatan_guru = s.get("rekomendasi") or s.get("catatan")
         if catatan_guru and not is_redundant_catatan(catatan_guru):
             t_rec = doc.add_table(rows=1, cols=1)
             t_rec.alignment = WD_TABLE_ALIGNMENT.CENTER
+            t_rec.autofit = False
             row_rec = t_rec.rows[0]
             row_rec._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
             c_rec = row_rec.cells[0]
-            c_rec.width = Inches(6.87)
+            c_rec.width = Inches(6.97)
             set_cell_background(c_rec, "F8FAFC")
-            set_cell_margins(c_rec, top=35, bottom=35, left=45, right=45)
+            set_cell_margins(c_rec, top=80, bottom=80, left=120, right=120)
             set_table_borders_thin(t_rec, color="CBD5E1", sz="4")
 
             p_rc = c_rec.paragraphs[0]
@@ -1827,31 +1824,29 @@ def generate_koreksi_report_docx(
             p_rc.paragraph_format.line_spacing = 1.15
             r_rh = p_rc.add_run("Catatan & Rekomendasi Guru: ")
             r_rh.font.name = "Times New Roman"
-            r_rh.font.size = Pt(8.5)
+            r_rh.font.size = Pt(9.5)
             r_rh.font.bold = True
 
             r_rt = p_rc.add_run(catatan_guru)
             r_rt.font.name = "Times New Roman"
-            r_rt.font.size = Pt(8.5)
+            r_rt.font.size = Pt(9.5)
             r_rt.font.italic = True
             r_rt.font.color.rgb = RGBColor(55, 65, 81)
 
-        # Lembar Tanda Tangan Orang Tua & Guru di Akhir Lembar Siswa (Kompak)
-        p_stu_sig_gap = doc.add_paragraph()
-        p_stu_sig_gap.paragraph_format.space_before = Pt(14)
-        p_stu_sig_gap.paragraph_format.space_after = Pt(0)
-        p_stu_sig_gap.paragraph_format.keep_with_next = True
-
+        # 5. Lembar Tanda Tangan Orang Tua & Guru di Akhir Lembar Siswa
         t_stu_sig = doc.add_table(rows=1, cols=2)
         t_stu_sig.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_stu_sig.autofit = False
         set_table_borders_none(t_stu_sig)
         row_stu_sig = t_stu_sig.rows[0]
         row_stu_sig._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
 
         c_ot = row_stu_sig.cells[0]
         c_gr = row_stu_sig.cells[1]
-        c_ot.width = Inches(3.43)
-        c_gr.width = Inches(3.43)
+        c_ot.width = Inches(3.48)
+        c_gr.width = Inches(3.48)
+        set_cell_margins(c_ot, top=140, bottom=70, left=100, right=100)
+        set_cell_margins(c_gr, top=140, bottom=70, left=100, right=100)
 
         p_ot = c_ot.paragraphs[0]
         p_ot.paragraph_format.line_spacing = 1.15
@@ -1863,7 +1858,7 @@ def generate_koreksi_report_docx(
         )
         for r in p_ot.runs:
             r.font.name = "Times New Roman"
-            r.font.size = Pt(9)
+            r.font.size = Pt(9.5)
 
         p_gr = c_gr.paragraphs[0]
         p_gr.paragraph_format.line_spacing = 1.15
@@ -1875,7 +1870,7 @@ def generate_koreksi_report_docx(
         )
         for r in p_gr.runs:
             r.font.name = "Times New Roman"
-            r.font.size = Pt(9)
+            r.font.size = Pt(9.5)
 
     output_stream = io.BytesIO()
     doc.save(output_stream)
