@@ -1222,6 +1222,25 @@ def add_koreksi_kop(doc: Document, nama_sekolah: str = ""):
     p_sp.paragraph_format.space_after = Pt(2)
 
 
+def is_redundant_catatan(catatan: str, kunci: str = "", jawaban_siswa: str = "") -> bool:
+    """Mendeteksi apakah catatan guru/AI hanya pengulangan mekanis dari status/kunci jawaban."""
+    if not catatan:
+        return True
+    c_lower = catatan.lower().strip()
+    redundant_patterns = [
+        r"^jawaban (benar|tepat|sesuai).*$",
+        r"^jawaban (salah|keliru)\.?\s*(kunci (jawaban )?(adalah )?.*|pernyataan tersebut adalah.*)?$",
+        r"^tepat\.?$",
+        r"^benar\.?$",
+        r"^salah\.?$",
+        r"^sesuai kunci.*$",
+    ]
+    for pat in redundant_patterns:
+        if re.match(pat, c_lower):
+            return True
+    return False
+
+
 def extract_options_from_soal_text(soal_text: str, nomor: int) -> List[Dict[str, str]]:
     """Mengekstrak opsi pilihan ganda A, B, C, D dari teks naskah soal jika tidak ada dalam payload."""
     if not soal_text:
@@ -1643,12 +1662,15 @@ def generate_koreksi_report_docx(
                 r_qt.font.name = "Times New Roman"
                 r_qt.font.size = Pt(9.5)
 
-            # 2. Cek apakah ada opsi PG (dari payload atau diekstrak dari soal_text)
+            # Cek opsi pilihan ganda
             opsi_list = item.get("opsi") or []
             if not opsi_list or len(opsi_list) < 2:
                 opsi_list = extract_options_from_soal_text(soal_text, nomor)
 
-            if opsi_list and len(opsi_list) >= 2:
+            is_pg_with_options = bool(opsi_list and len(opsi_list) >= 2)
+            is_essay = str(item.get("tipe", "")).lower() == "essay" or len(jawaban_siswa) > 35 or len(kunci) > 35
+
+            if is_pg_with_options:
                 # Render seluruh opsi jawaban PG (A, B, C, D)
                 for opt in opsi_list:
                     opt_lbl = str(opt.get("label", "")).upper()
@@ -1691,41 +1713,82 @@ def generate_koreksi_report_docx(
                         r_tag.font.bold = True
                         r_tag.font.color.rgb = RGBColor(185, 28, 28)
 
-                # Baris status evaluasi PG
+                # Ringkasan status PG (1 baris bersih, tanpa bullet)
                 p_res = doc.add_paragraph()
                 p_res.paragraph_format.left_indent = Inches(0.35)
                 p_res.paragraph_format.space_before = Pt(1)
                 p_res.paragraph_format.space_after = Pt(2)
                 p_res.paragraph_format.line_spacing = 1.05
                 if status == "benar":
-                    r_stat = p_res.add_run(f"•  Jawaban Siswa: {jawaban_siswa} (BENAR • Skor: {nilai})")
-                    r_stat.font.color.rgb = RGBColor(22, 101, 52)
+                    r_tag = p_res.add_run(f"[✓ BENAR • Skor: {nilai}]   ")
+                    r_tag.font.bold = True
+                    r_tag.font.color.rgb = RGBColor(22, 101, 52)
+                    r_ans = p_res.add_run(f"Jawaban Siswa: {jawaban_siswa}")
+                    r_ans.font.name = "Times New Roman"
+                    r_ans.font.size = Pt(8.5)
                 else:
-                    r_stat = p_res.add_run(f"•  Jawaban Siswa: {jawaban_siswa or '(Kosong)'} (SALAH • Skor: {nilai})  |  Kunci Benar: {kunci}")
-                    r_stat.font.color.rgb = RGBColor(185, 28, 28)
-                r_stat.font.name = "Times New Roman"
-                r_stat.font.size = Pt(8.5)
-                r_stat.font.bold = True
+                    r_tag = p_res.add_run(f"[✗ SALAH • Skor: {nilai}]   ")
+                    r_tag.font.bold = True
+                    r_tag.font.color.rgb = RGBColor(185, 28, 28)
+                    r_ans = p_res.add_run(f"Jawaban Siswa: {jawaban_siswa or '(Kosong)'}   |   Kunci Benar: {kunci}")
+                    r_ans.font.name = "Times New Roman"
+                    r_ans.font.size = Pt(8.5)
 
-                if catatan:
+                if catatan and not is_redundant_catatan(catatan, kunci, jawaban_siswa):
                     p_cat = doc.add_paragraph()
                     p_cat.paragraph_format.left_indent = Inches(0.35)
                     p_cat.paragraph_format.space_before = Pt(0)
-                    p_cat.paragraph_format.space_after = Pt(3)
-                    r_cat = p_cat.add_run(f"•  Catatan Guru: {catatan}")
+                    p_cat.paragraph_format.space_after = Pt(2)
+                    r_cat = p_cat.add_run(f"Catatan: {catatan}")
                     r_cat.font.name = "Times New Roman"
                     r_cat.font.size = Pt(8.5)
                     r_cat.font.italic = True
-                    r_cat.font.color.rgb = RGBColor(90, 90, 90)
+                    r_cat.font.color.rgb = RGBColor(100, 100, 100)
+
+            elif not is_essay:
+                # Soal Objektif Tanpa Opsi (Isian Singkat, Benar/Salah, atau PG tanpa teks opsi)
+                # TAMPILKAN TEPAT 1 BARIS BERSIH (Zero Bullets!)
+                p_res = doc.add_paragraph()
+                p_res.paragraph_format.left_indent = Inches(0.35)
+                p_res.paragraph_format.space_before = Pt(0)
+                p_res.paragraph_format.space_after = Pt(2)
+                p_res.paragraph_format.line_spacing = 1.05
+
+                if status == "benar":
+                    r_tag = p_res.add_run(f"[✓ BENAR • Skor: {nilai}]   ")
+                    r_tag.font.bold = True
+                    r_tag.font.color.rgb = RGBColor(22, 101, 52)
+                    r_ans = p_res.add_run(f"Jawaban Siswa: {jawaban_siswa or '(Kosong)'}")
+                    r_ans.font.name = "Times New Roman"
+                    r_ans.font.size = Pt(8.5)
+                else:
+                    r_tag = p_res.add_run(f"[✗ SALAH • Skor: {nilai}]   ")
+                    r_tag.font.bold = True
+                    r_tag.font.color.rgb = RGBColor(185, 28, 28)
+                    r_ans = p_res.add_run(f"Jawaban Siswa: {jawaban_siswa or '(Kosong)'}   |   Kunci Acuan: {kunci}")
+                    r_ans.font.name = "Times New Roman"
+                    r_ans.font.size = Pt(8.5)
+
+                if catatan and not is_redundant_catatan(catatan, kunci, jawaban_siswa):
+                    p_cat = doc.add_paragraph()
+                    p_cat.paragraph_format.left_indent = Inches(0.35)
+                    p_cat.paragraph_format.space_before = Pt(0)
+                    p_cat.paragraph_format.space_after = Pt(2)
+                    r_cat = p_cat.add_run(f"Catatan: {catatan}")
+                    r_cat.font.name = "Times New Roman"
+                    r_cat.font.size = Pt(8.5)
+                    r_cat.font.italic = True
+                    r_cat.font.color.rgb = RGBColor(100, 100, 100)
+
             else:
-                # Format non-PG (Isian, Benar/Salah, Essay) -> Teks Terstruktur Indented Bersih (Bebas Tabel Kotak)
+                # Format Essay / Uraian Panjang (Format Dialog Bersih, Tanpa Bullet Bising)
                 p_ans = doc.add_paragraph()
                 p_ans.paragraph_format.left_indent = Inches(0.35)
                 p_ans.paragraph_format.space_before = Pt(1)
                 p_ans.paragraph_format.space_after = Pt(1)
-                p_ans.paragraph_format.line_spacing = 1.08
+                p_ans.paragraph_format.line_spacing = 1.1
 
-                r_lbl = p_ans.add_run("•  Jawaban Siswa : ")
+                r_lbl = p_ans.add_run("Jawaban Siswa : ")
                 r_lbl.font.name = "Times New Roman"
                 r_lbl.font.size = Pt(9)
                 r_lbl.font.bold = True
@@ -1742,9 +1805,9 @@ def generate_koreksi_report_docx(
                 p_kc.paragraph_format.left_indent = Inches(0.35)
                 p_kc.paragraph_format.space_before = Pt(0)
                 p_kc.paragraph_format.space_after = Pt(1)
-                p_kc.paragraph_format.line_spacing = 1.08
+                p_kc.paragraph_format.line_spacing = 1.1
 
-                r_kclbl = p_kc.add_run("•  Kunci Acuan   : ")
+                r_kclbl = p_kc.add_run("Kunci Acuan   : ")
                 r_kclbl.font.name = "Times New Roman"
                 r_kclbl.font.size = Pt(9)
                 r_kclbl.font.bold = True
@@ -1757,25 +1820,21 @@ def generate_koreksi_report_docx(
                 p_st.paragraph_format.left_indent = Inches(0.35)
                 p_st.paragraph_format.space_before = Pt(0)
                 p_st.paragraph_format.space_after = Pt(2)
-                p_st.paragraph_format.line_spacing = 1.08
+                p_st.paragraph_format.line_spacing = 1.1
 
                 stat_text = "BENAR" if status == "benar" else "SEBAGIAN" if status == "setengah" else "SALAH"
-                r_stlbl = p_st.add_run(f"•  Hasil Evaluasi: [{stat_text} • Skor: {nilai}]")
+                r_stlbl = p_st.add_run(f"Hasil Evaluasi: [{stat_text} • Skor: {nilai}]")
                 r_stlbl.font.name = "Times New Roman"
                 r_stlbl.font.size = Pt(8.5)
                 r_stlbl.font.bold = True
                 r_stlbl.font.color.rgb = RGBColor(22, 101, 52) if status == "benar" else RGBColor(185, 28, 28)
 
-                if catatan:
-                    p_cat = doc.add_paragraph()
-                    p_cat.paragraph_format.left_indent = Inches(0.35)
-                    p_cat.paragraph_format.space_before = Pt(0)
-                    p_cat.paragraph_format.space_after = Pt(3)
-                    r_cat = p_cat.add_run(f"•  Catatan Guru  : {catatan}")
-                    r_cat.font.name = "Times New Roman"
-                    r_cat.font.size = Pt(8.5)
-                    r_cat.font.italic = True
-                    r_cat.font.color.rgb = RGBColor(90, 90, 90)
+                if catatan and not is_redundant_catatan(catatan, kunci, jawaban_siswa):
+                    r_note = p_st.add_run(f" — {catatan}")
+                    r_note.font.name = "Times New Roman"
+                    r_note.font.size = Pt(8.5)
+                    r_note.font.italic = True
+                    r_note.font.color.rgb = RGBColor(100, 100, 100)
 
         # Lembar Tanda Tangan Orang Tua & Guru di Akhir Lembar Siswa (Kompak)
         p_stu_sig_gap = doc.add_paragraph()
