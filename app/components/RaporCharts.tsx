@@ -93,13 +93,13 @@ export function TrenLineChart({
       })}
 
       {/* Area gradasi di bawah garis */}
-      {pathArea && <path d={pathArea} className="fill-indigo-500/15 dark:fill-indigo-400/10" />}
+      {pathArea && <path d={pathArea} className="fill-black/5 dark:fill-white/10" />}
 
       {/* Garis tren */}
       <path
         d={pathLine}
         fill="none"
-        className="stroke-indigo-600 dark:stroke-indigo-400"
+        className="stroke-black dark:stroke-white"
         strokeWidth={2.5}
         strokeLinejoin="round"
         strokeLinecap="round"
@@ -112,7 +112,7 @@ export function TrenLineChart({
             cx={p.x}
             cy={p.y}
             r={4}
-            className="fill-white dark:fill-[#1e1e1e] stroke-indigo-600 dark:stroke-indigo-400"
+            className="fill-white dark:fill-[#1e1e1e] stroke-black dark:stroke-white"
             strokeWidth={2.5}
           >
             <title>{`${p.d.label}: ${p.d.nilai}`}</title>
@@ -147,29 +147,29 @@ export function TrenLineChart({
 export function TrenBadge({ data }: { data: TitikTren[] }) {
   if (data.length < 2) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500">
-        <Minus size={13} /> Baru
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-gray-400 dark:text-gray-500 px-2 py-0.5 bg-gray-100 dark:bg-[#252525] border border-black/10 dark:border-white/10">
+        <Minus size={12} /> Baru
       </span>
     );
   }
   const delta = data[data.length - 1].nilai - data[0].nilai;
   if (delta > 0.5) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-green-600 dark:text-green-400">
-        <TrendingUp size={13} /> Naik {delta.toFixed(1)}
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-black dark:text-white px-2 py-0.5 bg-gray-100 dark:bg-white/10 border border-black/20 dark:border-white/20">
+        <TrendingUp size={12} /> +{delta.toFixed(1)}
       </span>
     );
   }
   if (delta < -0.5) {
     return (
-      <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-red-500 dark:text-red-400">
-        <TrendingDown size={13} /> Turun {Math.abs(delta).toFixed(1)}
+      <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-black dark:text-white px-2 py-0.5 bg-gray-100 dark:bg-white/10 border border-black/20 dark:border-white/20">
+        <TrendingDown size={12} /> -{Math.abs(delta).toFixed(1)}
       </span>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400">
-      <Minus size={13} /> Stabil
+    <span className="inline-flex items-center gap-1 text-[11px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 px-2 py-0.5 bg-gray-50 dark:bg-[#252525] border border-black/10 dark:border-white/10">
+      <Minus size={12} /> Stabil
     </span>
   );
 }
@@ -180,9 +180,9 @@ export function TrenBadge({ data }: { data: TitikTren[] }) {
 export function RataRataBar({ nilai, max }: { nilai: number; max: number }) {
   const pct = Math.max(4, Math.min(100, (nilai / Math.max(max, 1)) * 100));
   return (
-    <div className="w-full h-3 bg-gray-100 dark:bg-[#2a2a2a] border border-black/10 dark:border-white/10">
+    <div className="w-full h-3 bg-gray-100 dark:bg-[#2a2a2a] border border-black/15 dark:border-white/15">
       <div
-        className="h-full bg-indigo-500 dark:bg-indigo-400 border-r-2 border-black dark:border-white/40"
+        className="h-full bg-black dark:bg-white border-r-2 border-black dark:border-white/40"
         style={{ width: `${pct}%` }}
       />
     </div>

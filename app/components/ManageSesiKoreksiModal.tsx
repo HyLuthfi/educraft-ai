@@ -183,25 +183,25 @@ export function ManageSesiKoreksiModal({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs">
-      <div className="w-full max-w-2xl bg-white dark:bg-[#1a1a1a] border-3 sm:border-4 border-black dark:border-white shadow-[6px_6px_0px_0px_#000] sm:shadow-[10px_10px_0px_0px_#000] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.2)] flex flex-col max-h-[90vh] overflow-hidden">
-        {/* Header Modal */}
-        <div className="flex items-center justify-between p-3.5 sm:p-5 border-b-3 sm:border-b-4 border-black dark:border-white bg-yellow-300 dark:bg-yellow-400">
+      <div className="w-full max-w-2xl bg-white dark:bg-[#1a1a1a] border-2 sm:border-3 border-black dark:border-white/20 shadow-[6px_6px_0px_0px_#000] sm:shadow-[8px_8px_0px_0px_#000] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.15)] flex flex-col max-h-[90vh] overflow-hidden">
+        {/* Header Modal (Clean Editorial Monochrome) */}
+        <div className="flex items-center justify-between p-3.5 sm:p-5 border-b-2 sm:border-b-3 border-black dark:border-white/20 bg-gray-100 dark:bg-[#252525]">
           <div className="flex items-center gap-2 sm:gap-2.5">
-            <div className="p-1.5 bg-black text-white">
+            <div className="p-1.5 bg-black text-white dark:bg-white dark:text-black">
               <GraduationCap className="w-4 h-4 sm:w-5 sm:h-5" />
             </div>
             <div>
-              <h2 className="text-sm sm:text-base font-black uppercase tracking-tight text-black">
+              <h2 className="text-sm sm:text-base font-black uppercase tracking-tight text-black dark:text-white">
                 Kelola Sesi Koreksi & Ujian
               </h2>
-              <p className="text-[10px] sm:text-xs font-bold text-black/70">
+              <p className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400">
                 Tinjau riwayat penilaian dan hapus sesi uji coba / tidak valid
               </p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 bg-white border-2 border-black text-black hover:bg-black hover:text-white transition-colors shadow-[2px_2px_0px_0px_#000] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
+            className="p-1.5 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/30 text-black dark:text-white hover:bg-black hover:text-white transition-colors shadow-[2px_2px_0px_0px_#000] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none cursor-pointer"
             aria-label="Tutup modal"
           >
             <X className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -217,7 +217,7 @@ export function ManageSesiKoreksiModal({
               placeholder="Cari judul sesi atau nama siswa..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white/30 font-medium dark:text-white focus:outline-none focus:ring-2 focus:ring-yellow-400"
+              className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-[#1a1a1a] border-2 border-black/20 dark:border-white/30 font-medium dark:text-white focus:outline-none focus:border-black dark:focus:border-white"
             />
           </div>
 
@@ -227,7 +227,7 @@ export function ManageSesiKoreksiModal({
             </span>
             <button
               onClick={fetchSessions}
-              className="p-1.5 bg-white dark:bg-[#2a2a2a] text-black dark:text-white border border-black dark:border-white/20 hover:bg-gray-100 transition-colors"
+              className="p-1.5 bg-white dark:bg-[#2a2a2a] text-black dark:text-white border-2 border-black/20 dark:border-white/20 hover:border-black transition-colors"
               title="Segarkan data"
             >
               <RotateCcw size={13} />
@@ -300,7 +300,7 @@ export function ManageSesiKoreksiModal({
                     <div className="flex items-center gap-1.5 self-start sm:self-auto">
                       <button
                         onClick={() => handleExportSingleExcel(s)}
-                        className="p-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-600 font-bold text-[10px] uppercase flex items-center gap-1 transition-colors"
+                        className="px-2.5 py-1.5 bg-white dark:bg-[#1a1a1a] hover:bg-gray-100 text-black dark:text-white border-2 border-black/20 dark:border-white/20 font-bold text-[10px] uppercase flex items-center gap-1 transition-colors cursor-pointer"
                         title="Unduh Excel (.xlsx)"
                       >
                         <FileSpreadsheet size={13} />
@@ -309,7 +309,7 @@ export function ManageSesiKoreksiModal({
 
                       <button
                         onClick={() => setExpandedId(isExpanded ? null : s.id)}
-                        className="px-2 py-1 bg-gray-100 dark:bg-zinc-800 text-black dark:text-white border border-black/20 text-[10px] font-bold uppercase flex items-center gap-1 hover:bg-gray-200 transition-colors"
+                        className="px-2.5 py-1.5 bg-white dark:bg-[#1a1a1a] text-black dark:text-white border-2 border-black/20 dark:border-white/20 text-[10px] font-bold uppercase flex items-center gap-1 hover:border-black transition-colors cursor-pointer"
                       >
                         <span>{isExpanded ? "Tutup" : "Pratinjau"}</span>
                         {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
@@ -318,7 +318,7 @@ export function ManageSesiKoreksiModal({
                       <button
                         onClick={() => handleDelete(s)}
                         disabled={isDeletingThis}
-                        className="p-1.5 bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-500 font-bold text-[10px] uppercase flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
+                        className="p-1.5 bg-white dark:bg-[#1a1a1a] hover:bg-red-50 dark:hover:bg-red-950/30 text-red-600 dark:text-red-400 border-2 border-red-500/40 font-bold text-[10px] uppercase flex items-center gap-1 transition-colors disabled:opacity-50 cursor-pointer"
                         title="Hapus Sesi"
                       >
                         {isDeletingThis ? (
