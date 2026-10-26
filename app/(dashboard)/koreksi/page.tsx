@@ -840,11 +840,17 @@ export default function AutoKoreksiPage() {
     const toastId = toast.loading("Menyiapkan dokumen Word Laporan Koreksi...");
 
     try {
+      let mapel = "Hasil Evaluasi Pembelajaran";
+      const matchMapel = soalText.match(new RegExp("MATA PELAJARAN\s*:\s*([^\n\r]+)", "i"));
+      if (matchMapel) mapel = matchMapel[1].trim();
+      let kelas = "Semua Kelas";
+      const matchKelas = soalText.match(new RegExp("KELAS\s*:\s*([^\n\r]+)", "i"));
+      if (matchKelas) kelas = matchKelas[1].trim();
       const payload = {
         header: {
           nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
-          mata_pelajaran: "Laporan Hasil Koreksi Ujian",
-          kelas: "Semua Kelas",
+          mata_pelajaran: mapel,
+          kelas: kelas,
           tanggal: new Date().toLocaleDateString("id-ID", {
             day: "numeric",
             month: "long",
@@ -853,7 +859,19 @@ export default function AutoKoreksiPage() {
           kkm: scoringConfig.kkm,
           skala: scoringConfig.skala,
         },
-        koreksi: koreksiResult,
+        koreksi: {
+          ...koreksiResult,
+          hasil: (koreksiResult.hasil || []).map((h: any) => ({
+            ...h,
+            detail_koreksi: (h.detail_koreksi || []).map((d: any) => ({
+              ...d,
+              opsi:
+                d.opsi && d.opsi.length >= 2
+                  ? d.opsi
+                  : extractOptionsForQuestion(soalText, d.nomor),
+            })),
+          })),
+        },
         soal_text: soalText || "",
       };
 
@@ -2085,11 +2103,16 @@ export default function AutoKoreksiPage() {
                         W
                       </div>
                       <div className="min-w-0">
-                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
-                          Microsoft Word (.docx)
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
+                            Microsoft Word (.docx)
+                          </span>
+                          <span className="bg-blue-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
+                            Resmi Dinas
+                          </span>
                         </div>
                         <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
-                          Format resmi standar dinas (Buku Nilai, Evaluasi AI, Lembar Siswa &amp; Tanda Tangan)
+                          Buku Nilai, Analitik AI, Lembar Evaluasi Siswa Per Halaman &amp; Tanda Tangan
                         </div>
                       </div>
                     </div>
@@ -2119,31 +2142,6 @@ export default function AutoKoreksiPage() {
                       </div>
                     </div>
                     <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
-                  </button>
-
-                  {/* Print / Cetak PDF Button */}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsExportModalOpen(false);
-                      setTimeout(() => window.print(), 200);
-                    }}
-                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-200 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-gray-300 dark:border-gray-700">
-                        <Printer size={17} />
-                      </div>
-                      <div className="min-w-0">
-                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white truncate">
-                          Cetak Dokumen Fisik / Simpan PDF
-                        </div>
-                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
-                          Buka jendela pratinjau cetak browser resmi siap print
-                        </div>
-                      </div>
-                    </div>
-                    <Printer size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
                   </button>
                 </div>
 
