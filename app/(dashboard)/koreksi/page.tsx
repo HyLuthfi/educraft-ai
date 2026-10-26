@@ -2180,16 +2180,11 @@ export default function AutoKoreksiPage() {
                         PDF
                       </div>
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-xs sm:text-sm text-black dark:text-white">
-                            Dokumen PDF (.pdf)
-                          </span>
-                          <span className="bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-wider">
-                            Resmi Dinas
-                          </span>
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                          Dokumen PDF (.pdf)
                         </div>
                         <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
-                          Format resmi identik Word siap cetak
+                          Format identik Word siap cetak
                         </div>
                       </div>
                     </div>
