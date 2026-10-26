@@ -834,21 +834,12 @@ export default function LibraryPage() {
                 ))}
               </div>
 
-              {/* Modal Footer Controls */}
-              <div className="p-3.5 sm:p-4 bg-white dark:bg-[#202020] border-t-2 border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-2.5">
-                <div className="flex items-center gap-1.5">
-                  <button
-                    onClick={() => handleCopyWhatsApp(activeDoc)}
-                    className="px-3 py-1.5 border-2 border-black/15 dark:border-white/15 font-bold text-xs hover:border-black flex items-center gap-1.5 cursor-pointer active:translate-y-0.5"
-                    title="Salin untuk WhatsApp"
-                  >
-                    {copiedType === "wa" ? <Check size={13} /> : <Share2 size={13} />}
-                    <span>WhatsApp</span>
-                  </button>
-
+              {/* Modal Footer Controls (1 Baris Rapi & Padat) */}
+              <div className="p-3 sm:p-4 bg-white dark:bg-[#202020] border-t-2 border-black/10 dark:border-white/10 flex items-center justify-between gap-2 overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-1.5 shrink-0">
                   <button
                     onClick={() => handleCopyCleanText(activeDoc)}
-                    className="px-3 py-1.5 border-2 border-black/15 dark:border-white/15 font-bold text-xs hover:border-black flex items-center gap-1.5 cursor-pointer active:translate-y-0.5"
+                    className="px-3 py-1.5 border-2 border-black/15 dark:border-white/15 font-bold text-xs hover:border-black flex items-center gap-1.5 cursor-pointer active:translate-y-0.5 shrink-0"
                     title="Salin Teks Bersih"
                   >
                     {copiedType === "clean" ? <Check size={13} /> : <Copy size={13} />}
@@ -861,7 +852,7 @@ export default function LibraryPage() {
                       else setIsEditing(true);
                     }}
                     disabled={isSavingEdits}
-                    className={`px-3 py-1.5 border-2 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:translate-y-0.5 ${
+                    className={`px-3 py-1.5 border-2 font-bold text-xs flex items-center gap-1.5 transition-colors cursor-pointer active:translate-y-0.5 shrink-0 ${
                       isEditing
                         ? "bg-black text-white border-black dark:bg-white dark:text-black"
                         : "border-black/15 dark:border-white/15 hover:border-black"
@@ -879,24 +870,22 @@ export default function LibraryPage() {
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  {/* Bridge to Koreksi (Clean Neobrutal Primary Button, NO PURPLE) */}
+                <div className="flex items-center gap-2 shrink-0">
                   <button
                     onClick={() => handleBridgeToKoreksi(activeDoc)}
-                    className="px-3.5 py-1.5 bg-black text-white dark:bg-white dark:text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5"
+                    className="px-3.5 py-1.5 bg-black text-white dark:bg-white dark:text-black font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5 shrink-0"
                   >
-                    <ClipboardCheck size={14} /> Koreksi Jawaban Murid
+                    <ClipboardCheck size={14} /> <span>Koreksi Jawaban Murid</span>
                   </button>
 
-                  {/* Unduh */}
                   <button
                     onClick={() => {
                       setIsViewModalOpen(false);
                       openDownloadModal(activeDoc);
                     }}
-                    className="px-3.5 py-1.5 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/30 text-black dark:text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5"
+                    className="px-3.5 py-1.5 bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/30 text-black dark:text-white font-bold text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)] hover:bg-gray-100 transition-colors cursor-pointer active:translate-y-0.5 shrink-0"
                   >
-                    <Download size={14} /> Unduh
+                    <Download size={14} /> <span>Unduh</span>
                   </button>
                 </div>
               </div>
