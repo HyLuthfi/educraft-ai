@@ -126,6 +126,23 @@ def set_table_borders_none(table):
     tblPr.append(borders)
 
 
+def set_table_width_and_grid(table, col_dxa: List[int]):
+    """Mengunci lebar total tabel dan grid kolom secara presisi pada level XML OpenXML."""
+    tblPr = table._tbl.tblPr
+    total_w = sum(col_dxa)
+    tblW = tblPr.find(qn('w:tblW'))
+    if tblW is not None:
+        tblW.set(qn('w:w'), str(total_w))
+        tblW.set(qn('w:type'), 'dxa')
+    else:
+        tblPr.append(parse_xml(f'<w:tblW {nsdecls("w")} w:w="{total_w}" w:type="dxa"/>'))
+
+    tblGrid = table._tbl.tblGrid
+    tblGrid.clear()
+    for d in col_dxa:
+        tblGrid.append(parse_xml(f'<w:gridCol {nsdecls("w")} w:w="{d}"/>'))
+
+
 def set_table_borders_thin(table, color="CCCCCC", sz="4"):
     """Memberikan border garis tunggal tipis profesional pada tabel."""
     tblPr = table._tbl.tblPr
@@ -1334,6 +1351,9 @@ def generate_koreksi_report_docx(
     )
     tblPr.append(bdr)
 
+    col_meta_dxa = [2016, 3168, 2016, 2837]
+    set_table_width_and_grid(t_meta, col_meta_dxa)
+
     meta_rows = [
         ("Mata Pelajaran", f":  {mapel}", "Tanggal Koreksi", f":  {tanggal}"),
         ("Kelas / Fase", f":  {kelas}", "Standar KKM", f":  {kkm}"),
@@ -1403,6 +1423,9 @@ def generate_koreksi_report_docx(
     t_siswa.alignment = WD_TABLE_ALIGNMENT.CENTER
     t_siswa.autofit = False
     set_table_borders_thin(t_siswa, color="CBD5E1", sz="4")
+
+    col_siswa_dxa = [576, 3168, 1368, 1656, 3269]
+    set_table_width_and_grid(t_siswa, col_siswa_dxa)
 
     headers_siswa = ["No", "Nama Siswa", "Nilai Akhir", "Status KKM", "Catatan & Rekomendasi Guru"]
     widths_siswa = [Inches(0.4), Inches(2.2), Inches(0.95), Inches(1.15), Inches(2.27)]
@@ -1515,6 +1538,9 @@ def generate_koreksi_report_docx(
     row_sig = t_sig.rows[0]
     row_sig._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
 
+    col_sig_dxa = [5018, 5019]
+    set_table_width_and_grid(t_sig, col_sig_dxa)
+
     cell_kiri = row_sig.cells[0]
     cell_kanan = row_sig.cells[1]
     cell_kiri.width = Inches(3.48)
@@ -1588,6 +1614,9 @@ def generate_koreksi_report_docx(
             </w:tblBorders>'''
         )
         tblPr_sm.append(bdr_sm)
+
+        col_stu_meta_dxa = [1872, 3312, 1944, 2909]
+        set_table_width_and_grid(t_stu_meta, col_stu_meta_dxa)
 
         is_tuntas = str(s.get("status_kelulusan", "")).lower() == "tuntas"
         status_label = "TUNTAS KKM" if is_tuntas else "REMEDIAL (Belum Tuntas)"
@@ -1664,6 +1693,7 @@ def generate_koreksi_report_docx(
         r_tt.font.size = Pt(10.5)
         r_tt.font.bold = True
 
+        col_eval_dxa = [504, 3341, 1800, 1800, 1152, 1440]
         col_eval_w = [Inches(0.35), Inches(2.32), Inches(1.25), Inches(1.25), Inches(0.80), Inches(1.00)]
         eval_headers = ["No", "Butir Pertanyaan", "Jawaban Siswa", "Kunci Acuan", "Skor / Status", "Catatan Evaluasi"]
 
@@ -1671,6 +1701,7 @@ def generate_koreksi_report_docx(
         t_eval.alignment = WD_TABLE_ALIGNMENT.CENTER
         t_eval.autofit = False
         set_table_borders_thin(t_eval, color="CBD5E1", sz="4")
+        set_table_width_and_grid(t_eval, col_eval_dxa)
 
         hdr = t_eval.rows[0]
         hdr._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
@@ -1805,33 +1836,31 @@ def generate_koreksi_report_docx(
             r_st.font.bold = True
             r_st.font.color.rgb = RGBColor(22, 101, 52) if is_tuntas else RGBColor(185, 28, 28)
 
-        # 4. Catatan & Rekomendasi Guru Callout Box (Clean Spaced)
+        # 4. Baris Terintegrasi Catatan & Rekomendasi Guru (Satu Kesatuan Tabel, Pasti Rata Sempurna!)
         catatan_guru = s.get("rekomendasi") or s.get("catatan")
         if catatan_guru and not is_redundant_catatan(catatan_guru):
-            t_rec = doc.add_table(rows=1, cols=1)
-            t_rec.alignment = WD_TABLE_ALIGNMENT.CENTER
-            t_rec.autofit = False
-            row_rec = t_rec.rows[0]
-            row_rec._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
-            c_rec = row_rec.cells[0]
-            c_rec.width = Inches(6.97)
-            set_cell_background(c_rec, "F8FAFC")
-            set_cell_margins(c_rec, top=80, bottom=80, left=120, right=120)
-            set_table_borders_thin(t_rec, color="CBD5E1", sz="4")
+            r_note = t_eval.add_row()
+            r_note._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+            c_note = r_note.cells[0]
+            for c_idx in range(1, 6):
+                c_note.merge(r_note.cells[c_idx])
+            set_cell_background(c_note, "F8FAFC")
+            set_cell_margins(c_note, top=80, bottom=80, left=100, right=100)
+            c_note.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
 
-            p_rc = c_rec.paragraphs[0]
-            p_rc.paragraph_format.space_after = Pt(0)
-            p_rc.paragraph_format.line_spacing = 1.15
-            r_rh = p_rc.add_run("Catatan & Rekomendasi Guru: ")
-            r_rh.font.name = "Times New Roman"
-            r_rh.font.size = Pt(9.5)
-            r_rh.font.bold = True
+            p_n = c_note.paragraphs[0]
+            p_n.paragraph_format.space_after = Pt(0)
+            p_n.paragraph_format.line_spacing = 1.15
+            r_nh = p_n.add_run("Catatan & Rekomendasi Guru: ")
+            r_nh.font.name = "Times New Roman"
+            r_nh.font.size = Pt(9.5)
+            r_nh.font.bold = True
 
-            r_rt = p_rc.add_run(catatan_guru)
-            r_rt.font.name = "Times New Roman"
-            r_rt.font.size = Pt(9.5)
-            r_rt.font.italic = True
-            r_rt.font.color.rgb = RGBColor(55, 65, 81)
+            r_nt = p_n.add_run(catatan_guru)
+            r_nt.font.name = "Times New Roman"
+            r_nt.font.size = Pt(9.5)
+            r_nt.font.italic = True
+            r_nt.font.color.rgb = RGBColor(55, 65, 81)
 
         # 5. Lembar Tanda Tangan Orang Tua & Guru di Akhir Lembar Siswa
         t_stu_sig = doc.add_table(rows=1, cols=2)
@@ -1840,6 +1869,9 @@ def generate_koreksi_report_docx(
         set_table_borders_none(t_stu_sig)
         row_stu_sig = t_stu_sig.rows[0]
         row_stu_sig._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+
+        col_stu_sig_dxa = [5018, 5019]
+        set_table_width_and_grid(t_stu_sig, col_stu_sig_dxa)
 
         c_ot = row_stu_sig.cells[0]
         c_gr = row_stu_sig.cells[1]
