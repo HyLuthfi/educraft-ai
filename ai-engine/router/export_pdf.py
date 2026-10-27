@@ -2,9 +2,10 @@ import logging
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 import io
-from service.pdf_builder import generate_koreksi_report_pdf
+import datetime
+from service.pdf_builder import generate_koreksi_report_pdf, generate_rapor_report_pdf
 
 try:
     from fpdf import FPDF
@@ -257,4 +258,35 @@ async def export_koreksi_pdf(req: RequestExportKoreksiPdf):
     except Exception as e:
         logger.error(f"Export Koreksi PDF gagal: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Gagal generate dokumen PDF: {str(e)}")
+
+
+class RequestExportRaporPdf(BaseModel):
+    header: Optional[Dict[str, Any]] = None
+    siswa_list: list = Field(default_factory=list)
+    sesi_list: Optional[list] = Field(default_factory=list)
+
+
+@router.post("/export/rapor-pdf")
+async def export_rapor_pdf(req: RequestExportRaporPdf):
+    try:
+        header_dict = req.header or {}
+        header_dict.setdefault("nama_sekolah", "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL")
+        header_dict.setdefault("total_sesi", len(req.sesi_list or []))
+
+        pdf_stream = generate_rapor_report_pdf(
+            header_data=header_dict,
+            siswa_list=req.siswa_list or [],
+            sesi_list=req.sesi_list or []
+        )
+
+        filename = f"Rapor_Siswa_{datetime.datetime.now().strftime('%Y%m%d')}.pdf"
+        return StreamingResponse(
+            pdf_stream,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Export Rapor PDF gagal: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal generate dokumen PDF Rapor Siswa: {str(e)}")
+
 

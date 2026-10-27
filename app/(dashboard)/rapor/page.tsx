@@ -12,6 +12,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   TrendingUp,
   Users,
@@ -24,6 +25,8 @@ import {
   FileSpreadsheet,
   Settings,
   Loader2,
+  Download,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
@@ -74,6 +77,8 @@ export default function RaporPage() {
   const [error, setError] = useState<string | null>(null);
   const [query, setQuery] = useState("");
   const [isManageModalOpen, setIsManageModalOpen] = useState(false);
+  const [isDownloadModalOpen, setIsDownloadModalOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     async function load() {
@@ -195,6 +200,118 @@ export default function RaporPage() {
     toast.success("Rapor siswa berhasil diunduh ke format Excel!");
   };
 
+  const handleExportRaporDocx = async () => {
+    if (siswaTrenList.length === 0) {
+      toast.error("Belum ada data rapor untuk diekspor.");
+      return;
+    }
+
+    setIsExporting(true);
+    const toastId = toast.loading("Menyiapkan dokumen Word Rapor Siswa...");
+
+    try {
+      const payload = {
+        header: {
+          nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
+          mata_pelajaran: "Rapor Capaian & Tren Asesmen Siswa",
+          kelas: "Semua Kelas",
+          tanggal: new Date().toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          total_sesi: numericSesiCount,
+        },
+        siswa_list: siswaTrenList,
+        sesi_list: sesiList,
+      };
+
+      const res = await fetch("/api/export/rapor-docx", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Gagal mengunduh dokumen Word");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Rapor_Siswa_${new Date().toISOString().slice(0, 10)}.docx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+
+      toast.success("Dokumen Word Rapor Siswa berhasil diunduh!", { id: toastId });
+      setIsDownloadModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal mengekspor dokumen Word", { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportRaporPdf = async () => {
+    if (siswaTrenList.length === 0) {
+      toast.error("Belum ada data rapor untuk diekspor.");
+      return;
+    }
+
+    setIsExporting(true);
+    const toastId = toast.loading("Menyiapkan dokumen PDF Rapor Siswa...");
+
+    try {
+      const payload = {
+        header: {
+          nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
+          mata_pelajaran: "Rapor Capaian & Tren Asesmen Siswa",
+          kelas: "Semua Kelas",
+          tanggal: new Date().toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "long",
+            year: "numeric",
+          }),
+          total_sesi: numericSesiCount,
+        },
+        siswa_list: siswaTrenList,
+        sesi_list: sesiList,
+      };
+
+      const res = await fetch("/api/export/rapor-pdf", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const errData = await res.json().catch(() => ({}));
+        throw new Error(errData.error || "Gagal mengunduh dokumen PDF");
+      }
+
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Rapor_Siswa_${new Date().toISOString().slice(0, 10)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+
+      toast.success("Dokumen PDF Rapor Siswa berhasil diunduh!", { id: toastId });
+      setIsDownloadModalOpen(false);
+    } catch (err: any) {
+      toast.error(err.message || "Gagal mengekspor dokumen PDF", { id: toastId });
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
   // ── Loading ──
   if (loading) {
     return (
@@ -249,10 +366,10 @@ export default function RaporPage() {
             {siswaTrenList.length > 0 && (
               <button
                 type="button"
-                onClick={handleExportRaporExcel}
+                onClick={() => setIsDownloadModalOpen(true)}
                 className="px-3.5 sm:px-4 py-2.5 bg-white dark:bg-[#252525] border-2 border-black dark:border-white/30 text-black dark:text-white font-bold uppercase tracking-wider text-xs hover:bg-gray-100 dark:hover:bg-[#333] transition-all flex items-center justify-center gap-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-0.5 cursor-pointer whitespace-nowrap"
               >
-                <FileSpreadsheet size={14} /> <span>Unduh Excel</span>
+                <Download size={14} /> <span>Unduh Rapor</span>
               </button>
             )}
 
@@ -412,6 +529,132 @@ export default function RaporPage() {
           setSesiList((prev) => prev.filter((s) => s.id !== deletedId));
         }}
       />
+
+      {/* ── MODAL DOWNLOAD HUB TERPADU (PDF, WORD, EXCEL) ── */}
+      <AnimatePresence>
+        {isDownloadModalOpen && (
+          <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setIsDownloadModalOpen(false)}
+              className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="relative w-full max-w-lg bg-white dark:bg-[#1e1e1e] border-2 sm:border-3 border-black dark:border-white/20 shadow-[6px_6px_0px_0px_#000] dark:shadow-[6px_6px_0px_0px_rgba(255,255,255,0.15)] overflow-hidden flex flex-col max-h-[88vh]"
+            >
+              {/* Header Modal */}
+              <div className="flex items-center justify-between p-3.5 sm:p-5 border-b-2 border-black/10 dark:border-white/10 bg-gray-50 dark:bg-[#252525]">
+                <div>
+                  <h3 className="text-base sm:text-lg font-bold flex items-center gap-2 text-black dark:text-white">
+                    <Download size={18} className="text-gray-500 dark:text-gray-400" /> Download Hub
+                  </h3>
+                  <p className="text-gray-500 dark:text-gray-400 text-[11px] sm:text-xs mt-0.5">
+                    Pilih format ekspor rapor sesuai kebutuhan Anda.
+                  </p>
+                </div>
+                <button
+                  onClick={() => setIsDownloadModalOpen(false)}
+                  className="p-1.5 text-gray-400 hover:text-black dark:hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Body Modal */}
+              <div className="p-3.5 sm:p-5 space-y-4 overflow-y-auto">
+                <div className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <span className="bg-black text-white dark:bg-white dark:text-black text-[10px] font-black px-1.5 py-0.5 uppercase tracking-wider">
+                      01
+                    </span>
+                    <h4 className="font-bold text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">
+                      Dokumen Cetak &amp; Arsip
+                    </h4>
+                  </div>
+
+                  {/* Dokumen PDF */}
+                  <button
+                    type="button"
+                    disabled={isExporting}
+                    onClick={handleExportRaporPdf}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-red-100 text-red-700 dark:bg-red-950 dark:text-red-300 rounded flex items-center justify-center font-bold text-xs shrink-0 border border-red-300 dark:border-red-800">
+                        PDF
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                          Dokumen PDF (.pdf)
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Format identik Word siap cetak
+                        </div>
+                      </div>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+
+                  {/* Microsoft Word */}
+                  <button
+                    type="button"
+                    disabled={isExporting}
+                    onClick={handleExportRaporDocx}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-300 rounded flex items-center justify-center font-bold text-sm shrink-0 border border-blue-300 dark:border-blue-800">
+                        W
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                          Microsoft Word (.docx)
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Dokumen resmi dapat diedit di Word &amp; Docs
+                        </div>
+                      </div>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+
+                  {/* Microsoft Excel */}
+                  <button
+                    type="button"
+                    disabled={isExporting}
+                    onClick={() => {
+                      handleExportRaporExcel();
+                      setIsDownloadModalOpen(false);
+                    }}
+                    className="w-full flex items-center justify-between p-2.5 sm:p-3 border-2 border-black/15 dark:border-white/15 bg-white dark:bg-[#252525] hover:border-black dark:hover:border-white shadow-[2px_2px_0px_0px_rgba(0,0,0,0.06)] active:translate-y-0.5 transition-all group text-left cursor-pointer"
+                  >
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-8 h-8 sm:w-9 sm:h-9 bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300 rounded flex items-center justify-center font-bold text-xs shrink-0 border border-emerald-400 dark:border-emerald-800">
+                        XLS
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-bold text-xs sm:text-sm text-black dark:text-white">
+                          Microsoft Excel (.xlsx)
+                        </div>
+                        <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                          Rekap nilai lengkap &amp; peringkat rapor kelas
+                        </div>
+                      </div>
+                    </div>
+                    <Download size={16} className="text-gray-400 group-hover:text-black dark:group-hover:text-white shrink-0 ml-2" />
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
