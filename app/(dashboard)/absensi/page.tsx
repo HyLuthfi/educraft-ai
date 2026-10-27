@@ -1459,19 +1459,36 @@ function RiwayatAbsensiView({
         </button>
       </div>
 
-      {/* KPI Stats Bar Monokrom */}
-      <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000]">
-          <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Total Sesi</span>
-          <div className="text-xl sm:text-2xl font-black text-black dark:text-white mt-0.5">{totalSesi} Sesi</div>
+      {/* KPI Stats Bar Monokrom (Ringkas, Padat, & Proporsional 1:1 Rapor) */}
+      <div className="grid grid-cols-3 gap-2 sm:gap-3">
+        <div className="p-2.5 sm:p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex flex-col justify-between">
+          <span className="text-[10px] sm:text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider truncate">
+            Total Sesi
+          </span>
+          <div className="flex items-baseline gap-1 mt-0.5">
+            <span className="text-lg sm:text-2xl font-black text-black dark:text-white font-sans">{totalSesi}</span>
+            <span className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400">Sesi</span>
+          </div>
         </div>
-        <div className="p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000]">
-          <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Total Catatan</span>
-          <div className="text-xl sm:text-2xl font-black text-black dark:text-white mt-0.5">{totalMuridSemua} Siswa</div>
+
+        <div className="p-2.5 sm:p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex flex-col justify-between">
+          <span className="text-[10px] sm:text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider truncate">
+            Total Siswa
+          </span>
+          <div className="flex items-baseline gap-1 mt-0.5">
+            <span className="text-lg sm:text-2xl font-black text-black dark:text-white font-sans">{totalMuridSemua}</span>
+            <span className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400">Siswa</span>
+          </div>
         </div>
-        <div className="p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000]">
-          <span className="text-[10px] font-black uppercase text-gray-500 tracking-wider">Rata Kehadiran</span>
-          <div className="text-xl sm:text-2xl font-black text-black dark:text-white mt-0.5">{avgKehadiran}%</div>
+
+        <div className="p-2.5 sm:p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex flex-col justify-between">
+          <span className="text-[10px] sm:text-[11px] font-bold uppercase text-gray-500 dark:text-gray-400 tracking-wider truncate">
+            Kehadiran
+          </span>
+          <div className="flex items-baseline gap-0.5 mt-0.5">
+            <span className="text-lg sm:text-2xl font-black text-black dark:text-white font-sans">{avgKehadiran}</span>
+            <span className="text-[10px] sm:text-xs font-black text-black dark:text-white">%</span>
+          </div>
         </div>
       </div>
 
