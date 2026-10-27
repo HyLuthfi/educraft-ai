@@ -81,12 +81,12 @@ interface RencanaPembelajaran {
 }
 
 const GAYA_MENGAJAR = [
-  { id: "ceramah", label: "Penjelasan Seru", desc: "Guru jelaskan, murid aktif tanya jawab" },
-  { id: "diskusi", label: "Kerja Kelompok", desc: "Diskusi & kolaborasi bareng teman" },
-  { id: "proyek", label: "Karya / Proyek", desc: "Belajar sambil bikin karya nyata" },
-  { id: "masalah", label: "Pecahkan Masalah", desc: "Analisis studi kasus & cari solusi" },
-  { id: "eksplorasi", label: "Eksplorasi Mandiri", desc: "Murid amati & temukan konsep sendiri" },
-  { id: "game", label: "Belajar Lewat Game", desc: "Kuis seru & tantangan interaktif" },
+  { id: "ceramah", label: "Penjelasan Seru" },
+  { id: "diskusi", label: "Kerja Kelompok" },
+  { id: "proyek", label: "Karya / Proyek" },
+  { id: "masalah", label: "Pecahkan Masalah" },
+  { id: "eksplorasi", label: "Eksplorasi Mandiri" },
+  { id: "game", label: "Game Edukasi" },
 ];
 
 const TIPE_AKTIVITAS: Record<
@@ -173,7 +173,7 @@ export default function PerencanaPembelajaranPage() {
     setIsLoading(true);
 
     const gayaObj = GAYA_MENGAJAR.find((g) => g.id === gaya);
-    const gayaLabel = gayaObj ? `${gayaObj.label} (${gayaObj.desc})` : gaya;
+    const gayaLabel = gayaObj ? gayaObj.label : gaya;
 
     try {
       const formData = new FormData();
@@ -622,12 +622,12 @@ export default function PerencanaPembelajaranPage() {
                     </div>
                   </div>
 
-                  {/* Gaya Mengajar Grid (Bahasa Simpel, Mudah Dipahami) */}
+                  {/* Gaya Mengajar Grid (Bahasa Ringkas, Pas Tanpa Terpotong) */}
                   <div>
                     <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 block">
                       Suasana & Cara Belajar
                     </label>
-                    <div className="grid grid-cols-2 gap-1.5">
+                    <div className="grid grid-cols-2 gap-1.5 sm:gap-2">
                       {GAYA_MENGAJAR.map((item) => {
                         const active = gaya === item.id;
                         return (
@@ -635,18 +635,13 @@ export default function PerencanaPembelajaranPage() {
                             key={item.id}
                             type="button"
                             onClick={() => setGaya(item.id)}
-                            className={`p-2 border-2 text-left transition-all cursor-pointer ${
+                            className={`py-2 px-2.5 sm:px-3 border-2 font-bold text-xs uppercase tracking-tight text-center transition-all cursor-pointer ${
                               active
                                 ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_#000] -translate-y-0.5"
                                 : "bg-white dark:bg-[#252525] text-gray-700 dark:text-gray-300 border-black/30 dark:border-white/20 hover:border-black dark:hover:border-white"
                             }`}
                           >
-                            <span className="font-bold text-xs uppercase tracking-tight block truncate">
-                              {item.label}
-                            </span>
-                            <span className={`text-[10px] leading-tight block truncate mt-0.5 ${active ? "opacity-85 text-white dark:text-black" : "text-gray-500 dark:text-gray-400"}`}>
-                              {item.desc}
-                            </span>
+                            <span className="block leading-snug">{item.label}</span>
                           </button>
                         );
                       })}
