@@ -310,25 +310,25 @@ export default function RaporPage() {
         {/* ── KONTEN UTAMA RAPOR ── */}
         {!error && siswaTrenList.length > 0 && (
           <div className="space-y-6 sm:space-y-8">
-            {/* 3 StatCard Ringkas (Monokrom Murni) */}
-            <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
+            {/* 3 StatCard Ringkas (Monokrom Murni, Tanpa Truncate Canggung) */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-4">
               <StatCard
-                icon={<Users size={15} className="text-black dark:text-white" />}
-                label="Total Siswa"
+                icon={<Users size={14} className="text-black dark:text-white" />}
+                label="Siswa"
                 value={String(totalSiswa)}
-                sub={`Dari ${numericSesiCount} sesi numerik`}
+                sub={`${numericSesiCount} sesi dinilai`}
               />
               <StatCard
-                icon={<GraduationCap size={15} className="text-black dark:text-white" />}
-                label="Rata-Rata"
+                icon={<GraduationCap size={14} className="text-black dark:text-white" />}
+                label="Rata Kelas"
                 value={rataKelas.toFixed(1)}
-                sub="Rata-rata seluruh siswa"
+                sub="Skala 100"
               />
               <StatCard
-                icon={<Trophy size={15} className="text-black dark:text-white" />}
-                label="Peringkat 1"
-                value={filtered.length ? siswaTrenList[0].nama.split(" ")[0] : "-"}
-                sub={siswaTrenList.length ? `Rata ${siswaTrenList[0].rataRata.toFixed(1)}` : ""}
+                icon={<Trophy size={14} className="text-black dark:text-white" />}
+                label="Tertinggi"
+                value={filtered.length ? `${siswaTrenList[0].rataRata.toFixed(1)}` : "-"}
+                sub={siswaTrenList.length ? `${siswaTrenList[0].nama.split(" ")[0]}` : ""}
               />
             </div>
 
@@ -365,13 +365,15 @@ export default function RaporPage() {
 
             {/* Grid Kartu Tren Siswa */}
             <div>
-              <div className="flex items-center justify-between mb-3 border-t-2 border-black/10 dark:border-white/10 pt-5">
-                <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black dark:text-white flex items-center gap-1.5">
-                  <TrendingUp size={15} /> Grafik Perkembangan Nilai Per Siswa
-                </h2>
-                <span className="text-[11px] text-gray-500 dark:text-gray-400">
-                  {filtered.length} Siswa Ditampilkan
-                </span>
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 mb-3.5 border-t-2 border-black/10 dark:border-white/10 pt-5">
+                <div>
+                  <h2 className="text-xs sm:text-sm font-bold uppercase tracking-wider text-black dark:text-white flex items-center gap-1.5">
+                    <TrendingUp size={15} /> Tren Perkembangan Nilai Siswa
+                  </h2>
+                  <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-0.5">
+                    Menampilkan {filtered.length} riwayat siswa
+                  </p>
+                </div>
               </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -414,7 +416,7 @@ export default function RaporPage() {
   );
 }
 
-// ── Kartu statistik ringkas (Monokrom Murni) ──
+// ── Kartu statistik ringkas (Monokrom Murni, Font Sans-Serif Kokoh) ──
 function StatCard({
   icon,
   label,
@@ -427,12 +429,12 @@ function StatCard({
   sub?: string;
 }) {
   return (
-    <div className="border-2 border-black dark:border-white/20 p-3 sm:p-5 bg-white dark:bg-[#202020] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)]">
-      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[10px] sm:text-xs mb-1 sm:mb-2 truncate">
-        {icon} <span className="truncate">{label}</span>
+    <div className="border-2 border-black dark:border-white/20 p-2.5 sm:p-4 bg-white dark:bg-[#202020] shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] dark:shadow-[2px_2px_0px_0px_rgba(255,255,255,0.1)] flex flex-col justify-between">
+      <div className="flex items-center gap-1.5 text-gray-500 dark:text-gray-400 font-bold uppercase text-[10px] sm:text-xs tracking-normal">
+        {icon} <span>{label}</span>
       </div>
-      <div className="text-lg sm:text-3xl font-editorial font-bold text-black dark:text-white truncate">{value}</div>
-      {sub && <p className="hidden sm:block text-[11px] text-gray-500 dark:text-gray-400 mt-1.5 truncate">{sub}</p>}
+      <div className="text-xl sm:text-3xl font-extrabold text-black dark:text-white my-0.5 tracking-tight">{value}</div>
+      {sub && <p className="text-[10px] sm:text-[11px] text-gray-500 dark:text-gray-400 font-medium truncate">{sub}</p>}
     </div>
   );
 }

@@ -41,6 +41,41 @@ export function TrenLineChart({
   const max = Math.max(maxNilai, 1);
   const n = data.length;
 
+  if (n === 0) {
+    return (
+      <div className="flex items-center justify-center h-28 text-xs text-gray-400 dark:text-gray-500 font-medium border border-dashed border-black/15">
+        Belum ada data nilai asesmen.
+      </div>
+    );
+  }
+
+  // Jika baru ada 1 sesi: jangan buat kanvas grafik koordinat kosong, sajikan kartu progres tunggal compact & bersih
+  if (n === 1) {
+    const single = data[0];
+    const pct = Math.min(100, Math.max(0, (single.nilai / max) * 100));
+    return (
+      <div className="bg-gray-50 dark:bg-[#1a1a1a] p-3 border border-black/15 dark:border-white/10 space-y-2">
+        <div className="flex items-center justify-between text-xs">
+          <span className="font-bold text-gray-500 dark:text-gray-400">
+            Sesi Pertama: <span className="text-black dark:text-white">{single.label}</span>
+          </span>
+          <span className="font-mono font-bold text-sm text-black dark:text-white">
+            {single.nilai} <span className="text-[10px] text-gray-400 font-normal">/ {max}</span>
+          </span>
+        </div>
+        <div className="w-full h-2.5 bg-gray-200 dark:bg-[#282828] border border-black/15 dark:border-white/15 overflow-hidden">
+          <div
+            className="h-full bg-black dark:bg-white transition-all duration-300"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+        <p className="text-[10px] text-gray-400 dark:text-gray-500 italic">
+          Grafik garis tren otomatis aktif setelah siswa mengikuti minimal 2 sesi asesmen.
+        </p>
+      </div>
+    );
+  }
+
   // Posisi X tiap titik (rata dari kiri ke kanan)
   const xOf = (i: number) => (n <= 1 ? padL + innerW / 2 : padL + (i / (n - 1)) * innerW);
   const yOf = (v: number) => padT + innerH - (Math.min(v, max) / max) * innerH;
@@ -54,14 +89,6 @@ export function TrenLineChart({
 
   // Garis grid horizontal (4 baris)
   const gridVals = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(max * f));
-
-  if (n === 0) {
-    return (
-      <div className="flex items-center justify-center h-40 text-sm text-gray-400 dark:text-gray-500 font-medium">
-        Belum ada data nilai.
-      </div>
-    );
-  }
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" preserveAspectRatio="xMidYMid meet">
@@ -178,7 +205,12 @@ export function TrenBadge({ data }: { data: TitikTren[] }) {
 // Mini bar — perbandingan rata-rata antar siswa (leaderboard)
 // ═══════════════════════════════════════════════════════════════════════════
 export function RataRataBar({ nilai, max }: { nilai: number; max: number }) {
-  const pct = Math.max(4, Math.min(100, (nilai / Math.max(max, 1)) * 100));
+  if (nilai <= 0) {
+    return (
+      <div className="w-full h-3 bg-gray-100 dark:bg-[#2a2a2a] border border-black/15 dark:border-white/15" />
+    );
+  }
+  const pct = Math.max(2, Math.min(100, (nilai / Math.max(max, 1)) * 100));
   return (
     <div className="w-full h-3 bg-gray-100 dark:bg-[#2a2a2a] border border-black/15 dark:border-white/15">
       <div
