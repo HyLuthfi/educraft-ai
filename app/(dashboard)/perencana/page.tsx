@@ -81,12 +81,12 @@ interface RencanaPembelajaran {
 }
 
 const GAYA_MENGAJAR = [
-  "Ceramah Interaktif",
-  "Discovery Learning",
-  "Project-Based Learning",
-  "Problem-Based Learning",
-  "Kolaboratif / Diskusi",
-  "Gamifikasi",
+  { id: "ceramah", label: "Penjelasan Seru", desc: "Guru jelaskan, murid aktif tanya jawab" },
+  { id: "diskusi", label: "Kerja Kelompok", desc: "Diskusi & kolaborasi bareng teman" },
+  { id: "proyek", label: "Karya / Proyek", desc: "Belajar sambil bikin karya nyata" },
+  { id: "masalah", label: "Pecahkan Masalah", desc: "Analisis studi kasus & cari solusi" },
+  { id: "eksplorasi", label: "Eksplorasi Mandiri", desc: "Murid amati & temukan konsep sendiri" },
+  { id: "game", label: "Belajar Lewat Game", desc: "Kuis seru & tantangan interaktif" },
 ];
 
 const TIPE_AKTIVITAS: Record<
@@ -115,7 +115,7 @@ export default function PerencanaPembelajaranPage() {
   const [jenjang, setJenjang] = useState("");
   const [jumlahPertemuan, setJumlahPertemuan] = useState(4);
   const [durasi, setDurasi] = useState(90);
-  const [gaya, setGaya] = useState(GAYA_MENGAJAR[0]);
+  const [gaya, setGaya] = useState(GAYA_MENGAJAR[0].id);
   const [sertakanKuis, setSertakanKuis] = useState(true);
   const [sertakanGame, setSertakanGame] = useState(true);
   const [instruksi, setInstruksi] = useState("");
@@ -172,6 +172,9 @@ export default function PerencanaPembelajaranPage() {
 
     setIsLoading(true);
 
+    const gayaObj = GAYA_MENGAJAR.find((g) => g.id === gaya);
+    const gayaLabel = gayaObj ? `${gayaObj.label} (${gayaObj.desc})` : gaya;
+
     try {
       const formData = new FormData();
       formData.append("raw_materi", rawMateri);
@@ -182,7 +185,7 @@ export default function PerencanaPembelajaranPage() {
           durasi,
           jenjang,
           mata_pelajaran: mataPelajaran,
-          gaya,
+          gaya: gayaLabel,
           sertakan_kuis: sertakanKuis,
           sertakan_game: sertakanGame,
           instruksi,
@@ -317,6 +320,9 @@ export default function PerencanaPembelajaranPage() {
   const handleExportDocx = async () => {
     if (!result || !result.daftar_pertemuan) return;
     const toastId = toast.loading("Menyiapkan dokumen Word Modul Ajar...");
+    const gayaObj = GAYA_MENGAJAR.find((g) => g.id === gaya);
+    const gayaLabel = gayaObj ? gayaObj.label : (gaya || "Problem-Based Learning");
+
     try {
       const res = await fetch("/api/export/perencana-docx", {
         method: "POST",
@@ -326,7 +332,7 @@ export default function PerencanaPembelajaranPage() {
             judul: result.judul_rencana,
             mata_pelajaran: mataPelajaran || "Mata Pelajaran Umum",
             jenjang: jenjang || "Fase E / Kelas X",
-            gaya: gaya || "Problem-Based Learning",
+            gaya: gayaLabel,
             durasi: durasi || 90,
             tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
             nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
@@ -362,6 +368,9 @@ export default function PerencanaPembelajaranPage() {
   const handleExportPdf = async () => {
     if (!result || !result.daftar_pertemuan) return;
     const toastId = toast.loading("Menyiapkan dokumen PDF Modul Ajar...");
+    const gayaObj = GAYA_MENGAJAR.find((g) => g.id === gaya);
+    const gayaLabel = gayaObj ? gayaObj.label : (gaya || "Problem-Based Learning");
+
     try {
       const res = await fetch("/api/export/perencana-pdf", {
         method: "POST",
@@ -371,7 +380,7 @@ export default function PerencanaPembelajaranPage() {
             judul: result.judul_rencana,
             mata_pelajaran: mataPelajaran || "Mata Pelajaran Umum",
             jenjang: jenjang || "Fase E / Kelas X",
-            gaya: gaya || "Problem-Based Learning",
+            gaya: gayaLabel,
             durasi: durasi || 90,
             tanggal: new Date().toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" }),
             nama_sekolah: "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL",
@@ -613,24 +622,31 @@ export default function PerencanaPembelajaranPage() {
                     </div>
                   </div>
 
-                  {/* Gaya Mengajar Grid */}
+                  {/* Gaya Mengajar Grid (Bahasa Simpel, Mudah Dipahami) */}
                   <div>
-                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 block">Model Pembelajaran</label>
+                    <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1.5 block">
+                      Suasana & Cara Belajar
+                    </label>
                     <div className="grid grid-cols-2 gap-1.5">
-                      {GAYA_MENGAJAR.map((g) => {
-                        const active = gaya === g;
+                      {GAYA_MENGAJAR.map((item) => {
+                        const active = gaya === item.id;
                         return (
                           <button
-                            key={g}
+                            key={item.id}
                             type="button"
-                            onClick={() => setGaya(g)}
-                            className={`p-2 border-2 font-bold text-xs text-left transition-all cursor-pointer ${
+                            onClick={() => setGaya(item.id)}
+                            className={`p-2 border-2 text-left transition-all cursor-pointer ${
                               active
                                 ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_#000] -translate-y-0.5"
                                 : "bg-white dark:bg-[#252525] text-gray-700 dark:text-gray-300 border-black/30 dark:border-white/20 hover:border-black dark:hover:border-white"
                             }`}
                           >
-                            <span className="truncate block">{g}</span>
+                            <span className="font-bold text-xs uppercase tracking-tight block truncate">
+                              {item.label}
+                            </span>
+                            <span className={`text-[10px] leading-tight block truncate mt-0.5 ${active ? "opacity-85 text-white dark:text-black" : "text-gray-500 dark:text-gray-400"}`}>
+                              {item.desc}
+                            </span>
                           </button>
                         );
                       })}
@@ -678,15 +694,17 @@ export default function PerencanaPembelajaranPage() {
                 </div>
               </div>
 
-              {/* Submit Button Utama */}
-              <button
-                onClick={handleSubmit}
-                disabled={isLoading}
-                className="w-full py-4 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-sm sm:text-base border-2 border-black dark:border-white shadow-[4px_4px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
-              >
-                <Sparkles size={18} />
-                <span>Susun Rencana Pembelajaran dengan AI</span>
-              </button>
+              {/* Submit Button Utama (Ringkas, Proporsional, & Bersih) */}
+              <div className="flex justify-end pt-2">
+                <button
+                  onClick={handleSubmit}
+                  disabled={isLoading}
+                  className="w-full sm:w-auto px-6 py-2.5 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-xs sm:text-sm border-2 border-black dark:border-white shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 cursor-pointer"
+                >
+                  <Sparkles size={15} />
+                  <span>Susun Rencana Ajar</span>
+                </button>
+              </div>
             </div>
           )}
 
