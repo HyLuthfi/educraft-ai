@@ -3132,3 +3132,336 @@ def generate_ranking_report_docx(
     return output_stream
 
 
+def add_absensi_kop(doc: Document, nama_sekolah: str = ""):
+    """Kop Surat Resmi Kedinasan untuk Dokumen Rekapitulasi Presensi Kehadiran Siswa."""
+    sekolah_clean = (nama_sekolah or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+
+    p_kop = doc.add_paragraph()
+    p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_kop.paragraph_format.space_before = Pt(0)
+    p_kop.paragraph_format.space_after = Pt(6)
+    p_kop.paragraph_format.line_spacing = 1.15
+
+    r1 = p_kop.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
+    r1.font.name = "Times New Roman"
+    r1.font.size = Pt(11)
+    r1.font.bold = True
+
+    r2 = p_kop.add_run(f"{sekolah_clean}\n")
+    r2.font.name = "Times New Roman"
+    r2.font.size = Pt(13)
+    r2.font.bold = True
+
+    current_year = datetime.datetime.now().year
+    r3 = p_kop.add_run(f"LAPORAN REKAPITULASI PRESENSI KEHADIRAN SISWA • TAHUN AJARAN {current_year}/{current_year + 1}\n")
+    r3.font.name = "Times New Roman"
+    r3.font.size = Pt(10)
+    r3.font.bold = True
+
+    r4 = p_kop.add_run("Saitech AI Solutions • Website: saitech.co.id")
+    r4.font.name = "Times New Roman"
+    r4.font.size = Pt(9)
+    r4.font.italic = True
+    r4.font.color.rgb = RGBColor(90, 90, 90)
+
+    pBdr = parse_xml(
+        r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        r'<w:bottom w:val="double" w:sz="12" w:space="8" w:color="000000"/>'
+        r'</w:pBdr>'
+    )
+    p_kop._p.get_or_add_pPr().append(pBdr)
+
+
+def generate_absensi_report_docx(
+    header_data: Dict[str, Any],
+    absensi_data: Dict[str, Any]
+) -> io.BytesIO:
+    """
+    Membangun dokumen Word (.docx) resmi Laporan Presensi Kehadiran Siswa
+    dengan Tipografi & Sistem Spacing Standar Kedinasan Indonesia.
+    """
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_width = Inches(8.27)
+    sec.page_height = Inches(11.69)
+    sec.top_margin = Inches(0.65)
+    sec.bottom_margin = Inches(0.65)
+    sec.left_margin = Inches(0.65)
+    sec.right_margin = Inches(0.65)
+
+    # 1. Kop Kedinasan Resmi
+    sekolah_clean = (header_data.get("nama_sekolah") or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+    add_absensi_kop(doc, sekolah_clean)
+
+    tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
+    judul_agenda = header_data.get("judul") or header_data.get("agenda") or "Presensi Kehadiran Kelas"
+    
+    murid_list = absensi_data.get("murid") or absensi_data.get("data") or []
+    total_murid = len(murid_list)
+
+    rekap = absensi_data.get("rekap") or {}
+    hadir_cnt = int(rekap.get("hadir", sum(1 for m in murid_list if str(m.get("status", "")).lower() == "hadir")))
+    izin_cnt = int(rekap.get("izin", sum(1 for m in murid_list if str(m.get("status", "")).lower() == "izin")))
+    sakit_cnt = int(rekap.get("sakit", sum(1 for m in murid_list if str(m.get("status", "")).lower() == "sakit")))
+    alpa_cnt = int(rekap.get("alpa", sum(1 for m in murid_list if str(m.get("status", "")).lower() == "alpa")))
+    terlambat_cnt = int(rekap.get("terlambat", sum(1 for m in murid_list if str(m.get("status", "")).lower() == "terlambat")))
+
+    pct_hadir = f"{(hadir_cnt / total_murid * 100):.1f}%" if total_murid > 0 else "0.0%"
+
+    # 2. Tabel Metadata Presensi (3 baris x 4 kolom simetris - Ruled Header Table)
+    t_meta = doc.add_table(rows=3, cols=4)
+    t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_meta.autofit = False
+    tblPr = t_meta._tbl.tblPr
+    tblPr.append(parse_xml(
+        r'''<w:tblBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+            <w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>
+            <w:bottom w:val="single" w:sz="8" w:space="0" w:color="000000"/>
+            <w:left w:val="none"/><w:right w:val="none"/>
+            <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E5E7EB"/>
+            <w:insideV w:val="none"/>
+        </w:tblBorders>'''
+    ))
+
+    col_meta_dxa = [2016, 3168, 2016, 2837]
+    set_table_width_and_grid(t_meta, col_meta_dxa)
+
+    meta_rows = [
+        ("Agenda / Kelas", f":  {judul_agenda}", "Tanggal Presensi", f":  {tanggal}"),
+        ("Total Peserta Didik", f":  {total_murid} Murid", "Tingkat Kehadiran", f":  {pct_hadir} ({hadir_cnt} Hadir)"),
+        ("Siswa Tidak Hadir", f":  {izin_cnt + sakit_cnt + alpa_cnt} Murid (I: {izin_cnt}, S: {sakit_cnt}, A: {alpa_cnt})", "Siswa Terlambat", f":  {terlambat_cnt} Murid"),
+    ]
+
+    col_meta_w = [Inches(1.4), Inches(2.2), Inches(1.4), Inches(1.97)]
+    for r_idx, (k1, v1, k2, v2) in enumerate(meta_rows):
+        row = t_meta.rows[r_idx]
+        row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        for c_idx, width in enumerate(col_meta_w):
+            cell = row.cells[c_idx]
+            cell.width = width
+            set_cell_margins(cell, top=70, bottom=70, left=100, right=100)
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+        p1 = row.cells[0].paragraphs[0]
+        p1.paragraph_format.line_spacing = 1.15
+        p1.paragraph_format.space_after = Pt(0)
+        run1 = p1.add_run(k1)
+        run1.font.name = "Times New Roman"
+        run1.font.size = Pt(9.5)
+        run1.font.bold = True
+
+        p2 = row.cells[1].paragraphs[0]
+        p2.paragraph_format.line_spacing = 1.15
+        p2.paragraph_format.space_after = Pt(0)
+        run2 = p2.add_run(v1)
+        run2.font.name = "Times New Roman"
+        run2.font.size = Pt(9.5)
+        if r_idx == 0:
+            run2.font.bold = True
+
+        p3 = row.cells[2].paragraphs[0]
+        p3.paragraph_format.line_spacing = 1.15
+        p3.paragraph_format.space_after = Pt(0)
+        run3 = p3.add_run(k2)
+        run3.font.name = "Times New Roman"
+        run3.font.size = Pt(9.5)
+        run3.font.bold = True
+
+        p4 = row.cells[3].paragraphs[0]
+        p4.paragraph_format.line_spacing = 1.15
+        p4.paragraph_format.space_after = Pt(0)
+        run4 = p4.add_run(v2)
+        run4.font.name = "Times New Roman"
+        run4.font.size = Pt(9.5)
+
+    # 3. Bagian I: REKAPITULASI STATUS KEHADIRAN KELAS
+    p_sec1 = doc.add_paragraph()
+    p_sec1.paragraph_format.space_before = Pt(12)
+    p_sec1.paragraph_format.space_after = Pt(4)
+    p_sec1.paragraph_format.line_spacing = 1.15
+    p_sec1.paragraph_format.keep_with_next = True
+    r_sec1 = p_sec1.add_run("I. REKAPITULASI STATUS KEHADIRAN KELAS")
+    r_sec1.font.name = "Times New Roman"
+    r_sec1.font.size = Pt(10.5)
+    r_sec1.font.bold = True
+
+    t_rekap = doc.add_table(rows=2, cols=5)
+    t_rekap.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_rekap.autofit = False
+    col_rekap_dxa = [2007, 2007, 2007, 2008, 2008] # Total 10037 dxa
+    set_table_width_and_grid(t_rekap, col_rekap_dxa)
+    set_table_borders_thin(t_rekap, color="D1D5DB", sz="4")
+
+    rekap_hdrs = ["Hadir (H)", "Izin (I)", "Sakit (S)", "Alpa (A)", "Terlambat (T)"]
+    rekap_vals = [f"{hadir_cnt} Murid", f"{izin_cnt} Murid", f"{sakit_cnt} Murid", f"{alpa_cnt} Murid", f"{terlambat_cnt} Murid"]
+    col_rekap_w = [Inches(1.39), Inches(1.39), Inches(1.39), Inches(1.40), Inches(1.40)]
+
+    hdr_r = t_rekap.rows[0]
+    hdr_r._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    for c_idx, h_text in enumerate(rekap_hdrs):
+        c = hdr_r.cells[c_idx]
+        c.width = col_rekap_w[c_idx]
+        set_cell_margins(c, top=75, bottom=75, left=80, right=80)
+        c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        shd = parse_xml(r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F3F4F6"/>''')
+        c._tc.get_or_add_tcPr().append(shd)
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.line_spacing = 1.15
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.keep_with_next = True
+        r = p.add_run(h_text)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+    val_r = t_rekap.rows[1]
+    val_r._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    for c_idx, v_text in enumerate(rekap_vals):
+        c = val_r.cells[c_idx]
+        c.width = col_rekap_w[c_idx]
+        set_cell_margins(c, top=70, bottom=70, left=80, right=80)
+        c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p.paragraph_format.line_spacing = 1.15
+        p.paragraph_format.space_after = Pt(0)
+        r = p.add_run(v_text)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(10)
+        r.font.bold = True
+
+    # 4. Bagian II: DAFTAR PRESENSI & KEHADIRAN PESERTA DIDIK
+    p_sec2 = doc.add_paragraph()
+    p_sec2.paragraph_format.space_before = Pt(14)
+    p_sec2.paragraph_format.space_after = Pt(4)
+    p_sec2.paragraph_format.line_spacing = 1.15
+    p_sec2.paragraph_format.keep_with_next = True
+    r_sec2 = p_sec2.add_run("II. DAFTAR PRESENSI & KEHADIRAN PESERTA DIDIK")
+    r_sec2.font.name = "Times New Roman"
+    r_sec2.font.size = Pt(10.5)
+    r_sec2.font.bold = True
+
+    t_murid = doc.add_table(rows=len(murid_list) + 1, cols=5)
+    t_murid.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_murid.autofit = False
+    col_murid_dxa = [600, 1200, 3837, 2000, 2400] # Total 10037 dxa
+    set_table_width_and_grid(t_murid, col_murid_dxa)
+    set_table_borders_thin(t_murid, color="D1D5DB", sz="4")
+
+    headers_m = ["No", "No. Absen", "Nama Peserta Didik", "Status Presensi", "Catatan / Keterangan"]
+    col_m_w = [Inches(0.42), Inches(0.83), Inches(2.67), Inches(1.39), Inches(1.66)]
+
+    # Header Row Murid
+    hdr_m = t_murid.rows[0]
+    hdr_m._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    hdr_m._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    for c_idx, h_text in enumerate(headers_m):
+        c = hdr_m.cells[c_idx]
+        c.width = col_m_w[c_idx]
+        set_cell_margins(c, top=80, bottom=80, left=90, right=90)
+        c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        shd = parse_xml(r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F3F4F6"/>''')
+        c._tc.get_or_add_tcPr().append(shd)
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 1, 3) else WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.line_spacing = 1.15
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.keep_with_next = True
+        r = p.add_run(h_text)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+    # Data Rows Murid
+    for idx, m in enumerate(murid_list):
+        row = t_murid.rows[idx + 1]
+        row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        nama_m = m.get("nama", f"Murid #{idx+1}")
+        no_absen = str(m.get("nomor_absen") or (idx + 1))
+        st = str(m.get("status", "hadir")).lower()
+        ket = m.get("keterangan", "") or "-"
+
+        if st == "hadir":
+            st_label = "[✓] Hadir"
+        elif st == "izin":
+            st_label = "[I] Izin"
+        elif st == "sakit":
+            st_label = "[S] Sakit"
+        elif st == "terlambat":
+            st_label = "[T] Terlambat"
+        else:
+            st_label = "[A] Alpa"
+
+        row_vals = [str(idx + 1), no_absen, nama_m, st_label, ket]
+        for c_idx, val in enumerate(row_vals):
+            c = row.cells[c_idx]
+            c.width = col_m_w[c_idx]
+            set_cell_margins(c, top=70, bottom=70, left=90, right=90)
+            c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = c.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 1, 3) else WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.space_after = Pt(0)
+            r = p.add_run(val)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+            if c_idx in (0, 1, 3):
+                r.font.bold = True
+
+    # 5. Lembar Pengesahan Tanda Tangan
+    t_ttd = doc.add_table(rows=1, cols=2)
+    t_ttd.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_ttd.autofit = False
+    row_ttd = t_ttd.rows[0]
+    row_ttd._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    
+    col_ttd_dxa = [5018, 5019]
+    set_table_width_and_grid(t_ttd, col_ttd_dxa)
+
+    c_ks = row_ttd.cells[0]
+    c_gr = row_ttd.cells[1]
+    c_ks.width = Inches(3.48)
+    c_gr.width = Inches(3.48)
+    set_cell_margins(c_ks, top=140, bottom=70, left=100, right=100)
+    set_cell_margins(c_gr, top=140, bottom=70, left=100, right=100)
+
+    p_ks = c_ks.paragraphs[0]
+    p_ks.paragraph_format.line_spacing = 1.15
+    p_ks.paragraph_format.space_after = Pt(0)
+    p_ks.paragraph_format.keep_with_next = True
+    p_ks.add_run(
+        "Mengetahui,\n"
+        "Kepala Sekolah\n\n\n\n"
+        "( ................................................................ )\n"
+        "NIP. ........................................................"
+    )
+    for r in p_ks.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+
+    p_gr = c_gr.paragraphs[0]
+    p_gr.paragraph_format.line_spacing = 1.15
+    p_gr.paragraph_format.space_after = Pt(0)
+    p_gr.paragraph_format.keep_with_next = True
+    p_gr.add_run(
+        f"{tanggal}\n"
+        "Guru Pengampu / Wali Kelas\n\n\n\n"
+        "( ................................................................ )\n"
+        "NIP. ........................................................"
+    )
+    for r in p_gr.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+
+    output_stream = io.BytesIO()
+    doc.save(output_stream)
+    output_stream.seek(0)
+    return output_stream
+
+
+
