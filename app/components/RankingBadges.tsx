@@ -39,37 +39,37 @@ export interface Badge {
   tone: { bg: string; text: string; border: string };
 }
 
-// Palet warna per lencana (dipilih agar harmonis, bukan warna default polos).
+// Palet monokrom neobrutalisme editorial murni (anti-rainbow & bebas warna pastel AI vibes).
 const TONES = {
   gold: {
-    bg: "bg-amber-100 dark:bg-amber-500/15",
-    text: "text-amber-700 dark:text-amber-300",
-    border: "border-amber-500",
+    bg: "bg-black text-white dark:bg-white dark:text-black",
+    text: "text-white dark:text-black",
+    border: "border-black dark:border-white",
   },
   fire: {
-    bg: "bg-orange-100 dark:bg-orange-500/15",
-    text: "text-orange-700 dark:text-orange-300",
-    border: "border-orange-500",
+    bg: "bg-gray-100 dark:bg-[#2a2a2a]",
+    text: "text-black dark:text-white",
+    border: "border-black/20 dark:border-white/20",
   },
   rise: {
-    bg: "bg-emerald-100 dark:bg-emerald-500/15",
-    text: "text-emerald-700 dark:text-emerald-300",
-    border: "border-emerald-500",
+    bg: "bg-gray-100 dark:bg-[#2a2a2a]",
+    text: "text-black dark:text-white",
+    border: "border-black/20 dark:border-white/20",
   },
   perfect: {
-    bg: "bg-violet-100 dark:bg-violet-500/15",
-    text: "text-violet-700 dark:text-violet-300",
-    border: "border-violet-500",
+    bg: "bg-gray-100 dark:bg-[#2a2a2a]",
+    text: "text-black dark:text-white",
+    border: "border-black/20 dark:border-white/20",
   },
   target: {
-    bg: "bg-sky-100 dark:bg-sky-500/15",
-    text: "text-sky-700 dark:text-sky-300",
-    border: "border-sky-500",
+    bg: "bg-gray-100 dark:bg-[#2a2a2a]",
+    text: "text-black dark:text-white",
+    border: "border-black/20 dark:border-white/20",
   },
   grow: {
-    bg: "bg-lime-100 dark:bg-lime-500/15",
-    text: "text-lime-700 dark:text-lime-300",
-    border: "border-lime-500",
+    bg: "bg-gray-100 dark:bg-[#2a2a2a]",
+    text: "text-black dark:text-white",
+    border: "border-black/20 dark:border-white/20",
   },
 } as const;
 
@@ -179,16 +179,18 @@ export function BadgeChip({ badge, size = "md" }: { badge: Badge; size?: "sm" | 
   );
 }
 
-// ── Medali podium (juara 1/2/3) ──
+// ── Medali podium neobrutalisme monokrom (juara 1/2/3) ──
 export function MedaliPodium({ posisi }: { posisi: 1 | 2 | 3 }) {
-  const cfg = {
-    1: { color: "text-amber-500", label: "Emas" },
-    2: { color: "text-slate-400", label: "Perak" },
-    3: { color: "text-orange-600", label: "Perunggu" },
-  }[posisi];
+  if (posisi === 1) {
+    return (
+      <div className="w-8 h-8 rounded-full bg-black text-white dark:bg-white dark:text-black flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
+        <Crown size={18} strokeWidth={2.5} />
+      </div>
+    );
+  }
   return (
-    <span className={`inline-flex items-center gap-1 ${cfg.color}`} title={`Medali ${cfg.label}`}>
-      <Medal size={20} strokeWidth={2.5} />
-    </span>
+    <div className="w-8 h-8 rounded-full bg-gray-100 dark:bg-[#2a2a2a] border-2 border-black/20 dark:border-white/30 text-black dark:text-white flex items-center justify-center">
+      <Medal size={16} strokeWidth={2.5} />
+    </div>
   );
 }

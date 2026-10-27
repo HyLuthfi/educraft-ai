@@ -2774,3 +2774,361 @@ def generate_rapor_report_docx(
     return output_stream
 
 
+def add_ranking_kop(doc: Document, nama_sekolah: str = ""):
+    """Kop Surat Resmi Kedinasan untuk Dokumen Klasemen & Ranking Siswa."""
+    sekolah_clean = (nama_sekolah or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+
+    p_kop = doc.add_paragraph()
+    p_kop.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    p_kop.paragraph_format.space_before = Pt(0)
+    p_kop.paragraph_format.space_after = Pt(6)
+    p_kop.paragraph_format.line_spacing = 1.15
+
+    r1 = p_kop.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
+    r1.font.name = "Times New Roman"
+    r1.font.size = Pt(11)
+    r1.font.bold = True
+
+    r2 = p_kop.add_run(f"{sekolah_clean}\n")
+    r2.font.name = "Times New Roman"
+    r2.font.size = Pt(13)
+    r2.font.bold = True
+
+    current_year = datetime.datetime.now().year
+    r3 = p_kop.add_run(f"LAPORAN PAPAN PERINGKAT & KLASEMEN PRESTASI SISWA • TAHUN AJARAN {current_year}/{current_year + 1}\n")
+    r3.font.name = "Times New Roman"
+    r3.font.size = Pt(10)
+    r3.font.bold = True
+
+    r4 = p_kop.add_run("Saitech AI Solutions • Website: saitech.co.id")
+    r4.font.name = "Times New Roman"
+    r4.font.size = Pt(9)
+    r4.font.italic = True
+    r4.font.color.rgb = RGBColor(90, 90, 90)
+
+    pBdr = parse_xml(
+        r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+        r'<w:bottom w:val="double" w:sz="12" w:space="8" w:color="000000"/>'
+        r'</w:pBdr>'
+    )
+    p_kop._p.get_or_add_pPr().append(pBdr)
+
+
+def generate_ranking_report_docx(
+    header_data: Dict[str, Any],
+    ranking_list: List[Dict[str, Any]],
+    sesi_list: Optional[List[Dict[str, Any]]] = None
+) -> io.BytesIO:
+    """
+    Membangun dokumen Word (.docx) resmi Laporan Klasemen & Ranking Prestasi Siswa
+    dengan Tipografi & Sistem Spacing Standar Kedinasan Indonesia.
+    """
+    doc = Document()
+    sec = doc.sections[0]
+    sec.page_width = Inches(8.27)
+    sec.page_height = Inches(11.69)
+    sec.top_margin = Inches(0.65)
+    sec.bottom_margin = Inches(0.65)
+    sec.left_margin = Inches(0.65)
+    sec.right_margin = Inches(0.65)
+
+    # 1. Kop Kedinasan Resmi
+    sekolah_clean = (header_data.get("nama_sekolah") or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+    add_ranking_kop(doc, sekolah_clean)
+
+    tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
+    total_siswa = len(ranking_list)
+    total_sesi = header_data.get("total_sesi", 0)
+
+    # Data Calculation
+    valid_scores = []
+    for s in ranking_list:
+        v = s.get("rata_rata") if s.get("rata_rata") is not None else s.get("rataRata")
+        if v is not None:
+            try:
+                valid_scores.append(float(v))
+            except (ValueError, TypeError):
+                pass
+
+    rata_kelas = f"{sum(valid_scores)/len(valid_scores):.1f}" if valid_scores else "0.0"
+    top_score = f"{max(valid_scores):.1f}" if valid_scores else "-"
+    top_student = ranking_list[0].get("nama", "-") if ranking_list else "-"
+
+    # 2. Tabel Metadata Ujian Kelas (3 baris x 4 kolom simetris - Ruled Header Table)
+    t_meta = doc.add_table(rows=3, cols=4)
+    t_meta.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_meta.autofit = False
+    tblPr = t_meta._tbl.tblPr
+    tblPr.append(parse_xml(
+        r'''<w:tblBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+            <w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>
+            <w:bottom w:val="single" w:sz="8" w:space="0" w:color="000000"/>
+            <w:left w:val="none"/><w:right w:val="none"/>
+            <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E5E7EB"/>
+            <w:insideV w:val="none"/>
+        </w:tblBorders>'''
+    ))
+
+    col_meta_dxa = [2016, 3168, 2016, 2837]
+    set_table_width_and_grid(t_meta, col_meta_dxa)
+
+    meta_rows = [
+        ("Dokumen Klasemen", ":  Papan Peringkat Prestasi Siswa", "Tanggal Penetapan", f":  {tanggal}"),
+        ("Total Siswa", f":  {total_siswa} Siswa Terdaftar", "Sesi Evaluasi Diikuti", f":  {total_sesi} Sesi Penilaian"),
+        ("Rata-Rata Kelas", f":  {rata_kelas} (Skala 100)", "Juara Kelas (#1)", f":  {top_student} ({top_score})"),
+    ]
+
+    col_meta_w = [Inches(1.4), Inches(2.2), Inches(1.4), Inches(1.97)]
+    for r_idx, (k1, v1, k2, v2) in enumerate(meta_rows):
+        row = t_meta.rows[r_idx]
+        row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        for c_idx, width in enumerate(col_meta_w):
+            cell = row.cells[c_idx]
+            cell.width = width
+            set_cell_margins(cell, top=70, bottom=70, left=100, right=100)
+            cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+        p1 = row.cells[0].paragraphs[0]
+        p1.paragraph_format.line_spacing = 1.15
+        p1.paragraph_format.space_after = Pt(0)
+        run1 = p1.add_run(k1)
+        run1.font.name = "Times New Roman"
+        run1.font.size = Pt(9.5)
+        run1.font.bold = True
+
+        p2 = row.cells[1].paragraphs[0]
+        p2.paragraph_format.line_spacing = 1.15
+        p2.paragraph_format.space_after = Pt(0)
+        run2 = p2.add_run(v1)
+        run2.font.name = "Times New Roman"
+        run2.font.size = Pt(9.5)
+
+        p3 = row.cells[2].paragraphs[0]
+        p3.paragraph_format.line_spacing = 1.15
+        p3.paragraph_format.space_after = Pt(0)
+        run3 = p3.add_run(k2)
+        run3.font.name = "Times New Roman"
+        run3.font.size = Pt(9.5)
+        run3.font.bold = True
+
+        p4 = row.cells[3].paragraphs[0]
+        p4.paragraph_format.line_spacing = 1.15
+        p4.paragraph_format.space_after = Pt(0)
+        run4 = p4.add_run(v2)
+        run4.font.name = "Times New Roman"
+        run4.font.size = Pt(9.5)
+
+    # 3. Bagian I: PODIUM JUARA TIGA BESAR KELAS
+    p_sec1 = doc.add_paragraph()
+    p_sec1.paragraph_format.space_before = Pt(12)
+    p_sec1.paragraph_format.space_after = Pt(4)
+    p_sec1.paragraph_format.line_spacing = 1.15
+    p_sec1.paragraph_format.keep_with_next = True
+    r_sec1 = p_sec1.add_run("I. PODIUM JUARA TIGA BESAR KELAS")
+    r_sec1.font.name = "Times New Roman"
+    r_sec1.font.size = Pt(10.5)
+    r_sec1.font.bold = True
+
+    podium_list = ranking_list[:3]
+    t_podium = doc.add_table(rows=len(podium_list) + 1, cols=5)
+    t_podium.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_podium.autofit = False
+    col_podium_dxa = [1200, 3337, 1500, 1600, 2400]
+    set_table_width_and_grid(t_podium, col_podium_dxa)
+    set_table_borders_thin(t_podium, color="D1D5DB", sz="4")
+
+    headers_podium = ["Podium", "Nama Peserta Didik", "Rata-Rata", "Sesi Diikuti / Tuntas", "Lencana Prestasi"]
+    col_podium_w = [Inches(0.83), Inches(2.32), Inches(1.04), Inches(1.11), Inches(1.67)]
+
+    # Header Row Podium
+    hdr_podium = t_podium.rows[0]
+    hdr_podium._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    hdr_podium._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    for c_idx, h_text in enumerate(headers_podium):
+        c = hdr_podium.cells[c_idx]
+        c.width = col_podium_w[c_idx]
+        set_cell_margins(c, top=80, bottom=80, left=90, right=90)
+        c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        shading = parse_xml(r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F3F4F6"/>''')
+        c._tc.get_or_add_tcPr().append(shading)
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3) else WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.line_spacing = 1.15
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.keep_with_next = True
+        r = p.add_run(h_text)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+    # Data Rows Podium
+    medali_labels = ["Juara 1 (Emas)", "Juara 2 (Perak)", "Juara 3 (Perunggu)"]
+    for idx, s in enumerate(podium_list):
+        row = t_podium.rows[idx + 1]
+        row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        nama_s = s.get("nama", f"Siswa #{idx+1}")
+        tot_sesi = s.get("total_sesi") if s.get("total_sesi") is not None else s.get("totalSesi", 0)
+        tunt_sesi = s.get("tuntas_count") if s.get("tuntas_count") is not None else s.get("tuntasCount", 0)
+        raw_avg = s.get("rata_rata") if s.get("rata_rata") is not None else s.get("rataRata", 0)
+        avg_val = float(raw_avg)
+
+        badges = s.get("badges", [])
+        badge_str = ", ".join(b.get("label", "") for b in badges) if badges else "-"
+
+        row_vals = [
+            medali_labels[idx] if idx < len(medali_labels) else f"Juara #{idx+1}",
+            nama_s,
+            f"{avg_val:.1f}",
+            f"{tot_sesi} Sesi ({tunt_sesi} Tuntas)",
+            badge_str
+        ]
+
+        for c_idx, val in enumerate(row_vals):
+            c = row.cells[c_idx]
+            c.width = col_podium_w[c_idx]
+            set_cell_margins(c, top=70, bottom=70, left=90, right=90)
+            c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = c.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3) else WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.space_after = Pt(0)
+            r = p.add_run(val)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+            if c_idx in (0, 1, 2):
+                r.font.bold = True
+
+    # 4. Bagian II: KLASEMEN LENGKAP PRESTASI SISWA
+    p_sec2 = doc.add_paragraph()
+    p_sec2.paragraph_format.space_before = Pt(14)
+    p_sec2.paragraph_format.space_after = Pt(4)
+    p_sec2.paragraph_format.line_spacing = 1.15
+    p_sec2.paragraph_format.keep_with_next = True
+    r_sec2 = p_sec2.add_run("II. KLASEMEN LENGKAP PRESTASI SELURUH PESERTA DIDIK")
+    r_sec2.font.name = "Times New Roman"
+    r_sec2.font.size = Pt(10.5)
+    r_sec2.font.bold = True
+
+    t_all = doc.add_table(rows=len(ranking_list) + 1, cols=6)
+    t_all.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_all.autofit = False
+    col_all_dxa = [800, 3237, 1200, 1200, 1400, 2200]
+    set_table_width_and_grid(t_all, col_all_dxa)
+    set_table_borders_thin(t_all, color="D1D5DB", sz="4")
+
+    headers_all = ["Rank", "Nama Peserta Didik", "Total Sesi", "Sesi Tuntas", "Rata-Rata", "Lencana & Prestasi"]
+    col_all_w = [Inches(0.55), Inches(2.25), Inches(0.83), Inches(0.83), Inches(0.97), Inches(1.54)]
+
+    # Header Row Klasemen
+    hdr_all = t_all.rows[0]
+    hdr_all._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    hdr_all._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    for c_idx, h_text in enumerate(headers_all):
+        c = hdr_all.cells[c_idx]
+        c.width = col_all_w[c_idx]
+        set_cell_margins(c, top=80, bottom=80, left=90, right=90)
+        c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+        shading = parse_xml(r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F3F4F6"/>''')
+        c._tc.get_or_add_tcPr().append(shading)
+        p = c.paragraphs[0]
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3, 4) else WD_ALIGN_PARAGRAPH.LEFT
+        p.paragraph_format.line_spacing = 1.15
+        p.paragraph_format.space_after = Pt(0)
+        p.paragraph_format.keep_with_next = True
+        r = p.add_run(h_text)
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+        r.font.bold = True
+
+    # Data Rows Klasemen
+    for idx, s in enumerate(ranking_list):
+        row = t_all.rows[idx + 1]
+        row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        nama_s = s.get("nama", f"Siswa #{idx+1}")
+        tot_sesi = s.get("total_sesi") if s.get("total_sesi") is not None else s.get("totalSesi", 0)
+        tunt_sesi = s.get("tuntas_count") if s.get("tuntas_count") is not None else s.get("tuntasCount", 0)
+        raw_avg = s.get("rata_rata") if s.get("rata_rata") is not None else s.get("rataRata", 0)
+        avg_val = float(raw_avg)
+
+        badges = s.get("badges", [])
+        badge_str = ", ".join(b.get("label", "") for b in badges) if badges else "-"
+
+        row_vals = [
+            str(idx + 1),
+            nama_s,
+            str(tot_sesi),
+            str(tunt_sesi),
+            f"{avg_val:.1f}",
+            badge_str
+        ]
+
+        for c_idx, val in enumerate(row_vals):
+            c = row.cells[c_idx]
+            c.width = col_all_w[c_idx]
+            set_cell_margins(c, top=70, bottom=70, left=90, right=90)
+            c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            p = c.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3, 4) else WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.space_after = Pt(0)
+            r = p.add_run(val)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+            if c_idx in (0, 4):
+                r.font.bold = True
+
+    # 5. Lembar Pengesahan Tanda Tangan
+    t_ttd = doc.add_table(rows=1, cols=2)
+    t_ttd.alignment = WD_TABLE_ALIGNMENT.CENTER
+    t_ttd.autofit = False
+    row_ttd = t_ttd.rows[0]
+    row_ttd._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+    
+    col_ttd_dxa = [5018, 5019]
+    set_table_width_and_grid(t_ttd, col_ttd_dxa)
+
+    c_ks = row_ttd.cells[0]
+    c_gr = row_ttd.cells[1]
+    c_ks.width = Inches(3.48)
+    c_gr.width = Inches(3.48)
+    set_cell_margins(c_ks, top=140, bottom=70, left=100, right=100)
+    set_cell_margins(c_gr, top=140, bottom=70, left=100, right=100)
+
+    p_ks = c_ks.paragraphs[0]
+    p_ks.paragraph_format.line_spacing = 1.15
+    p_ks.paragraph_format.space_after = Pt(0)
+    p_ks.paragraph_format.keep_with_next = True
+    p_ks.add_run(
+        "Mengetahui,\n"
+        "Kepala Sekolah\n\n\n\n"
+        "( ................................................................ )\n"
+        "NIP. ........................................................"
+    )
+    for r in p_ks.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+
+    p_gr = c_gr.paragraphs[0]
+    p_gr.paragraph_format.line_spacing = 1.15
+    p_gr.paragraph_format.space_after = Pt(0)
+    p_gr.paragraph_format.keep_with_next = True
+    p_gr.add_run(
+        f"{tanggal}\n"
+        "Guru Pengampu / Wali Kelas\n\n\n\n"
+        "( ................................................................ )\n"
+        "NIP. ........................................................"
+    )
+    for r in p_gr.runs:
+        r.font.name = "Times New Roman"
+        r.font.size = Pt(9.5)
+
+    output_stream = io.BytesIO()
+    doc.save(output_stream)
+    output_stream.seek(0)
+    return output_stream
+
+

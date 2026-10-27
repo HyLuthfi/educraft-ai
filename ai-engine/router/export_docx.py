@@ -8,7 +8,7 @@ import os
 import sys
 import datetime
 
-from service.docx_builder import generate_exam_docx, generate_koreksi_report_docx, generate_rapor_report_docx
+from service.docx_builder import generate_exam_docx, generate_koreksi_report_docx, generate_rapor_report_docx, generate_ranking_report_docx
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -131,5 +131,36 @@ async def export_rapor_docx(req: RequestExportRaporDocx):
     except Exception as e:
         logger.error(f"Export Rapor DOCX gagal: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Gagal generate dokumen Word Rapor Siswa: {str(e)}")
+
+
+class RequestExportRankingDocx(BaseModel):
+    header: Optional[dict] = Field(default_factory=dict)
+    ranking_list: list = Field(default_factory=list)
+    sesi_list: Optional[list] = Field(default_factory=list)
+
+
+@router.post("/export/ranking-docx")
+async def export_ranking_docx(req: RequestExportRankingDocx):
+    try:
+        header_dict = req.header or {}
+        header_dict.setdefault("nama_sekolah", "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL")
+        header_dict.setdefault("total_sesi", len(req.sesi_list or []))
+
+        docx_stream = generate_ranking_report_docx(
+            header_data=header_dict,
+            ranking_list=req.ranking_list or [],
+            sesi_list=req.sesi_list or []
+        )
+
+        filename = f"Ranking_Kelas_{datetime.datetime.now().strftime('%Y%m%d')}.docx"
+        return StreamingResponse(
+            docx_stream,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Export Ranking DOCX gagal: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal generate dokumen Word Ranking Siswa: {str(e)}")
+
 
 
