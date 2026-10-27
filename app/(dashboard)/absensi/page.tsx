@@ -69,9 +69,20 @@ export interface SesiAbsensiRow {
 }
 
 // ── Palet Monokrom Neobrutalisme Murni (Zero Pastel / AI Rainbow) ──
-export const STATUS_META: Record<Status, { label: string; short: string; badge: string; card: string; activeStyle: string }> = {
+export const STATUS_META: Record<
+  Status,
+  {
+    label: string;
+    buttonLabel: string;
+    short: string;
+    badge: string;
+    card: string;
+    activeStyle: string;
+  }
+> = {
   hadir: {
     label: "Hadir",
+    buttonLabel: "Hadir",
     short: "H",
     badge: "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white",
     card: "bg-white dark:bg-[#181818]",
@@ -79,6 +90,7 @@ export const STATUS_META: Record<Status, { label: string; short: string; badge: 
   },
   izin: {
     label: "Izin",
+    buttonLabel: "Izin",
     short: "I",
     badge: "bg-neutral-800 text-white dark:bg-neutral-200 dark:text-black border-black dark:border-white",
     card: "bg-white dark:bg-[#181818]",
@@ -86,6 +98,7 @@ export const STATUS_META: Record<Status, { label: string; short: string; badge: 
   },
   sakit: {
     label: "Sakit",
+    buttonLabel: "Sakit",
     short: "S",
     badge: "bg-neutral-700 text-white dark:bg-neutral-300 dark:text-black border-black dark:border-white",
     card: "bg-white dark:bg-[#181818]",
@@ -93,6 +106,7 @@ export const STATUS_META: Record<Status, { label: string; short: string; badge: 
   },
   alpa: {
     label: "Alpa",
+    buttonLabel: "Alpa",
     short: "A",
     badge: "bg-neutral-600 text-white dark:bg-neutral-400 dark:text-black border-black dark:border-white",
     card: "bg-white dark:bg-[#181818]",
@@ -100,6 +114,7 @@ export const STATUS_META: Record<Status, { label: string; short: string; badge: 
   },
   terlambat: {
     label: "Terlambat",
+    buttonLabel: "Telat",
     short: "T",
     badge: "bg-neutral-500 text-white dark:bg-neutral-500 dark:text-white border-black dark:border-white",
     card: "bg-white dark:bg-[#181818]",
@@ -1180,127 +1195,130 @@ function ResultView({
   handleScanPicked,
 }: ResultViewProps) {
   return (
-    <div className="space-y-6">
-      {/* Top Bar Navigation & Actions */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-5 sm:space-y-6">
+      {/* Top Bar: Navigasi Ringkas & Kontrol Aksi (1 Baris Rapi) */}
+      <div className="flex items-center justify-between gap-2 pb-1 border-b border-black/10 dark:border-white/10">
         <button
           onClick={handleBack}
-          className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white dark:bg-[#252525] dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#252525] dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
         >
-          <ArrowLeft size={14} /> Ganti Daftar Murid
+          <ArrowLeft size={13} />
+          <span>Ganti Daftar</span>
         </button>
 
         <div className="flex items-center gap-2">
           <button
             onClick={onOpenDownloadModal}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-white dark:bg-[#252525] text-black dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all cursor-pointer"
+            className="flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#252525] text-black dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
           >
-            <Download size={14} /> Unduh Presensi
+            <Download size={13} />
+            <span>Unduh</span>
           </button>
 
           <button
             onClick={handleSave}
             disabled={isSaving || isSaved}
-            className="flex items-center gap-1.5 px-3 sm:px-4 py-2 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold uppercase text-xs sm:text-sm tracking-wide shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:translate-x-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+            className="flex items-center gap-1.5 px-3.5 py-1.5 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
           >
-            {isSaved ? <Check size={14} /> : <Save size={14} />}
-            {isSaved ? "Tersimpan" : isSaving ? "Menyimpan..." : "Simpan Sesi"}
+            {isSaved ? <Check size={13} /> : <Save size={13} />}
+            <span>{isSaved ? "Tersimpan" : isSaving ? "Menyimpan..." : "Simpan Sesi"}</span>
           </button>
         </div>
       </div>
 
-      <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-black dark:border-white/30 bg-black text-white dark:bg-white dark:text-black text-[10px] sm:text-xs font-mono font-bold uppercase tracking-widest shadow-[2px_2px_0px_#000]">
-        <ClipboardCheck size={13} /> Langkah 2 dari 2 — Isi Kehadiran Murid
-      </div>
-
-      {/* Header: Judul & Tanggal */}
-      <div className="border-2 border-black dark:border-white/20 p-4 sm:p-5 bg-neutral-50 dark:bg-[#252525] shadow-[4px_4px_0px_0px_#000] flex flex-wrap items-center justify-between gap-4">
-        <div className="flex-1 min-w-[220px]">
+      {/* Header: Judul Agenda & Tanggal (Grid 1 Baris Lega, Bersih Tanpa Box Bertumpuk) */}
+      <div className="border-2 border-black dark:border-white/20 p-3 sm:p-4 bg-neutral-50 dark:bg-[#252525] shadow-[3px_3px_0px_#000] grid grid-cols-1 sm:grid-cols-3 gap-3 items-center">
+        <div className="sm:col-span-2">
           <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1 block">
-            Judul / Agenda Kelas
+            Agenda / Kelas
           </label>
           <input
             value={judul}
             onChange={(e) => setJudul(e.target.value)}
-            placeholder="Judul / Agenda Kelas..."
-            className="w-full text-lg sm:text-xl font-bold dark:text-white bg-transparent border-b-2 border-black/20 dark:border-white/20 py-0.5 focus:outline-none focus:border-black dark:focus:border-white"
+            placeholder="Contoh: Matematika Wajib X MIPA 1..."
+            className="w-full text-base sm:text-lg font-bold dark:text-white bg-transparent border-b-2 border-black/20 dark:border-white/20 py-0.5 focus:outline-none focus:border-black dark:focus:border-white"
           />
         </div>
-        <div className="inline-flex items-center gap-2 border-2 border-black dark:border-white/30 bg-white dark:bg-[#1a1a1a] px-3 py-1.5 shadow-[2px_2px_0px_#000]">
-          <CalendarDays size={14} className="text-black dark:text-white" />
-          <input
-            type="date"
-            value={tanggal}
-            onChange={(e) => setTanggal(e.target.value)}
-            className="bg-transparent dark:text-white font-bold text-xs sm:text-sm focus:outline-none cursor-pointer"
-          />
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-500 dark:text-gray-400 mb-1 block">
+            Tanggal Presensi
+          </label>
+          <div className="flex items-center gap-2 border border-black/40 dark:border-white/30 bg-white dark:bg-[#1a1a1a] px-2.5 py-1.5">
+            <CalendarDays size={14} className="text-black dark:text-white shrink-0" />
+            <input
+              type="date"
+              value={tanggal}
+              onChange={(e) => setTanggal(e.target.value)}
+              className="bg-transparent dark:text-white font-bold text-xs sm:text-sm focus:outline-none w-full cursor-pointer"
+            />
+          </div>
         </div>
       </div>
 
       {/* Banner Scan Kertas via AI (Monokrom Neobrutal) */}
-      <div className="border-2 border-black dark:border-white/30 bg-neutral-100 dark:bg-[#252525] p-3.5 sm:p-4 flex flex-wrap items-center justify-between gap-3 shadow-[4px_4px_0px_0px_#000]">
+      <div className="border-2 border-black dark:border-white/30 bg-neutral-100 dark:bg-[#252525] p-3 sm:p-3.5 flex flex-wrap items-center justify-between gap-2.5 shadow-[3px_3px_0px_#000]">
         <div className="flex items-start gap-2.5 text-xs sm:text-sm font-medium text-black dark:text-white">
           <ScanLine size={16} className="mt-0.5 shrink-0 text-black dark:text-white" />
-          <span>Punya <b>foto / lembar kertas absensi fisik</b>? AI dapat membaca centang paraf secara otomatis.</span>
+          <span>Punya <b>lembar fisik absensi</b>? AI membaca centang paraf murid otomatis.</span>
         </div>
         <button
           onClick={() => scanInputRef.current?.click()}
-          className="flex items-center gap-1.5 px-3.5 py-2 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+          className="flex items-center gap-1.5 px-3 py-1.5 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
         >
-          <ScanLine size={14} /> Unggah Foto Kertas
+          <ScanLine size={13} /> Unggah Foto
         </button>
         <input ref={scanInputRef} type="file" multiple accept="image/*,.pdf,.docx,.xlsx" className="hidden" onChange={handleScanPicked} />
       </div>
 
       {catatanAi && (
-        <div className="flex items-start gap-2 border-2 border-black dark:border-white/30 bg-neutral-50 dark:bg-[#252525] p-3 text-xs sm:text-sm font-medium text-black dark:text-white shadow-[3px_3px_0px_0px_#000]">
+        <div className="flex items-start gap-2 border-2 border-black dark:border-white/30 bg-neutral-50 dark:bg-[#252525] p-3 text-xs sm:text-sm font-medium text-black dark:text-white shadow-[2px_2px_0px_#000]">
           <Info size={15} className="mt-0.5 shrink-0 text-gray-500" />
           <span><b>Catatan AI:</b> {catatanAi}</span>
         </div>
       )}
 
       {/* Rekap 6 Kolom Monokrom Murni (Klik kartu = set semua ke status itu) */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-3">
-        <div className="border-2 border-black dark:border-white/30 bg-black text-white dark:bg-white dark:text-black p-2.5 sm:p-3 text-center shadow-[3px_3px_0px_#000]">
-          <div className="text-xl sm:text-2xl font-black font-sans">{murid.length}</div>
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 sm:gap-2.5">
+        <div className="border-2 border-black dark:border-white/30 bg-black text-white dark:bg-white dark:text-black p-2 sm:p-2.5 text-center shadow-[2px_2px_0px_#000]">
+          <div className="text-lg sm:text-xl font-black font-sans">{murid.length}</div>
           <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider">Total</div>
         </div>
         {STATUS_ORDER.map((s) => (
           <button
             key={s}
             onClick={() => setAll(s)}
-            className="border-2 border-black dark:border-white/30 p-2.5 sm:p-3 text-center bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer group"
+            className="border-2 border-black dark:border-white/30 p-2 sm:p-2.5 text-center bg-white dark:bg-[#252525] hover:bg-neutral-100 dark:hover:bg-[#303030] shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer group"
             title={`Set semua siswa ke ${STATUS_META[s].label}`}
           >
-            <div className="text-xl sm:text-2xl font-black font-sans text-black dark:text-white group-hover:scale-105 transition-transform">
+            <div className="text-lg sm:text-xl font-black font-sans text-black dark:text-white group-hover:scale-105 transition-transform">
               {rekap[s]}
             </div>
-            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400">
-              {STATUS_META[s].label}
+            <div className="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 truncate">
+              {s === "terlambat" ? "Telat" : STATUS_META[s].label}
             </div>
           </button>
         ))}
       </div>
 
       {/* Daftar Murid Card */}
-      <div className="space-y-2.5 sm:space-y-3">
+      <div className="space-y-2 sm:space-y-2.5">
         {murid.map((m, idx) => (
           <div
             key={idx}
-            className="border-2 border-black dark:border-white/30 p-3 sm:p-4 bg-white dark:bg-[#1e1e1e] shadow-[3px_3px_0px_#000] transition-colors"
+            className="border-2 border-black dark:border-white/30 p-3 bg-white dark:bg-[#1e1e1e] shadow-[2px_2px_0px_#000] transition-colors"
           >
             <div className="flex items-center gap-2 sm:gap-3">
               <input
                 value={m.nomor_absen}
                 onChange={(e) => updateMurid(idx, { nomor_absen: e.target.value })}
-                className="w-8 h-8 sm:w-10 sm:h-10 shrink-0 text-center font-black text-xs sm:text-sm bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border-2 border-black dark:border-white/30 focus:outline-none"
+                className="w-8 h-8 sm:w-9 sm:h-9 shrink-0 text-center font-black text-xs sm:text-sm bg-neutral-100 dark:bg-neutral-800 text-black dark:text-white border-2 border-black dark:border-white/30 focus:outline-none"
                 title="Nomor absen"
               />
               <input
                 value={m.nama}
                 onChange={(e) => updateMurid(idx, { nama: e.target.value })}
                 placeholder="Nama peserta didik..."
-                className="flex-1 min-w-0 text-sm sm:text-base font-bold dark:text-white bg-transparent border-b border-black/20 dark:border-white/20 py-0.5 sm:py-1 px-1 focus:outline-none focus:border-black dark:focus:border-white"
+                className="flex-1 min-w-0 text-sm sm:text-base font-bold dark:text-white bg-transparent border-b border-black/20 dark:border-white/20 py-0.5 px-1 focus:outline-none focus:border-black dark:focus:border-white"
               />
               <button
                 onClick={() => removeMurid(idx)}
@@ -1311,21 +1329,22 @@ function ResultView({
               </button>
             </div>
 
-            {/* Status Toggle (Pil Monokrom Neobrutal Taktil) */}
-            <div className="mt-2.5 sm:mt-3 grid grid-cols-5 gap-1 sm:gap-2">
+            {/* Status Toggle (Pil Monokrom Neobrutal Taktil, Simetris & Anti-Overflow) */}
+            <div className="mt-2.5 grid grid-cols-5 gap-1 sm:gap-1.5">
               {STATUS_ORDER.map((s) => {
                 const active = m.status === s;
                 return (
                   <button
                     key={s}
                     onClick={() => updateMurid(idx, { status: s })}
-                    className={`py-1.5 sm:py-2 border-2 font-bold uppercase text-[10px] sm:text-xs tracking-tight transition-all cursor-pointer ${
+                    className={`py-1.5 px-0.5 sm:px-1 border-2 font-black uppercase text-[10px] sm:text-xs tracking-tight transition-all cursor-pointer text-center truncate ${
                       active
                         ? STATUS_META[s].activeStyle
-                        : "bg-white dark:bg-[#252525] text-gray-500 dark:text-gray-400 border-black/30 dark:border-white/20 hover:border-black dark:hover:border-white"
+                        : "bg-white dark:bg-[#252525] text-gray-600 dark:text-gray-400 border-black/30 dark:border-white/20 hover:border-black dark:hover:border-white"
                     }`}
+                    title={`Status: ${STATUS_META[s].label}`}
                   >
-                    {STATUS_META[s].label}
+                    {STATUS_META[s].buttonLabel || STATUS_META[s].label}
                   </button>
                 );
               })}
@@ -1335,18 +1354,30 @@ function ResultView({
               value={m.keterangan}
               onChange={(e) => updateMurid(idx, { keterangan: e.target.value })}
               placeholder="Catatan / keterangan (opsional)..."
-              className="mt-2 sm:mt-2.5 w-full text-xs sm:text-sm dark:text-white bg-neutral-50 dark:bg-[#252525] border border-black/20 dark:border-white/20 px-2.5 sm:px-3 py-1.5 focus:outline-none focus:border-black dark:focus:border-white"
+              className="mt-2 w-full text-xs sm:text-sm dark:text-white bg-neutral-50 dark:bg-[#252525] border border-black/20 dark:border-white/20 px-2.5 py-1 focus:outline-none focus:border-black dark:focus:border-white"
             />
           </div>
         ))}
       </div>
 
-      <button
-        onClick={addMurid}
-        className="w-full py-2.5 sm:py-3 bg-neutral-50 dark:bg-[#252525] dark:text-white border-2 border-dashed border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 hover:bg-neutral-100 dark:hover:bg-[#303030] transition-colors cursor-pointer"
-      >
-        <Plus size={15} /> Tambah Murid
-      </button>
+      {/* Action Buttons: Tambah Murid & Simpan Utama */}
+      <div className="space-y-3 pt-1">
+        <button
+          onClick={addMurid}
+          className="w-full py-2.5 bg-neutral-50 dark:bg-[#252525] dark:text-white border-2 border-dashed border-black dark:border-white/30 font-bold uppercase text-xs sm:text-sm tracking-wide flex items-center justify-center gap-2 hover:bg-neutral-100 dark:hover:bg-[#303030] transition-colors cursor-pointer"
+        >
+          <Plus size={15} /> Tambah Murid
+        </button>
+
+        <button
+          onClick={handleSave}
+          disabled={isSaving || isSaved}
+          className="w-full py-3.5 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold uppercase text-xs sm:text-sm tracking-wider shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer flex items-center justify-center gap-2"
+        >
+          {isSaved ? <Check size={16} /> : <Save size={16} />}
+          <span>{isSaved ? "Presensi Telah Tersimpan" : isSaving ? "Menyimpan Data..." : "Simpan Catatan Presensi"}</span>
+        </button>
+      </div>
     </div>
   );
 }
