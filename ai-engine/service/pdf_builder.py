@@ -1714,3 +1714,285 @@ def generate_absensi_report_pdf(
     buffer.seek(0)
     return buffer
 
+
+def generate_kelompok_report_pdf(
+    header_data: Dict[str, Any],
+    kelompok_data: Dict[str, Any]
+) -> io.BytesIO:
+    """Membangun dokumen PDF resmi Pembagian Kelompok Belajar Siswa 100% identik dengan versi Word."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=0.65 * inch,
+        rightMargin=0.65 * inch,
+        topMargin=0.65 * inch,
+        bottomMargin=0.65 * inch
+    )
+
+    styles = getSampleStyleSheet()
+
+    style_kop_instansi = ParagraphStyle(
+        "KopInstansiKel",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=11,
+        leading=13,
+        alignment=1, # Center
+        textColor=colors.black
+    )
+    style_kop_sekolah = ParagraphStyle(
+        "KopSekolahKel",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=13,
+        leading=16,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_kop_judul = ParagraphStyle(
+        "KopJudulKel",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=10,
+        leading=12,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_kop_footer = ParagraphStyle(
+        "KopFooterKel",
+        parent=styles["Normal"],
+        fontName="Times-Italic",
+        fontSize=9,
+        leading=11,
+        alignment=1,
+        textColor=colors.HexColor("#555555")
+    )
+    style_sec_title = ParagraphStyle(
+        "SectionTitleKel",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=10.5,
+        leading=13,
+        textColor=colors.black,
+        spaceBefore=10,
+        spaceAfter=4,
+        keepWithNext=True
+    )
+    style_k_title = ParagraphStyle(
+        "KelompokTitle",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9.5,
+        leading=12,
+        textColor=colors.black,
+        spaceBefore=8,
+        spaceAfter=3,
+        keepWithNext=True
+    )
+    style_cell = ParagraphStyle(
+        "TableCellKel",
+        parent=styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.black
+    )
+    style_cell_bold = ParagraphStyle(
+        "TableCellBoldKel",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.black
+    )
+    style_cell_center = ParagraphStyle(
+        "TableCellCenterKel",
+        parent=styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=9,
+        leading=11.5,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_cell_center_bold = ParagraphStyle(
+        "TableCellCenterBoldKel",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11.5,
+        alignment=1,
+        textColor=colors.black
+    )
+
+    story = []
+
+    # 1. KOP SURAT
+    sekolah_clean = (header_data.get("nama_sekolah") or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+
+    current_year = datetime.datetime.now().year
+    story.append(Paragraph("DINAS PENDIDIKAN DAN KEBUDAYAAN", style_kop_instansi))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(sekolah_clean, style_kop_sekolah))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(f"LAPORAN PEMBAGIAN KELOMPOK BELAJAR SISWA • TAHUN AJARAN {current_year}/{current_year + 1}", style_kop_judul))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph("Saitech AI Solutions • Website: saitech.co.id", style_kop_footer))
+    story.append(Spacer(1, 4))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceBefore=0, spaceAfter=1))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.black, spaceBefore=0, spaceAfter=8))
+
+    # Data Calculation
+    tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
+    judul_agenda = header_data.get("judul") or header_data.get("agenda") or "Pembagian Kelompok Belajar"
+    strategi = header_data.get("strategi") or kelompok_data.get("ringkasan_strategi") or "Pembagian Seimbang"
+
+    daftar_kelompok = kelompok_data.get("daftar_kelompok") or []
+    total_kelompok = len(daftar_kelompok)
+    total_murid = sum(len(k.get("anggota", [])) for k in daftar_kelompok)
+
+    # 2. Metadata Table (2 baris x 4 kolom)
+    meta_data = [
+        [
+            Paragraph("<b>Agenda / Kelas</b>", style_cell_bold),
+            Paragraph(f": <b>{judul_agenda}</b>", style_cell),
+            Paragraph("<b>Tanggal Penetapan</b>", style_cell_bold),
+            Paragraph(f": {tanggal}", style_cell),
+        ],
+        [
+            Paragraph("<b>Strategi Pembagian</b>", style_cell_bold),
+            Paragraph(f": {strategi}", style_cell),
+            Paragraph("<b>Jumlah Kelompok</b>", style_cell_bold),
+            Paragraph(f": {total_kelompok} Kelompok ({total_murid} Siswa)", style_cell),
+        ],
+    ]
+    meta_table = Table(
+        meta_data,
+        colWidths=[1.4 * inch, 2.2 * inch, 1.4 * inch, 1.97 * inch]
+    )
+    meta_table.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 0.75, colors.black),
+        ('LINEBELOW', (0, -1), (-1, -1), 0.75, colors.black),
+        ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E5E7EB")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 8))
+
+    # 3. Bagian I: REKAPITULASI PEMBAGIAN KELOMPOK
+    story.append(Paragraph("I. REKAPITULASI PEMBAGIAN KELOMPOK BELAJAR", style_sec_title))
+    rekap_data = [
+        [
+            Paragraph("No", style_cell_center_bold),
+            Paragraph("Nama Kelompok", style_cell_bold),
+            Paragraph("Jumlah Anggota", style_cell_center_bold),
+            Paragraph("Rata-rata Nilai", style_cell_center_bold),
+            Paragraph("Alasan Komposisi", style_cell_bold),
+        ]
+    ]
+
+    for k_idx, k in enumerate(daftar_kelompok):
+        nama_k = k.get("nama_kelompok") or f"Kelompok {k_idx + 1}"
+        jml_a = f"{len(k.get('anggota', []))} Anggota"
+        rata_val = str(k.get("rata_rata_nilai") or "-")
+        alasan = k.get("alasan_komposisi") or "-"
+
+        rekap_data.append([
+            Paragraph(str(k_idx + 1), style_cell_center_bold),
+            Paragraph(f"<b>{nama_k}</b>", style_cell),
+            Paragraph(jml_a, style_cell_center),
+            Paragraph(rata_val, style_cell_center),
+            Paragraph(alasan, style_cell),
+        ])
+
+    t_rekap = Table(rekap_data, colWidths=[0.42 * inch, 1.94 * inch, 1.11 * inch, 1.25 * inch, 2.25 * inch])
+    t_rekap.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#D1D5DB")),
+        ('BOX', (0, 0), (-1, -1), 0.75, colors.black),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(t_rekap)
+    story.append(Spacer(1, 10))
+
+    # 4. Bagian II: RINCIAN DAFTAR ANGGOTA PER KELOMPOK
+    story.append(Paragraph("II. RINCIAN ANGGOTA MASING-MASING KELOMPOK", style_sec_title))
+
+    for k_idx, k in enumerate(daftar_kelompok):
+        nama_k = k.get("nama_kelompok") or f"Kelompok {k_idx + 1}"
+        anggota = k.get("anggota") or []
+        rata_str = f" • Rata-rata Nilai: {k.get('rata_rata_nilai')}" if k.get("rata_rata_nilai") else ""
+
+        story.append(Paragraph(f"<b>Kelompok {k_idx + 1}: {nama_k}</b> ({len(anggota)} Siswa{rata_str})", style_k_title))
+
+        ang_data = [
+            [
+                Paragraph("No", style_cell_center_bold),
+                Paragraph("Absen", style_cell_center_bold),
+                Paragraph("Nama Peserta Didik", style_cell_bold),
+                Paragraph("Nilai", style_cell_center_bold),
+                Paragraph("Peran / Catatan", style_cell_bold),
+            ]
+        ]
+
+        for a_idx, a in enumerate(anggota):
+            no_absen = str(a.get("nomor_absen") or (a_idx + 1))
+            nama_a = a.get("nama") or f"Siswa {a_idx + 1}"
+            nilai_a = str(a.get("nilai") or "-")
+            catatan_a = a.get("catatan") or "-"
+
+            ang_data.append([
+                Paragraph(str(a_idx + 1), style_cell_center_bold),
+                Paragraph(no_absen, style_cell_center_bold),
+                Paragraph(f"<b>{nama_a}</b>", style_cell),
+                Paragraph(nilai_a, style_cell_center),
+                Paragraph(catatan_a, style_cell),
+            ])
+
+        t_ang = Table(ang_data, colWidths=[0.42 * inch, 0.69 * inch, 2.81 * inch, 1.25 * inch, 1.80 * inch])
+        t_ang.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#D1D5DB")),
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t_ang)
+        story.append(Spacer(1, 4))
+
+    story.append(Spacer(1, 10))
+
+    # 5. Lembar Pengesahan Tanda Tangan
+    sig_data = [
+        [
+            Paragraph("Mengetahui,<br/>Kepala Sekolah<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ........................................................", style_cell),
+            Paragraph(f"{tanggal}<br/>Guru Pengampu / Wali Kelas<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ........................................................", style_cell)
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=[3.48 * inch, 3.48 * inch])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(sig_table)
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+

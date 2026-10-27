@@ -8,7 +8,7 @@ import os
 import sys
 import datetime
 
-from service.docx_builder import generate_exam_docx, generate_koreksi_report_docx, generate_rapor_report_docx, generate_ranking_report_docx, generate_absensi_report_docx
+from service.docx_builder import generate_exam_docx, generate_koreksi_report_docx, generate_rapor_report_docx, generate_ranking_report_docx, generate_absensi_report_docx, generate_kelompok_report_docx
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -188,6 +188,34 @@ async def export_absensi_docx(req: RequestExportAbsensiDocx):
     except Exception as e:
         logger.error(f"Export Absensi DOCX gagal: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Gagal generate dokumen Word Presensi Siswa: {str(e)}")
+
+
+class RequestExportKelompokDocx(BaseModel):
+    header: Optional[dict] = Field(default_factory=dict)
+    kelompok: dict = Field(default_factory=dict)
+
+
+@router.post("/export/kelompok-docx")
+async def export_kelompok_docx(req: RequestExportKelompokDocx):
+    try:
+        header_dict = req.header or {}
+        header_dict.setdefault("nama_sekolah", "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL")
+
+        docx_stream = generate_kelompok_report_docx(
+            header_data=header_dict,
+            kelompok_data=req.kelompok or {}
+        )
+
+        filename = f"Laporan_Kelompok_{datetime.datetime.now().strftime('%Y%m%d')}.docx"
+        return StreamingResponse(
+            docx_stream,
+            media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Export Kelompok DOCX gagal: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal generate dokumen Word Pembagian Kelompok: {str(e)}")
+
 
 
 

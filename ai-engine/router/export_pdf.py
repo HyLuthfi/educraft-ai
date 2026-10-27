@@ -5,7 +5,7 @@ from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional, List
 import io
 import datetime
-from service.pdf_builder import generate_koreksi_report_pdf, generate_rapor_report_pdf, generate_ranking_report_pdf, generate_absensi_report_pdf
+from service.pdf_builder import generate_koreksi_report_pdf, generate_rapor_report_pdf, generate_ranking_report_pdf, generate_absensi_report_pdf, generate_kelompok_report_pdf
 
 try:
     from fpdf import FPDF
@@ -345,6 +345,34 @@ async def export_absensi_pdf(req: RequestExportAbsensiPdf):
     except Exception as e:
         logger.error(f"Export Absensi PDF gagal: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=f"Gagal generate dokumen PDF Presensi Siswa: {str(e)}")
+
+
+class RequestExportKelompokPdf(BaseModel):
+    header: Optional[Dict[str, Any]] = None
+    kelompok: Dict[str, Any] = Field(default_factory=dict)
+
+
+@router.post("/export/kelompok-pdf")
+async def export_kelompok_pdf(req: RequestExportKelompokPdf):
+    try:
+        header_dict = req.header or {}
+        header_dict.setdefault("nama_sekolah", "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL")
+
+        pdf_stream = generate_kelompok_report_pdf(
+            header_data=header_dict,
+            kelompok_data=req.kelompok or {}
+        )
+
+        filename = f"Laporan_Kelompok_{datetime.datetime.now().strftime('%Y%m%d')}.pdf"
+        return StreamingResponse(
+            pdf_stream,
+            media_type="application/pdf",
+            headers={"Content-Disposition": f"attachment; filename={filename}"},
+        )
+    except Exception as e:
+        logger.error(f"Export Kelompok PDF gagal: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Gagal generate dokumen PDF Pembagian Kelompok: {str(e)}")
+
 
 
 

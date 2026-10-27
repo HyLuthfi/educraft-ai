@@ -15,7 +15,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ format:
       format !== "ranking-docx" &&
       format !== "ranking-pdf" &&
       format !== "absensi-docx" &&
-      format !== "absensi-pdf"
+      format !== "absensi-pdf" &&
+      format !== "kelompok-docx" &&
+      format !== "kelompok-pdf"
     ) {
       return NextResponse.json({ error: "Format tidak didukung" }, { status: 400 });
     }
@@ -59,6 +61,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ format:
     } else if (format === "absensi-pdf") {
       headers.set("Content-Type", "application/pdf");
       headers.set("Content-Disposition", "attachment; filename=Laporan_Presensi.pdf");
+    } else if (format === "kelompok-pdf") {
+      headers.set("Content-Type", "application/pdf");
+      headers.set("Content-Disposition", "attachment; filename=Laporan_Pembagian_Kelompok.pdf");
     } else if (format === "koreksi-docx") {
       headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
       headers.set("Content-Disposition", "attachment; filename=Laporan_Hasil_Koreksi.docx");
@@ -71,6 +76,9 @@ export async function POST(req: Request, { params }: { params: Promise<{ format:
     } else if (format === "absensi-docx") {
       headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
       headers.set("Content-Disposition", "attachment; filename=Laporan_Presensi.docx");
+    } else if (format === "kelompok-docx") {
+      headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      headers.set("Content-Disposition", "attachment; filename=Laporan_Pembagian_Kelompok.docx");
     } else {
       headers.set("Content-Type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
       headers.set("Content-Disposition", "attachment; filename=soal-educraft.docx");
