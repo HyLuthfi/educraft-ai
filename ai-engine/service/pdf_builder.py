@@ -1996,3 +1996,305 @@ def generate_kelompok_report_pdf(
     buffer.seek(0)
     return buffer
 
+
+def generate_perencana_report_pdf(
+    header_data: Dict[str, Any],
+    perencana_data: Dict[str, Any]
+) -> io.BytesIO:
+    """Membangun dokumen PDF resmi Modul Ajar / RPP Kurikulum Merdeka 100% identik dengan versi Word."""
+    buffer = io.BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        leftMargin=0.65 * inch,
+        rightMargin=0.65 * inch,
+        topMargin=0.65 * inch,
+        bottomMargin=0.65 * inch
+    )
+
+    styles = getSampleStyleSheet()
+
+    style_kop_instansi = ParagraphStyle(
+        "KopInstansiPer",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=11,
+        leading=13,
+        alignment=1, # Center
+        textColor=colors.black
+    )
+    style_kop_sekolah = ParagraphStyle(
+        "KopSekolahPer",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=13,
+        leading=16,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_kop_judul = ParagraphStyle(
+        "KopJudulPer",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=10,
+        leading=12,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_kop_footer = ParagraphStyle(
+        "KopFooterPer",
+        parent=styles["Normal"],
+        fontName="Times-Italic",
+        fontSize=9,
+        leading=11,
+        alignment=1,
+        textColor=colors.HexColor("#555555")
+    )
+    style_sec_title = ParagraphStyle(
+        "SectionTitlePer",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=10.5,
+        leading=13,
+        textColor=colors.black,
+        spaceBefore=10,
+        spaceAfter=4,
+        keepWithNext=True
+    )
+    style_p_title = ParagraphStyle(
+        "PertemuanTitle",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9.5,
+        leading=12,
+        textColor=colors.black,
+        spaceBefore=8,
+        spaceAfter=3,
+        keepWithNext=True
+    )
+    style_cell = ParagraphStyle(
+        "TableCellPer",
+        parent=styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.black
+    )
+    style_cell_bold = ParagraphStyle(
+        "TableCellBoldPer",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=9,
+        leading=11.5,
+        textColor=colors.black
+    )
+    style_cell_center = ParagraphStyle(
+        "TableCellCenterPer",
+        parent=styles["Normal"],
+        fontName="Times-Roman",
+        fontSize=8.5,
+        leading=11,
+        alignment=1,
+        textColor=colors.black
+    )
+    style_cell_center_bold = ParagraphStyle(
+        "TableCellCenterBoldPer",
+        parent=styles["Normal"],
+        fontName="Times-Bold",
+        fontSize=8.5,
+        leading=11,
+        alignment=1,
+        textColor=colors.black
+    )
+
+    story = []
+
+    # 1. KOP SURAT
+    sekolah_clean = (header_data.get("nama_sekolah") or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+
+    current_year = datetime.datetime.now().year
+    story.append(Paragraph("DINAS PENDIDIKAN DAN KEBUDAYAAN", style_kop_instansi))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(sekolah_clean, style_kop_sekolah))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph(f"MODUL AJAR / RENCANA PELAKSANAAN PEMBELAJARAN (RPP) • TAHUN AJARAN {current_year}/{current_year + 1}", style_kop_judul))
+    story.append(Spacer(1, 2))
+    story.append(Paragraph("Saitech AI Solutions • Website: saitech.co.id", style_kop_footer))
+    story.append(Spacer(1, 4))
+    story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceBefore=0, spaceAfter=1))
+    story.append(HRFlowable(width="100%", thickness=0.5, color=colors.black, spaceBefore=0, spaceAfter=8))
+
+    # Data Calculation
+    tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
+    mapel = header_data.get("mata_pelajaran") or header_data.get("mapel") or "Mata Pelajaran Umum"
+    jenjang = header_data.get("jenjang") or "Fase E / Kelas X"
+    gaya = header_data.get("gaya") or "Problem-Based Learning"
+    durasi = f"{header_data.get('durasi', 90)} Menit / Pertemuan"
+
+    judul_rencana = perencana_data.get("judul_rencana") or "Modul Ajar Pembelajaran"
+    ringkasan = perencana_data.get("ringkasan") or "-"
+    daftar_pertemuan = perencana_data.get("daftar_pertemuan") or []
+    total_pertemuan = perencana_data.get("total_pertemuan") or len(daftar_pertemuan)
+    saran_asesmen = perencana_data.get("saran_asesmen") or "-"
+
+    # 2. Metadata Table (3 baris x 4 kolom)
+    meta_data = [
+        [
+            Paragraph("<b>Topik / Modul Ajar</b>", style_cell_bold),
+            Paragraph(f": <b>{judul_rencana}</b>", style_cell),
+            Paragraph("<b>Mata Pelajaran</b>", style_cell_bold),
+            Paragraph(f": {mapel}", style_cell),
+        ],
+        [
+            Paragraph("<b>Fase / Jenjang</b>", style_cell_bold),
+            Paragraph(f": {jenjang}", style_cell),
+            Paragraph("<b>Alokasi Waktu</b>", style_cell_bold),
+            Paragraph(f": {total_pertemuan} Pertemuan ({durasi})", style_cell),
+        ],
+        [
+            Paragraph("<b>Model Pembelajaran</b>", style_cell_bold),
+            Paragraph(f": {gaya}", style_cell),
+            Paragraph("<b>Tanggal Penyusunan</b>", style_cell_bold),
+            Paragraph(f": {tanggal}", style_cell),
+        ],
+    ]
+    meta_table = Table(
+        meta_data,
+        colWidths=[1.4 * inch, 2.2 * inch, 1.4 * inch, 1.97 * inch]
+    )
+    meta_table.setStyle(TableStyle([
+        ('LINEABOVE', (0, 0), (-1, 0), 0.75, colors.black),
+        ('LINEBELOW', (0, -1), (-1, -1), 0.75, colors.black),
+        ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E5E7EB")),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('TOPPADDING', (0, 0), (-1, -1), 3),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+        ('LEFTPADDING', (0, 0), (-1, -1), 4),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+    ]))
+    story.append(meta_table)
+    story.append(Spacer(1, 8))
+
+    # 3. Bagian I: RINGKASAN CAPAIAN & ALUR PEMBELAJARAN
+    story.append(Paragraph("I. RINGKASAN MODUL & CAPAIAN PEMBELAJARAN", style_sec_title))
+    story.append(Paragraph(ringkasan, style_cell))
+    story.append(Spacer(1, 8))
+
+    # 4. Bagian II: RANGKAIAN DETAIL PERTEMUAN PEMBELAJARAN
+    story.append(Paragraph("II. RANGKAIAN DETAIL PERTEMUAN PEMBELAJARAN", style_sec_title))
+
+    for p_idx, p in enumerate(daftar_pertemuan):
+        p_num = p.get("pertemuan_ke") or (p_idx + 1)
+        p_judul = p.get("judul_pertemuan") or f"Pertemuan {p_num}"
+        p_topik = p.get("topik") or "-"
+        p_metode = p.get("metode") or gaya
+        p_penilaian = p.get("penilaian") or "-"
+        p_catatan = p.get("catatan_guru") or ""
+
+        tujuan_list = p.get("tujuan_pembelajaran") or []
+        materi_list = p.get("materi_pokok") or []
+        aktivitas_list = p.get("aktivitas") or []
+
+        story.append(Paragraph(f"<b>Pertemuan {p_num}: {p_judul}</b>", style_p_title))
+
+        # Komponen Tabel Ringkasan Pertemuan
+        t_p_data = [
+            [
+                Paragraph("<b>Topik & Metode</b>", style_cell_bold),
+                Paragraph(f"{p_topik} (Metode: {p_metode})", style_cell),
+            ],
+            [
+                Paragraph("<b>Tujuan Pembelajaran</b>", style_cell_bold),
+                Paragraph(" • " + "<br/> • ".join(tujuan_list) if tujuan_list else "-", style_cell),
+            ],
+            [
+                Paragraph("<b>Materi & Penilaian</b>", style_cell_bold),
+                Paragraph(f"Materi: {', '.join(materi_list) if materi_list else '-'}<br/>Penilaian: {p_penilaian}", style_cell),
+            ]
+        ]
+        t_p_tab = Table(t_p_data, colWidths=[1.52 * inch, 5.45 * inch])
+        t_p_tab.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, -1), colors.HexColor("#F9FAFB")),
+            ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#D1D5DB")),
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.black),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t_p_tab)
+        story.append(Spacer(1, 3))
+
+        # Tabel Aktivitas Pembelajaran
+        if aktivitas_list:
+            akt_data = [
+                [
+                    Paragraph("No", style_cell_center_bold),
+                    Paragraph("Tahap / Tipe", style_cell_bold),
+                    Paragraph("Deskripsi Rincian Aktivitas", style_cell_bold),
+                    Paragraph("Durasi", style_cell_center_bold),
+                ]
+            ]
+            for a_i, a in enumerate(aktivitas_list):
+                tipe_str = a.get("tipe", "").upper()
+                judul_a = a.get("judul", "")
+                desk_a = a.get("deskripsi", "")
+                dur_a = f"{a.get('durasi_menit', 15)}m"
+                full_desk = f"<b>{judul_a}</b><br/>{desk_a}" if desk_a else f"<b>{judul_a}</b>"
+
+                akt_data.append([
+                    Paragraph(str(a_i + 1), style_cell_center_bold),
+                    Paragraph(f"<b>{tipe_str}</b>", style_cell),
+                    Paragraph(full_desk, style_cell),
+                    Paragraph(dur_a, style_cell_center),
+                ])
+
+            t_akt_tab = Table(akt_data, colWidths=[0.42 * inch, 1.11 * inch, 4.60 * inch, 0.84 * inch])
+            t_akt_tab.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.HexColor("#D1D5DB")),
+                ('BOX', (0, 0), (-1, -1), 0.75, colors.black),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('TOPPADDING', (0, 0), (-1, -1), 3),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+                ('LEFTPADDING', (0, 0), (-1, -1), 4),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+            ]))
+            story.append(t_akt_tab)
+
+        if p_catatan:
+            story.append(Spacer(1, 2))
+            story.append(Paragraph(f"<i>Catatan Pedagogis Guru: {p_catatan}</i>", style_cell))
+
+        story.append(Spacer(1, 6))
+
+    # 5. Bagian III: SARAN ASESMEN AKHIR & INSTRUMEN EVALUASI
+    if saran_asesmen and saran_asesmen != "-":
+        story.append(Paragraph("III. SARAN ASESMEN AKHIR & EVALUASI", style_sec_title))
+        story.append(Paragraph(saran_asesmen, style_cell))
+        story.append(Spacer(1, 10))
+
+    # 6. Lembar Pengesahan Tanda Tangan
+    sig_data = [
+        [
+            Paragraph("Mengetahui,<br/>Kepala Sekolah<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ........................................................", style_cell),
+            Paragraph(f"{tanggal}<br/>Guru Mata Pelajaran / Pengampu<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ........................................................", style_cell)
+        ]
+    ]
+    sig_table = Table(sig_data, colWidths=[3.48 * inch, 3.48 * inch])
+    sig_table.setStyle(TableStyle([
+        ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+        ('LEFTPADDING', (0, 0), (-1, -1), 6),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(sig_table)
+
+    doc.build(story)
+    buffer.seek(0)
+    return buffer
+
