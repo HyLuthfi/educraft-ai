@@ -234,7 +234,13 @@ export default function RaporPage() {
           }),
           total_sesi: numericSesiCount,
         },
-        siswa_list: siswaTrenList,
+        siswa_list: siswaTrenList.map((s, idx) => ({
+          ...s,
+          rank: idx + 1,
+          rata_rata: s.rataRata,
+          total_sesi: s.totalSesi,
+          tuntas_count: s.tuntasCount,
+        })),
         sesi_list: sesiList,
       };
 
@@ -290,7 +296,13 @@ export default function RaporPage() {
           }),
           total_sesi: numericSesiCount,
         },
-        siswa_list: siswaTrenList,
+        siswa_list: siswaTrenList.map((s, idx) => ({
+          ...s,
+          rank: idx + 1,
+          rata_rata: s.rataRata,
+          total_sesi: s.totalSesi,
+          tuntas_count: s.tuntasCount,
+        })),
         sesi_list: sesiList,
       };
 

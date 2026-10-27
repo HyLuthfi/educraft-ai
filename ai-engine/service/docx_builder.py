@@ -2416,55 +2416,64 @@ def generate_rapor_report_docx(
     for idx_s, s in enumerate(siswa_list):
         doc.add_page_break()
         nama_siswa = s.get("nama", f"Siswa #{idx_s + 1}")
-        tot_sesi = s.get("total_sesi", 0)
-        tunt_sesi = s.get("tuntas_count", 0)
-        avg_score = float(s.get("rata_rata", 0))
-        rank_num = idx_s + 1
         data_pts = s.get("data", []) or s.get("history", [])
+        
+        tot_sesi = int(s.get("total_sesi") if s.get("total_sesi") is not None else s.get("totalSesi", 0))
+        tunt_sesi = int(s.get("tuntas_count") if s.get("tuntas_count") is not None else s.get("tuntasCount", 0))
+        raw_avg = s.get("rata_rata") if s.get("rata_rata") is not None else s.get("rataRata")
+        
+        if (raw_avg is None or float(raw_avg) == 0.0) and data_pts:
+            pts_vals = [float(pt.get("nilai", 0)) for pt in data_pts if pt.get("nilai") is not None]
+            avg_score = sum(pts_vals) / len(pts_vals) if pts_vals else 0.0
+        else:
+            avg_score = float(raw_avg or 0.0)
+            
+        if not tot_sesi and data_pts:
+            tot_sesi = len(data_pts)
+        if not tunt_sesi and data_pts:
+            tunt_sesi = sum(1 for pt in data_pts if float(pt.get("nilai", 0)) >= float(pt.get("kkm", 75)))
+
+        rank_num = s.get("rank") or (idx_s + 1)
 
         if avg_score >= 90:
             predikat_huruf = "A"
             predikat_label = "A (Sangat Baik / Istimewa)"
-            catatan_guru = (
-                "Peserta didik menunjukkan penguasaan materi yang sangat istimewa dan konsisten tinggi. "
-                "Memiliki daya nalar kritis serta pemahaman konsep yang mendalam di setiap sesi penilaian. "
-                "Pertahankan motivasi belajar dan terus kembangkan kemampuan literasi serta analisis mandiri."
+            catatan_wali = (
+                "Ananda menunjukkan prestasi yang sangat membanggakan dengan penguasaan kompetensi yang istimewa. "
+                "Pertahankan semangat belajar, ketekunan, dan teruslah menjadi teladan positif bagi rekan-rekan di kelas."
             )
         elif avg_score >= 80:
             predikat_huruf = "B"
             predikat_label = "B (Baik / Terampil)"
-            catatan_guru = (
-                "Peserta didik telah menguasai sebagian besar kompetensi dengan capaian sangat memuaskan. "
-                "Konsep-konsep dasar telah dipahami dengan kokoh. Disarankan untuk terus aktif mengeksplorasi "
-                "studi kasus dan pengayaan soal-soal tingkat lanjut (HOTS)."
+            catatan_wali = (
+                "Ananda telah mencapai ketuntasan belajar dengan hasil yang sangat baik. "
+                "Tingkatkan terus keaktifan dan ketelitian belajar untuk meraih prestasi yang lebih tinggi pada materi-materi mendatang."
             )
         elif avg_score >= 70:
             predikat_huruf = "C"
             predikat_label = "C (Cukup / Memenuhi KKM)"
-            catatan_guru = (
-                "Peserta didik telah berhasil memenuhi kriteria ketuntasan minimal (KKM). "
-                "Perlu meningkatkan ketelitian belajar dan mengulang materi pada kompetensi-kompetensi "
-                "yang capaian nilainya belum optimal agar pemahaman semakin matang."
+            catatan_wali = (
+                "Ananda telah berhasil memenuhi standar ketuntasan minimal (KKM). "
+                "Disarankan untuk lebih fokus dan memperbanyak latihan mandiri di rumah pada materi yang masih memerlukan penguatan."
             )
         elif avg_score >= 60:
             predikat_huruf = "D"
             predikat_label = "D (Kurang / Bimbingan Dasar)"
-            catatan_guru = (
-                "Peserta didik belum mencapai standar ketuntasan minimal pada beberapa sesi materi. "
-                "Sangat disarankan untuk mengikuti program remedial terarah dan pendampingan belajar "
-                "secara intensif dari guru pengampu serta dukungan belajar di rumah."
+            catatan_wali = (
+                "Ananda perlu lebih disiplin dalam mengatur waktu belajar serta proaktif bertanya kepada guru. "
+                "Dengan ketekunan dan bimbingan belajar tambahan, Ananda pasti mampu meningkatkan capaian kompetensi."
             )
         else:
             predikat_huruf = "E"
             predikat_label = "E (Perlu Pendampingan Khusus)"
-            catatan_guru = (
-                "Peserta didik memerlukan bimbingan belajar remedial intensif dan penguatan pemahaman konsep "
-                "paling mendasar. Diperlukan komunikasi intensif antara guru pengampu dan orang tua/wali siswa."
+            catatan_wali = (
+                "Ananda memerlukan bimbingan belajar dan pendampingan yang lebih intensif pada konsep-konsep dasar. "
+                "Perlu adanya perhatian serta kerja sama yang baik antara pihak sekolah dan orang tua di rumah."
             )
 
-        status_kkm_badge = "TUNTAS KOMPETENSI" if avg_score >= 75 else "PERLU PENDAMPINGAN REMEDIAL"
+        status_kkm_badge = "Tuntas Memenuhi Standar KKM" if avg_score >= 75 else "Perlu Bimbingan Tambahan"
 
-        # 1. Header Kop Rapor Siswa Mandiri
+        # 1. Header Kop Rapor Resmi Kedinasan untuk Siswa & Orang Tua
         p_hdr = doc.add_paragraph()
         p_hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
         p_hdr.paragraph_format.space_before = Pt(0)
@@ -2478,19 +2487,18 @@ def generate_rapor_report_docx(
 
         r_sek = p_hdr.add_run(f"{sekolah_clean}\n")
         r_sek.font.name = "Times New Roman"
-        r_sek.font.size = Pt(12)
+        r_sek.font.size = Pt(12.5)
         r_sek.font.bold = True
 
-        r_doc = p_hdr.add_run("LAPORAN HASIL CAPAIAN ASESMEN SISWA\n")
+        r_doc = p_hdr.add_run("LAPORAN HASIL CAPAIAN KOMPETENSI PESERTA DIDIK\n")
         r_doc.font.name = "Times New Roman"
         r_doc.font.size = Pt(11)
         r_doc.font.bold = True
 
-        r_sub = p_hdr.add_run(f"TAHUN AJARAN {current_year}/{current_year + 1} • SAITECH AI SOLUTIONS")
+        r_sub = p_hdr.add_run(f"TAHUN AJARAN {current_year}/{current_year + 1}")
         r_sub.font.name = "Times New Roman"
-        r_sub.font.size = Pt(8.5)
-        r_sub.font.italic = True
-        r_sub.font.color.rgb = RGBColor(90, 90, 90)
+        r_sub.font.size = Pt(9.5)
+        r_sub.font.bold = True
 
         p_hdr._p.get_or_add_pPr().append(parse_xml(
             r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
@@ -2498,7 +2506,7 @@ def generate_rapor_report_docx(
             r'</w:pBdr>'
         ))
 
-        # 2. Tabel Profil Siswa (3 baris x 4 kolom simetris - Ruled Header Table)
+        # 2. Tabel Identitas Peserta Didik (Ruled Table 4 Kolom Simetris)
         t_prof = doc.add_table(rows=3, cols=4)
         t_prof.alignment = WD_TABLE_ALIGNMENT.CENTER
         t_prof.autofit = False
@@ -2513,16 +2521,16 @@ def generate_rapor_report_docx(
             </w:tblBorders>'''
         ))
 
-        col_prof_dxa = [1800, 3218, 1800, 3219] # Total 10037 dxa
+        col_prof_dxa = [1900, 3118, 1900, 3119] # Total 10037 dxa
         set_table_width_and_grid(t_prof, col_prof_dxa)
 
         prof_rows = [
             ("Nama Peserta Didik", f":  {nama_siswa}", "Kelas / Fase", f":  {kelas}"),
-            ("Peringkat Kelas", f":  Peringkat {rank_num} dari {total_siswa} Siswa", "Sesi Evaluasi Diikuti", f":  {tot_sesi} Sesi Asesmen"),
-            ("Rata-Rata Capaian", f":  {avg_score:.1f} (Predikat {predikat_huruf})", "Status Ketuntasan", f":  {status_kkm_badge}"),
+            ("Nomor Urut / Peringkat", f":  Peringkat {rank_num} dari {total_siswa} Siswa", "Semester / Tahun", f":  Ganjil / {current_year}/{current_year + 1}"),
+            ("Nilai Rata-Rata Rapor", f":  {avg_score:.1f} (Predikat {predikat_huruf})", "Status Capaian Belajar", f":  {status_kkm_badge}"),
         ]
 
-        col_prof_w = [Inches(1.25), Inches(2.23), Inches(1.25), Inches(2.24)]
+        col_prof_w = [Inches(1.32), Inches(2.16), Inches(1.32), Inches(2.17)]
         for r_idx, (k1, v1, k2, v2) in enumerate(prof_rows):
             row = t_prof.rows[r_idx]
             row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
@@ -2546,7 +2554,7 @@ def generate_rapor_report_docx(
             r2 = p2.add_run(v1)
             r2.font.name = "Times New Roman"
             r2.font.size = Pt(9.5)
-            if r_idx == 0:
+            if r_idx in (0, 2):
                 r2.font.bold = True
 
             p3 = row.cells[2].paragraphs[0]
@@ -2570,23 +2578,23 @@ def generate_rapor_report_docx(
         p_sec_stu.paragraph_format.space_after = Pt(3)
         p_sec_stu.paragraph_format.line_spacing = 1.15
         p_sec_stu.paragraph_format.keep_with_next = True
-        r_sec_stu = p_sec_stu.add_run("RINCIAN HASIL CAPAIAN ASESMEN PER SESI")
+        r_sec_stu = p_sec_stu.add_run("CAPAIAN KOMPETENSI ASESMEN PEMBELAJARAN")
         r_sec_stu.font.name = "Times New Roman"
         r_sec_stu.font.size = Pt(10)
         r_sec_stu.font.bold = True
 
-        # 4. Tabel Matriks Rapor Asesmen (6 Kolom)
-        # Baris: 1 header + N sesi (atau 1 jika kosong) + 1 baris rangkuman + 1 baris catatan guru
+        # 4. Tabel Matriks Rapor Asesmen Formal (6 Kolom)
+        # Baris: 1 header + N sesi (atau 1 jika kosong) + 1 baris rangkuman + 1 baris catatan wali kelas
         n_sesi_rows = max(len(data_pts), 1)
         t_sesi = doc.add_table(rows=1 + n_sesi_rows + 2, cols=6)
         t_sesi.alignment = WD_TABLE_ALIGNMENT.CENTER
         t_sesi.autofit = False
-        col_sesi_dxa = [504, 3693, 1700, 1200, 1240, 1700] # Total 10037 dxa
+        col_sesi_dxa = [504, 3200, 1000, 1000, 900, 3433] # Total 10037 dxa
         set_table_width_and_grid(t_sesi, col_sesi_dxa)
         set_table_borders_thin(t_sesi, color="D1D5DB", sz="4")
 
-        headers_sesi = ["No", "Materi / Sesi Asesmen", "Tanggal Asesmen", "Standar KKM", "Nilai Akhir", "Hasil & Predikat"]
-        col_sesi_w = [Inches(0.35), Inches(2.56), Inches(1.18), Inches(0.83), Inches(0.86), Inches(1.18)]
+        headers_sesi = ["No", "Materi / Sesi Asesmen", "Standar KKM", "Nilai Angka", "Predikat", "Keterangan Capaian Kompetensi"]
+        col_sesi_w = [Inches(0.35), Inches(2.22), Inches(0.69), Inches(0.69), Inches(0.63), Inches(2.39)]
 
         # Header Row
         hdr_sesi_row = t_sesi.rows[0]
@@ -2595,12 +2603,12 @@ def generate_rapor_report_docx(
         for c_idx, h_text in enumerate(headers_sesi):
             c = hdr_sesi_row.cells[c_idx]
             c.width = col_sesi_w[c_idx]
-            set_cell_margins(c, top=75, bottom=75, left=80, right=80)
+            set_cell_margins(c, top=75, bottom=75, left=70, right=70)
             c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
             shading = parse_xml(r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F3F4F6"/>''')
             c._tc.get_or_add_tcPr().append(shading)
             p = c.paragraphs[0]
-            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx != 1 else WD_ALIGN_PARAGRAPH.LEFT
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3, 4) else WD_ALIGN_PARAGRAPH.LEFT
             p.paragraph_format.line_spacing = 1.15
             p.paragraph_format.space_after = Pt(0)
             p.paragraph_format.keep_with_next = True
@@ -2615,51 +2623,49 @@ def generate_rapor_report_docx(
                 r_elem = t_sesi.rows[s_idx + 1]
                 r_elem._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
                 sesi_name = pt.get("sesi_title") or pt.get("label") or f"Asesmen #{s_idx + 1}"
-                sesi_date = pt.get("tanggal") or pt.get("label") or "-"
                 kkm_val = pt.get("kkm", 75)
                 score_val = float(pt.get("nilai", 0))
 
-                if score_val >= kkm_val:
-                    status_text = "[✓] TUNTAS"
-                else:
-                    status_text = "[✗] REMEDIAL"
-
                 if score_val >= 90:
                     pred_sesi = "A"
+                    capaian_desc = "Menunjukkan penguasaan kompetensi yang sangat istimewa dan pemahaman mendalam."
                 elif score_val >= 80:
                     pred_sesi = "B"
+                    capaian_desc = "Menunjukkan penguasaan kompetensi yang baik dan telah mencapai ketuntasan materi."
                 elif score_val >= 70:
                     pred_sesi = "C"
+                    capaian_desc = "Telah memenuhi standar kriteria ketuntasan minimal (KKM) dengan cukup baik."
                 elif score_val >= 60:
                     pred_sesi = "D"
+                    capaian_desc = "Perlu penguatan konsep dan latihan mandiri untuk meningkatkan ketuntasan materi."
                 else:
                     pred_sesi = "E"
+                    capaian_desc = "Perlu bimbingan remedial dan pendampingan konsep dasar secara terarah."
 
                 row_vals = [
                     str(s_idx + 1),
                     sesi_name,
-                    sesi_date,
                     str(kkm_val),
                     f"{score_val:.1f}",
-                    f"{status_text} ({pred_sesi})",
+                    pred_sesi,
+                    capaian_desc,
                 ]
 
                 for c_idx, val in enumerate(row_vals):
                     c = r_elem.cells[c_idx]
                     c.width = col_sesi_w[c_idx]
-                    set_cell_margins(c, top=70, bottom=70, left=80, right=80)
+                    set_cell_margins(c, top=70, bottom=70, left=70, right=70)
                     c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
                     p = c.paragraphs[0]
-                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3, 4, 5) else WD_ALIGN_PARAGRAPH.LEFT
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3, 4) else WD_ALIGN_PARAGRAPH.LEFT
                     p.paragraph_format.line_spacing = 1.15
                     p.paragraph_format.space_after = Pt(0)
                     r = p.add_run(val)
                     r.font.name = "Times New Roman"
                     r.font.size = Pt(9.5)
-                    if c_idx in (0, 4):
+                    if c_idx in (0, 3, 4):
                         r.font.bold = True
         else:
-            # Fallback jika tidak ada titik data
             r_elem = t_sesi.rows[1]
             r_elem._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
             c_empty = r_elem.cells[0]
@@ -2674,7 +2680,7 @@ def generate_rapor_report_docx(
             r_emp.font.size = Pt(9.5)
             r_emp.font.italic = True
 
-        # Baris Penutup 1: Rangkuman Capaian Nilai (Merged 6 Kolom)
+        # Baris Penutup 1: Rangkuman Nilai Rapor (Merged 6 Kolom)
         row_summary = t_sesi.rows[1 + n_sesi_rows]
         row_summary._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
         c_sum0 = row_summary.cells[0]
@@ -2690,13 +2696,13 @@ def generate_rapor_report_docx(
         p_sum.paragraph_format.line_spacing = 1.15
         p_sum.paragraph_format.space_after = Pt(0)
         r_sum = p_sum.add_run(
-            f"Rata-Rata Capaian: {avg_score:.1f}  •  Tingkat Ketuntasan: {tunt_sesi}/{tot_sesi} Sesi Tuntas  •  Predikat Mutu: {predikat_label}"
+            f"Rata-Rata Nilai Akhir: {avg_score:.1f}  •  Predikat Akhir: {predikat_label}  •  Ketuntasan: {tunt_sesi}/{tot_sesi} Sesi Tuntas"
         )
         r_sum.font.name = "Times New Roman"
         r_sum.font.size = Pt(9.5)
         r_sum.font.bold = True
 
-        # Baris Penutup 2: Catatan & Rekomendasi Guru (Merged 6 Kolom)
+        # Baris Penutup 2: Catatan Wali Kelas (Merged 6 Kolom)
         row_catatan = t_sesi.rows[1 + n_sesi_rows + 1]
         row_catatan._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
         c_cat0 = row_catatan.cells[0]
@@ -2709,17 +2715,17 @@ def generate_rapor_report_docx(
         p_cat.paragraph_format.line_spacing = 1.15
         p_cat.paragraph_format.space_after = Pt(0)
         
-        r_cat_title = p_cat.add_run("Catatan Perkembangan & Rekomendasi Guru:\n")
+        r_cat_title = p_cat.add_run("Catatan Wali Kelas / Perkembangan Peserta Didik:\n")
         r_cat_title.font.name = "Times New Roman"
         r_cat_title.font.size = Pt(9.5)
         r_cat_title.font.bold = True
 
-        r_cat_body = p_cat.add_run(catatan_guru)
+        r_cat_body = p_cat.add_run(catatan_wali)
         r_cat_body.font.name = "Times New Roman"
         r_cat_body.font.size = Pt(9.5)
         r_cat_body.font.italic = True
 
-        # 5. Lembar Pengesahan Tanda Tangan Siswa (Orang Tua & Guru)
+        # 5. Lembar Pengesahan Tanda Tangan Siswa (Orang Tua & Wali Kelas)
         t_stu_sig = doc.add_table(rows=1, cols=2)
         t_stu_sig.alignment = WD_TABLE_ALIGNMENT.CENTER
         t_stu_sig.autofit = False
@@ -2754,7 +2760,7 @@ def generate_rapor_report_docx(
         p_gr.paragraph_format.keep_with_next = True
         p_gr.add_run(
             f"{tanggal}\n"
-            "Guru Pengampu / Wali Kelas\n\n\n\n"
+            "Wali Kelas\n\n\n\n"
             "( ................................................................ )\n"
             "NIP. ........................................................"
         )
