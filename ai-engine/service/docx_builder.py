@@ -2100,7 +2100,12 @@ def generate_rapor_report_docx(
     sec.right_margin = Inches(0.65)
 
     # 1. Kop Resmi
-    add_rapor_kop(doc, header_data.get("nama_sekolah", ""))
+    sekolah_clean = (header_data.get("nama_sekolah") or "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL").strip().upper()
+    if sekolah_clean in ("EDUCRAFT AI", "LEMBAGA PENDIDIKAN", "SAI TECH", "PT SOLUSI AGEN INDONESIA"):
+        sekolah_clean = "SMA / SMK / MADRASAH PENDIDIKAN NASIONAL"
+    current_year = datetime.datetime.now().year
+
+    add_rapor_kop(doc, sekolah_clean)
 
     tanggal = header_data.get("tanggal") or datetime.datetime.now().strftime("%d %B %Y")
     total_siswa = len(siswa_list)
@@ -2403,6 +2408,359 @@ def generate_rapor_report_docx(
     for r in p_gr.runs:
         r.font.name = "Times New Roman"
         r.font.size = Pt(9.5)
+
+    # ══════════════════════════════════════════════════════════════════════════
+    # LEMBAR RAPOR HASIL CAPAIAN ASESMEN INDIVIDUAL PER SISWA (UNTUK DIBAGIKAN)
+    # ══════════════════════════════════════════════════════════════════════════
+    kelas = header_data.get("kelas", "Semua Kelas")
+    for idx_s, s in enumerate(siswa_list):
+        doc.add_page_break()
+        nama_siswa = s.get("nama", f"Siswa #{idx_s + 1}")
+        tot_sesi = s.get("total_sesi", 0)
+        tunt_sesi = s.get("tuntas_count", 0)
+        avg_score = float(s.get("rata_rata", 0))
+        rank_num = idx_s + 1
+        data_pts = s.get("data", []) or s.get("history", [])
+
+        if avg_score >= 90:
+            predikat_huruf = "A"
+            predikat_label = "A (Sangat Baik / Istimewa)"
+            catatan_guru = (
+                "Peserta didik menunjukkan penguasaan materi yang sangat istimewa dan konsisten tinggi. "
+                "Memiliki daya nalar kritis serta pemahaman konsep yang mendalam di setiap sesi penilaian. "
+                "Pertahankan motivasi belajar dan terus kembangkan kemampuan literasi serta analisis mandiri."
+            )
+        elif avg_score >= 80:
+            predikat_huruf = "B"
+            predikat_label = "B (Baik / Terampil)"
+            catatan_guru = (
+                "Peserta didik telah menguasai sebagian besar kompetensi dengan capaian sangat memuaskan. "
+                "Konsep-konsep dasar telah dipahami dengan kokoh. Disarankan untuk terus aktif mengeksplorasi "
+                "studi kasus dan pengayaan soal-soal tingkat lanjut (HOTS)."
+            )
+        elif avg_score >= 70:
+            predikat_huruf = "C"
+            predikat_label = "C (Cukup / Memenuhi KKM)"
+            catatan_guru = (
+                "Peserta didik telah berhasil memenuhi kriteria ketuntasan minimal (KKM). "
+                "Perlu meningkatkan ketelitian belajar dan mengulang materi pada kompetensi-kompetensi "
+                "yang capaian nilainya belum optimal agar pemahaman semakin matang."
+            )
+        elif avg_score >= 60:
+            predikat_huruf = "D"
+            predikat_label = "D (Kurang / Bimbingan Dasar)"
+            catatan_guru = (
+                "Peserta didik belum mencapai standar ketuntasan minimal pada beberapa sesi materi. "
+                "Sangat disarankan untuk mengikuti program remedial terarah dan pendampingan belajar "
+                "secara intensif dari guru pengampu serta dukungan belajar di rumah."
+            )
+        else:
+            predikat_huruf = "E"
+            predikat_label = "E (Perlu Pendampingan Khusus)"
+            catatan_guru = (
+                "Peserta didik memerlukan bimbingan belajar remedial intensif dan penguatan pemahaman konsep "
+                "paling mendasar. Diperlukan komunikasi intensif antara guru pengampu dan orang tua/wali siswa."
+            )
+
+        status_kkm_badge = "TUNTAS KOMPETENSI" if avg_score >= 75 else "PERLU PENDAMPINGAN REMEDIAL"
+
+        # 1. Header Kop Rapor Siswa Mandiri
+        p_hdr = doc.add_paragraph()
+        p_hdr.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        p_hdr.paragraph_format.space_before = Pt(0)
+        p_hdr.paragraph_format.space_after = Pt(4)
+        p_hdr.paragraph_format.line_spacing = 1.15
+
+        r_inst = p_hdr.add_run("DINAS PENDIDIKAN DAN KEBUDAYAAN\n")
+        r_inst.font.name = "Times New Roman"
+        r_inst.font.size = Pt(10)
+        r_inst.font.bold = True
+
+        r_sek = p_hdr.add_run(f"{sekolah_clean}\n")
+        r_sek.font.name = "Times New Roman"
+        r_sek.font.size = Pt(12)
+        r_sek.font.bold = True
+
+        r_doc = p_hdr.add_run("LAPORAN HASIL CAPAIAN ASESMEN SISWA\n")
+        r_doc.font.name = "Times New Roman"
+        r_doc.font.size = Pt(11)
+        r_doc.font.bold = True
+
+        r_sub = p_hdr.add_run(f"TAHUN AJARAN {current_year}/{current_year + 1} • SAITECH AI SOLUTIONS")
+        r_sub.font.name = "Times New Roman"
+        r_sub.font.size = Pt(8.5)
+        r_sub.font.italic = True
+        r_sub.font.color.rgb = RGBColor(90, 90, 90)
+
+        p_hdr._p.get_or_add_pPr().append(parse_xml(
+            r'<w:pBdr xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            r'<w:bottom w:val="double" w:sz="12" w:space="6" w:color="000000"/>'
+            r'</w:pBdr>'
+        ))
+
+        # 2. Tabel Profil Siswa (3 baris x 4 kolom simetris - Ruled Header Table)
+        t_prof = doc.add_table(rows=3, cols=4)
+        t_prof.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_prof.autofit = False
+        tblPr_prof = t_prof._tbl.tblPr
+        tblPr_prof.append(parse_xml(
+            r'''<w:tblBorders xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+                <w:top w:val="single" w:sz="8" w:space="0" w:color="000000"/>
+                <w:bottom w:val="single" w:sz="8" w:space="0" w:color="000000"/>
+                <w:left w:val="none"/><w:right w:val="none"/>
+                <w:insideH w:val="single" w:sz="4" w:space="0" w:color="E5E7EB"/>
+                <w:insideV w:val="none"/>
+            </w:tblBorders>'''
+        ))
+
+        col_prof_dxa = [1800, 3218, 1800, 3219] # Total 10037 dxa
+        set_table_width_and_grid(t_prof, col_prof_dxa)
+
+        prof_rows = [
+            ("Nama Peserta Didik", f":  {nama_siswa}", "Kelas / Fase", f":  {kelas}"),
+            ("Peringkat Kelas", f":  Peringkat {rank_num} dari {total_siswa} Siswa", "Sesi Evaluasi Diikuti", f":  {tot_sesi} Sesi Asesmen"),
+            ("Rata-Rata Capaian", f":  {avg_score:.1f} (Predikat {predikat_huruf})", "Status Ketuntasan", f":  {status_kkm_badge}"),
+        ]
+
+        col_prof_w = [Inches(1.25), Inches(2.23), Inches(1.25), Inches(2.24)]
+        for r_idx, (k1, v1, k2, v2) in enumerate(prof_rows):
+            row = t_prof.rows[r_idx]
+            row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+            for c_idx, width in enumerate(col_prof_w):
+                cell = row.cells[c_idx]
+                cell.width = width
+                set_cell_margins(cell, top=65, bottom=65, left=90, right=90)
+                cell.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+
+            p1 = row.cells[0].paragraphs[0]
+            p1.paragraph_format.line_spacing = 1.15
+            p1.paragraph_format.space_after = Pt(0)
+            r1 = p1.add_run(k1)
+            r1.font.name = "Times New Roman"
+            r1.font.size = Pt(9.5)
+            r1.font.bold = True
+
+            p2 = row.cells[1].paragraphs[0]
+            p2.paragraph_format.line_spacing = 1.15
+            p2.paragraph_format.space_after = Pt(0)
+            r2 = p2.add_run(v1)
+            r2.font.name = "Times New Roman"
+            r2.font.size = Pt(9.5)
+            if r_idx == 0:
+                r2.font.bold = True
+
+            p3 = row.cells[2].paragraphs[0]
+            p3.paragraph_format.line_spacing = 1.15
+            p3.paragraph_format.space_after = Pt(0)
+            r3 = p3.add_run(k2)
+            r3.font.name = "Times New Roman"
+            r3.font.size = Pt(9.5)
+            r3.font.bold = True
+
+            p4 = row.cells[3].paragraphs[0]
+            p4.paragraph_format.line_spacing = 1.15
+            p4.paragraph_format.space_after = Pt(0)
+            r4 = p4.add_run(v2)
+            r4.font.name = "Times New Roman"
+            r4.font.size = Pt(9.5)
+
+        # 3. Judul Tabel Rapor Individual
+        p_sec_stu = doc.add_paragraph()
+        p_sec_stu.paragraph_format.space_before = Pt(10)
+        p_sec_stu.paragraph_format.space_after = Pt(3)
+        p_sec_stu.paragraph_format.line_spacing = 1.15
+        p_sec_stu.paragraph_format.keep_with_next = True
+        r_sec_stu = p_sec_stu.add_run("RINCIAN HASIL CAPAIAN ASESMEN PER SESI")
+        r_sec_stu.font.name = "Times New Roman"
+        r_sec_stu.font.size = Pt(10)
+        r_sec_stu.font.bold = True
+
+        # 4. Tabel Matriks Rapor Asesmen (6 Kolom)
+        # Baris: 1 header + N sesi (atau 1 jika kosong) + 1 baris rangkuman + 1 baris catatan guru
+        n_sesi_rows = max(len(data_pts), 1)
+        t_sesi = doc.add_table(rows=1 + n_sesi_rows + 2, cols=6)
+        t_sesi.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_sesi.autofit = False
+        col_sesi_dxa = [504, 3693, 1700, 1200, 1240, 1700] # Total 10037 dxa
+        set_table_width_and_grid(t_sesi, col_sesi_dxa)
+        set_table_borders_thin(t_sesi, color="D1D5DB", sz="4")
+
+        headers_sesi = ["No", "Materi / Sesi Asesmen", "Tanggal Asesmen", "Standar KKM", "Nilai Akhir", "Hasil & Predikat"]
+        col_sesi_w = [Inches(0.35), Inches(2.56), Inches(1.18), Inches(0.83), Inches(0.86), Inches(1.18)]
+
+        # Header Row
+        hdr_sesi_row = t_sesi.rows[0]
+        hdr_sesi_row._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        hdr_sesi_row._tr.get_or_add_trPr().append(parse_xml(r'''<w:tblHeader xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        for c_idx, h_text in enumerate(headers_sesi):
+            c = hdr_sesi_row.cells[c_idx]
+            c.width = col_sesi_w[c_idx]
+            set_cell_margins(c, top=75, bottom=75, left=80, right=80)
+            c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+            shading = parse_xml(r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F3F4F6"/>''')
+            c._tc.get_or_add_tcPr().append(shading)
+            p = c.paragraphs[0]
+            p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx != 1 else WD_ALIGN_PARAGRAPH.LEFT
+            p.paragraph_format.line_spacing = 1.15
+            p.paragraph_format.space_after = Pt(0)
+            p.paragraph_format.keep_with_next = True
+            r = p.add_run(h_text)
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+            r.font.bold = True
+
+        # Data Rows Sesi
+        if data_pts:
+            for s_idx, pt in enumerate(data_pts):
+                r_elem = t_sesi.rows[s_idx + 1]
+                r_elem._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+                sesi_name = pt.get("sesi_title") or pt.get("label") or f"Asesmen #{s_idx + 1}"
+                sesi_date = pt.get("tanggal") or pt.get("label") or "-"
+                kkm_val = pt.get("kkm", 75)
+                score_val = float(pt.get("nilai", 0))
+
+                if score_val >= kkm_val:
+                    status_text = "[✓] TUNTAS"
+                else:
+                    status_text = "[✗] REMEDIAL"
+
+                if score_val >= 90:
+                    pred_sesi = "A"
+                elif score_val >= 80:
+                    pred_sesi = "B"
+                elif score_val >= 70:
+                    pred_sesi = "C"
+                elif score_val >= 60:
+                    pred_sesi = "D"
+                else:
+                    pred_sesi = "E"
+
+                row_vals = [
+                    str(s_idx + 1),
+                    sesi_name,
+                    sesi_date,
+                    str(kkm_val),
+                    f"{score_val:.1f}",
+                    f"{status_text} ({pred_sesi})",
+                ]
+
+                for c_idx, val in enumerate(row_vals):
+                    c = r_elem.cells[c_idx]
+                    c.width = col_sesi_w[c_idx]
+                    set_cell_margins(c, top=70, bottom=70, left=80, right=80)
+                    c.vertical_alignment = WD_ALIGN_VERTICAL.CENTER
+                    p = c.paragraphs[0]
+                    p.alignment = WD_ALIGN_PARAGRAPH.CENTER if c_idx in (0, 2, 3, 4, 5) else WD_ALIGN_PARAGRAPH.LEFT
+                    p.paragraph_format.line_spacing = 1.15
+                    p.paragraph_format.space_after = Pt(0)
+                    r = p.add_run(val)
+                    r.font.name = "Times New Roman"
+                    r.font.size = Pt(9.5)
+                    if c_idx in (0, 4):
+                        r.font.bold = True
+        else:
+            # Fallback jika tidak ada titik data
+            r_elem = t_sesi.rows[1]
+            r_elem._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+            c_empty = r_elem.cells[0]
+            for c_idx in range(1, 6):
+                c_empty.merge(r_elem.cells[c_idx])
+            c_empty.width = Inches(6.97)
+            set_cell_margins(c_empty, top=70, bottom=70, left=80, right=80)
+            p_emp = c_empty.paragraphs[0]
+            p_emp.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            r_emp = p_emp.add_run("Belum ada rincian riwayat sesi asesmen yang tercatat.")
+            r_emp.font.name = "Times New Roman"
+            r_emp.font.size = Pt(9.5)
+            r_emp.font.italic = True
+
+        # Baris Penutup 1: Rangkuman Capaian Nilai (Merged 6 Kolom)
+        row_summary = t_sesi.rows[1 + n_sesi_rows]
+        row_summary._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        c_sum0 = row_summary.cells[0]
+        for c_idx in range(1, 6):
+            c_sum0.merge(row_summary.cells[c_idx])
+        c_sum0.width = Inches(6.97)
+        set_cell_margins(c_sum0, top=70, bottom=70, left=90, right=90)
+        c_sum0._tc.get_or_add_tcPr().append(parse_xml(
+            r'''<w:shd xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" w:val="clear" w:color="auto" w:fill="F9FAFB"/>'''
+        ))
+        p_sum = c_sum0.paragraphs[0]
+        p_sum.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_sum.paragraph_format.line_spacing = 1.15
+        p_sum.paragraph_format.space_after = Pt(0)
+        r_sum = p_sum.add_run(
+            f"Rata-Rata Capaian: {avg_score:.1f}  •  Tingkat Ketuntasan: {tunt_sesi}/{tot_sesi} Sesi Tuntas  •  Predikat Mutu: {predikat_label}"
+        )
+        r_sum.font.name = "Times New Roman"
+        r_sum.font.size = Pt(9.5)
+        r_sum.font.bold = True
+
+        # Baris Penutup 2: Catatan & Rekomendasi Guru (Merged 6 Kolom)
+        row_catatan = t_sesi.rows[1 + n_sesi_rows + 1]
+        row_catatan._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        c_cat0 = row_catatan.cells[0]
+        for c_idx in range(1, 6):
+            c_cat0.merge(row_catatan.cells[c_idx])
+        c_cat0.width = Inches(6.97)
+        set_cell_margins(c_cat0, top=70, bottom=75, left=90, right=90)
+        p_cat = c_cat0.paragraphs[0]
+        p_cat.alignment = WD_ALIGN_PARAGRAPH.LEFT
+        p_cat.paragraph_format.line_spacing = 1.15
+        p_cat.paragraph_format.space_after = Pt(0)
+        
+        r_cat_title = p_cat.add_run("Catatan Perkembangan & Rekomendasi Guru:\n")
+        r_cat_title.font.name = "Times New Roman"
+        r_cat_title.font.size = Pt(9.5)
+        r_cat_title.font.bold = True
+
+        r_cat_body = p_cat.add_run(catatan_guru)
+        r_cat_body.font.name = "Times New Roman"
+        r_cat_body.font.size = Pt(9.5)
+        r_cat_body.font.italic = True
+
+        # 5. Lembar Pengesahan Tanda Tangan Siswa (Orang Tua & Guru)
+        t_stu_sig = doc.add_table(rows=1, cols=2)
+        t_stu_sig.alignment = WD_TABLE_ALIGNMENT.CENTER
+        t_stu_sig.autofit = False
+        row_stu_sig = t_stu_sig.rows[0]
+        row_stu_sig._tr.get_or_add_trPr().append(parse_xml(r'''<w:cantSplit xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"/>'''))
+        col_stu_sig_dxa = [5018, 5019]
+        set_table_width_and_grid(t_stu_sig, col_stu_sig_dxa)
+
+        c_ot = row_stu_sig.cells[0]
+        c_gr = row_stu_sig.cells[1]
+        c_ot.width = Inches(3.48)
+        c_gr.width = Inches(3.48)
+        set_cell_margins(c_ot, top=140, bottom=70, left=100, right=100)
+        set_cell_margins(c_gr, top=140, bottom=70, left=100, right=100)
+
+        p_ot = c_ot.paragraphs[0]
+        p_ot.paragraph_format.line_spacing = 1.15
+        p_ot.paragraph_format.space_after = Pt(0)
+        p_ot.paragraph_format.keep_with_next = True
+        p_ot.add_run(
+            "Mengetahui,\n"
+            "Orang Tua / Wali Siswa\n\n\n\n"
+            "( ................................................................ )"
+        )
+        for r in p_ot.runs:
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
+
+        p_gr = c_gr.paragraphs[0]
+        p_gr.paragraph_format.line_spacing = 1.15
+        p_gr.paragraph_format.space_after = Pt(0)
+        p_gr.paragraph_format.keep_with_next = True
+        p_gr.add_run(
+            f"{tanggal}\n"
+            "Guru Pengampu / Wali Kelas\n\n\n\n"
+            "( ................................................................ )\n"
+            "NIP. ........................................................"
+        )
+        for r in p_gr.runs:
+            r.font.name = "Times New Roman"
+            r.font.size = Pt(9.5)
 
     output_stream = io.BytesIO()
     doc.save(output_stream)

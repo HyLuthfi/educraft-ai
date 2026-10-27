@@ -920,6 +920,215 @@ def generate_rapor_report_pdf(
     ]))
     story.append(sig_table)
 
+    # ══════════════════════════════════════════════════════════════════════════
+    # LEMBAR RAPOR HASIL CAPAIAN ASESMEN INDIVIDUAL PER SISWA (UNTUK DIBAGIKAN)
+    # ══════════════════════════════════════════════════════════════════════════
+    kelas = header_data.get("kelas", "Semua Kelas")
+    for idx_s, s in enumerate(siswa_list):
+        story.append(PageBreak())
+        nama_siswa = s.get("nama", f"Siswa #{idx_s + 1}")
+        tot_sesi = s.get("total_sesi", 0)
+        tunt_sesi = s.get("tuntas_count", 0)
+        avg_score = float(s.get("rata_rata", 0))
+        rank_num = idx_s + 1
+        data_pts = s.get("data", []) or s.get("history", [])
+
+        if avg_score >= 90:
+            predikat_huruf = "A"
+            predikat_label = "A (Sangat Baik / Istimewa)"
+            catatan_guru = (
+                "Peserta didik menunjukkan penguasaan materi yang sangat istimewa dan konsisten tinggi. "
+                "Memiliki daya nalar kritis serta pemahaman konsep yang mendalam di setiap sesi penilaian. "
+                "Pertahankan motivasi belajar dan terus kembangkan kemampuan literasi serta analisis mandiri."
+            )
+        elif avg_score >= 80:
+            predikat_huruf = "B"
+            predikat_label = "B (Baik / Terampil)"
+            catatan_guru = (
+                "Peserta didik telah menguasai sebagian besar kompetensi dengan capaian sangat memuaskan. "
+                "Konsep-konsep dasar telah dipahami dengan kokoh. Disarankan untuk terus aktif mengeksplorasi "
+                "studi kasus dan pengayaan soal-soal tingkat lanjut (HOTS)."
+            )
+        elif avg_score >= 70:
+            predikat_huruf = "C"
+            predikat_label = "C (Cukup / Memenuhi KKM)"
+            catatan_guru = (
+                "Peserta didik telah berhasil memenuhi kriteria ketuntasan minimal (KKM). "
+                "Perlu meningkatkan ketelitian belajar dan mengulang materi pada kompetensi-kompetensi "
+                "yang capaian nilainya belum optimal agar pemahaman semakin matang."
+            )
+        elif avg_score >= 60:
+            predikat_huruf = "D"
+            predikat_label = "D (Kurang / Bimbingan Dasar)"
+            catatan_guru = (
+                "Peserta didik belum mencapai standar ketuntasan minimal pada beberapa sesi materi. "
+                "Sangat disarankan untuk mengikuti program remedial terarah dan pendampingan belajar "
+                "secara intensif dari guru pengampu serta dukungan belajar di rumah."
+            )
+        else:
+            predikat_huruf = "E"
+            predikat_label = "E (Perlu Pendampingan Khusus)"
+            catatan_guru = (
+                "Peserta didik memerlukan bimbingan belajar remedial intensif dan penguatan pemahaman konsep "
+                "paling mendasar. Diperlukan komunikasi intensif antara guru pengampu dan orang tua/wali siswa."
+            )
+
+        status_kkm_badge = "TUNTAS KOMPETENSI" if avg_score >= 75 else "PERLU PENDAMPINGAN REMEDIAL"
+
+        # 1. Kop Lembaga Mandiri Siswa
+        story.append(Paragraph("DINAS PENDIDIKAN DAN KEBUDAYAAN", style_kop_instansi))
+        story.append(Spacer(1, 2))
+        story.append(Paragraph(sekolah_clean, style_kop_sekolah))
+        story.append(Spacer(1, 2))
+        story.append(Paragraph("LAPORAN HASIL CAPAIAN ASESMEN SISWA", style_kop_judul))
+        story.append(Spacer(1, 2))
+        story.append(Paragraph(f"TAHUN AJARAN {current_year}/{current_year + 1} • SAITECH AI SOLUTIONS", style_kop_footer))
+        story.append(Spacer(1, 4))
+        story.append(HRFlowable(width="100%", thickness=1.5, color=colors.black, spaceBefore=0, spaceAfter=1))
+        story.append(HRFlowable(width="100%", thickness=0.5, color=colors.black, spaceBefore=0, spaceAfter=8))
+
+        # 2. Tabel Profil Siswa (3 baris x 4 kolom)
+        prof_data = [
+            [
+                Paragraph("<b>Nama Peserta Didik</b>", style_cell_bold),
+                Paragraph(f": <b>{nama_siswa}</b>", style_cell),
+                Paragraph("<b>Kelas / Fase</b>", style_cell_bold),
+                Paragraph(f": {kelas}", style_cell),
+            ],
+            [
+                Paragraph("<b>Peringkat Kelas</b>", style_cell_bold),
+                Paragraph(f": Peringkat {rank_num} dari {total_siswa} Siswa", style_cell),
+                Paragraph("<b>Sesi Evaluasi Diikuti</b>", style_cell_bold),
+                Paragraph(f": {tot_sesi} Sesi Asesmen", style_cell),
+            ],
+            [
+                Paragraph("<b>Rata-Rata Capaian</b>", style_cell_bold),
+                Paragraph(f": <b>{avg_score:.1f}</b> (Predikat {predikat_huruf})", style_cell),
+                Paragraph("<b>Status Ketuntasan</b>", style_cell_bold),
+                Paragraph(f": <b>{status_kkm_badge}</b>", style_cell),
+            ],
+        ]
+        t_prof = Table(prof_data, colWidths=[1.35 * inch, 2.25 * inch, 1.35 * inch, 2.02 * inch])
+        t_prof.setStyle(TableStyle([
+            ('LINEABOVE', (0, 0), (-1, 0), 0.75, colors.black),
+            ('LINEBELOW', (0, -1), (-1, -1), 0.75, colors.black),
+            ('LINEBELOW', (0, 0), (-1, -2), 0.5, colors.HexColor("#E5E7EB")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ]))
+        story.append(t_prof)
+        story.append(Spacer(1, 8))
+
+        # 3. Judul Rincian
+        story.append(Paragraph("RINCIAN HASIL CAPAIAN ASESMEN PER SESI", style_sec_title))
+
+        # 4. Tabel Matriks Capaian Asesmen Siswa (6 Kolom)
+        sesi_table_data = [
+            [
+                Paragraph("No", style_cell_center_bold),
+                Paragraph("Materi / Sesi Asesmen", style_cell_bold),
+                Paragraph("Tanggal Asesmen", style_cell_center_bold),
+                Paragraph("Standar KKM", style_cell_center_bold),
+                Paragraph("Nilai Akhir", style_cell_center_bold),
+                Paragraph("Hasil & Predikat", style_cell_center_bold),
+            ]
+        ]
+
+        if data_pts:
+            for s_idx, pt in enumerate(data_pts):
+                sesi_name = pt.get("sesi_title") or pt.get("label") or f"Asesmen #{s_idx + 1}"
+                sesi_date = pt.get("tanggal") or pt.get("label") or "-"
+                kkm_val = pt.get("kkm", 75)
+                score_val = float(pt.get("nilai", 0))
+
+                if score_val >= kkm_val:
+                    status_text = "[✓] TUNTAS"
+                else:
+                    status_text = "[✗] REMEDIAL"
+
+                if score_val >= 90:
+                    pred_sesi = "A"
+                elif score_val >= 80:
+                    pred_sesi = "B"
+                elif score_val >= 70:
+                    pred_sesi = "C"
+                elif score_val >= 60:
+                    pred_sesi = "D"
+                else:
+                    pred_sesi = "E"
+
+                sesi_table_data.append([
+                    Paragraph(str(s_idx + 1), style_cell_center_bold),
+                    Paragraph(sesi_name, style_cell),
+                    Paragraph(sesi_date, style_cell_center),
+                    Paragraph(str(kkm_val), style_cell_center),
+                    Paragraph(f"<b>{score_val:.1f}</b>", style_cell_center),
+                    Paragraph(f"<b>{status_text}</b> ({pred_sesi})", style_cell_center),
+                ])
+        else:
+            sesi_table_data.append([
+                Paragraph("<i>Belum ada rincian riwayat sesi asesmen yang tercatat.</i>", style_cell_center),
+                "", "", "", "", ""
+            ])
+
+        # Baris Rangkuman (Merged 6 Kolom)
+        sesi_table_data.append([
+            Paragraph(f"<b>Rata-Rata Capaian:</b> {avg_score:.1f}  •  <b>Tingkat Ketuntasan:</b> {tunt_sesi}/{tot_sesi} Sesi Tuntas  •  <b>Predikat Mutu:</b> {predikat_label}", style_cell_bold),
+            "", "", "", "", ""
+        ])
+
+        # Baris Catatan Guru (Merged 6 Kolom)
+        sesi_table_data.append([
+            Paragraph(f"<b>Catatan Perkembangan & Rekomendasi Guru:</b><br/><i>{catatan_guru}</i>", style_cell),
+            "", "", "", "", ""
+        ])
+
+        t_sesi = Table(
+            sesi_table_data,
+            colWidths=[0.35 * inch, 2.56 * inch, 1.18 * inch, 0.83 * inch, 0.86 * inch, 1.19 * inch]
+        )
+        t_sesi_style = [
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor("#F3F4F6")),
+            ('GRID', (0, 0), (-1, -3 if data_pts else -3), 0.5, colors.HexColor("#D1D5DB")),
+            ('BOX', (0, 0), (-1, -1), 0.75, colors.black),
+            ('SPAN', (0, -2), (-1, -2)),
+            ('SPAN', (0, -1), (-1, -1)),
+            ('BACKGROUND', (0, -2), (-1, -2), colors.HexColor("#F9FAFB")),
+            ('LINEABOVE', (0, -2), (-1, -2), 0.75, colors.black),
+            ('LINEABOVE', (0, -1), (-1, -1), 0.5, colors.HexColor("#D1D5DB")),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 4),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 4),
+        ]
+        if not data_pts:
+            t_sesi_style.append(('SPAN', (0, 1), (-1, 1)))
+
+        t_sesi.setStyle(TableStyle(t_sesi_style))
+        story.append(t_sesi)
+        story.append(Spacer(1, 14))
+
+        # 5. Tanda Tangan Orang Tua & Guru
+        sig_stu_data = [
+            [
+                Paragraph("Mengetahui,<br/>Orang Tua / Wali Siswa<br/><br/><br/><br/>( ................................................................ )", style_cell),
+                Paragraph(f"{tanggal}<br/>Guru Pengampu / Wali Kelas<br/><br/><br/><br/>( ................................................................ )<br/>NIP. ........................................................", style_cell)
+            ]
+        ]
+        t_stu_sig = Table(sig_stu_data, colWidths=[3.48 * inch, 3.48 * inch])
+        t_stu_sig.setStyle(TableStyle([
+            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 6),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 6),
+            ('TOPPADDING', (0, 0), (-1, -1), 6),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ]))
+        story.append(t_stu_sig)
+
     doc.build(story)
     buffer.seek(0)
     return buffer

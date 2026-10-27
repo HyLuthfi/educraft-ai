@@ -15,6 +15,11 @@ import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 export interface TitikTren {
   label: string; // label sesi (mis. tanggal singkat)
   nilai: number; // nilai numerik pada sesi tsb
+  sesi_title?: string;
+  tanggal?: string;
+  kkm?: number;
+  status?: string;
+  rekomendasi?: string;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════

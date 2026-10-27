@@ -130,7 +130,19 @@ export default function RaporPage() {
           map.set(key, { nama: s.nama_siswa.trim(), data: [], rataRata: 0, totalSesi: 0, tuntasCount: 0 });
         }
         const entry = map.get(key)!;
-        entry.data.push({ label, nilai: Math.round(nilai * 10) / 10 });
+        entry.data.push({
+          label,
+          nilai: Math.round(nilai * 10) / 10,
+          sesi_title: sesi.title || "Asesmen Pembelajaran",
+          tanggal: new Date(sesi.created_at).toLocaleDateString("id-ID", {
+            day: "numeric",
+            month: "short",
+            year: "numeric",
+          }),
+          kkm: kkm,
+          status: nilai >= kkm ? "tuntas" : "remedial",
+          rekomendasi: (s as any).rekomendasi || "",
+        });
         if (nilai >= kkm) entry.tuntasCount += 1;
       }
     }
