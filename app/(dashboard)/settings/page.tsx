@@ -424,12 +424,11 @@ export default function SettingsPage() {
                           Bahasa Output Standar
                         </label>
                         <select
-                          value={outputLanguage}
-                          onChange={(e) => setOutputLanguage(e.target.value)}
+                          value="id"
+                          onChange={() => setOutputLanguage("id")}
                           className="w-full p-2.5 text-xs sm:text-sm border-2 border-black dark:border-white/30 bg-white dark:bg-[#1a1a1a] dark:text-white font-bold outline-none cursor-pointer shadow-[2px_2px_0px_#000]"
                         >
                           <option value="id">Bahasa Indonesia (Standar Kurikulum)</option>
-                          <option value="en">English (Bilingual / Asing)</option>
                         </select>
                       </div>
                     </div>
