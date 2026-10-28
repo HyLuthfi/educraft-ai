@@ -411,13 +411,11 @@ export default function SettingsPage() {
                           Model AI Pembuat Soal
                         </label>
                         <select
-                          value={aiModel}
-                          onChange={(e) => setAiModel(e.target.value)}
+                          value="auto"
+                          onChange={() => setAiModel("auto")}
                           className="w-full p-2.5 text-xs sm:text-sm border-2 border-black dark:border-white/30 bg-white dark:bg-[#1a1a1a] dark:text-white font-bold outline-none cursor-pointer shadow-[2px_2px_0px_#000]"
                         >
-                          <option value="auto">Gemini 3.8 Flash (Cepat & Direkomendasikan)</option>
-                          <option value="gpt-4o">GPT-4o (Komprehensif)</option>
-                          <option value="claude">Claude 3.5 Sonnet (Analitis)</option>
+                          <option value="auto">SAITECH AI Engine</option>
                         </select>
                       </div>
 
