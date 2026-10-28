@@ -10,7 +10,13 @@ export async function POST(req: Request) {
 
     // ── Cek dan Potong Saldo Akun (Rp 1.000 / request) ──
     if (user) {
-      const deductCheck = await deductUserBalance(supabase, user.id, DEFAULT_AI_COST);
+      const deductCheck = await deductUserBalance(
+        supabase,
+        user.id,
+        DEFAULT_AI_COST,
+        "Koreksi Jawaban AI",
+        "Penilaian otomatis lembar jawaban siswa"
+      );
       if (!deductCheck.success) {
         return NextResponse.json(
           {
@@ -40,7 +46,13 @@ export async function POST(req: Request) {
     if (!res.ok || !res.body) {
       // Refund saldo jika backend gagal
       if (user) {
-        await creditUserBalance(supabase, user.id, DEFAULT_AI_COST).catch(() => {});
+        await creditUserBalance(
+          supabase,
+          user.id,
+          DEFAULT_AI_COST,
+          "Refund: Koreksi Gagal",
+          "Pengembalian saldo karena proses AI gagal"
+        ).catch(() => {});
       }
       const errorText = await res.text();
       console.error("Backend Error:", errorText);

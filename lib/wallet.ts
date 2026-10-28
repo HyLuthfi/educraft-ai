@@ -1,17 +1,28 @@
 import { SupabaseClient } from "@supabase/supabase-js";
 
+export interface WalletLogItem {
+  id: string;
+  type: "IN" | "OUT";
+  amount: number;
+  title: string;
+  description?: string;
+  balanceAfter: number;
+  createdAt: string;
+}
+
 export interface WalletInfo {
   balance: number;
   plan: string;
   isPro: boolean;
+  logs: WalletLogItem[];
 }
 
 export const INITIAL_FREE_BALANCE = 50000; // Rp 50.000 saldo gratis awal
 export const DEFAULT_AI_COST = 1000; // Rp 1.000 per request AI
 
 /**
- * Mengambil informasi saldo Rupiah dan status paket user.
- * Jika belum ada data atau user baru, set saldo awal Rp 50.000.
+ * Mengambil informasi saldo Rupiah, status paket, dan riwayat mutasi user.
+ * Jika belum ada data atau user baru, beri saldo awal Rp 50.000 beserta log bonus sambutan.
  */
 export async function getOrCreateUserWallet(
   supabase: SupabaseClient,
@@ -49,21 +60,48 @@ export async function getOrCreateUserWallet(
     plan === "PRO" ||
     plan === "Pro Plan";
 
+  // Ambil log transaksi dari user_metadata Supabase
+  let logs: WalletLogItem[] = [];
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user?.user_metadata?.wallet_logs && Array.isArray(user.user_metadata.wallet_logs)) {
+      logs = user.user_metadata.wallet_logs;
+    } else {
+      // Buat log sambutan default
+      logs = [
+        {
+          id: "tx_initial_" + userId,
+          type: "IN",
+          amount: INITIAL_FREE_BALANCE,
+          title: "Saldo Awal Pengguna Baru",
+          description: "Bonus saldo selamat datang EduCraft AI (50x Sesi)",
+          balanceAfter: INITIAL_FREE_BALANCE,
+          createdAt: user?.created_at || new Date().toISOString(),
+        },
+      ];
+    }
+  } catch (err) {
+    console.warn("Gagal mengambil log dari user_metadata:", err);
+  }
+
   return {
     balance: Number(balance) || 0,
     plan: isPro ? "EduCraft Pro" : "Starter",
     isPro,
+    logs,
   };
 }
 
 /**
- * Validasi dan potong saldo user secara aman (Rp 1.000 per request AI).
- * Mengembalikan error INSUFFICIENT_BALANCE jika saldo < nominal yang dibutuhkan.
+ * Validasi dan potong saldo user secara aman (Rp 1.000 per request AI)
+ * serta mencatat mutasi pengeluaran ke log transaksi.
  */
 export async function deductUserBalance(
   supabase: SupabaseClient,
   userId: string,
-  amount: number = DEFAULT_AI_COST
+  amount: number = DEFAULT_AI_COST,
+  title: string = "Penggunaan Layanan AI",
+  description: string = "Biaya komputasi 1x request AI"
 ): Promise<
   | { success: true; newBalance: number; deducted: number }
   | { success: false; error: string; message: string; currentBalance: number; required: number }
@@ -97,6 +135,33 @@ export async function deductUserBalance(
     };
   }
 
+  // Catat log mutasi pengeluaran (OUT)
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const existingLogs: WalletLogItem[] = Array.isArray(user.user_metadata?.wallet_logs)
+        ? user.user_metadata.wallet_logs
+        : wallet.logs;
+
+      const newLog: WalletLogItem = {
+        id: "tx_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+        type: "OUT",
+        amount,
+        title,
+        description,
+        balanceAfter: newBalance,
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedLogs = [newLog, ...existingLogs].slice(0, 100);
+      await supabase.auth.updateUser({
+        data: { wallet_logs: updatedLogs },
+      });
+    }
+  } catch (logErr) {
+    console.warn("Gagal menyimpan log mutasi:", logErr);
+  }
+
   return {
     success: true,
     newBalance,
@@ -105,23 +170,28 @@ export async function deductUserBalance(
 }
 
 /**
- * Tambah saldo user saat pembayaran/topup berhasil.
- * Akun otomatis di-upgrade ke EduCraft Pro!
+ * Tambah saldo user saat pembayaran/topup berhasil atau saat refund,
+ * serta mencatat mutasi pemasukan ke log transaksi.
  */
 export async function creditUserBalance(
   supabase: SupabaseClient,
   userId: string,
-  amount: number
+  amount: number,
+  title: string = "Isi Ulang Saldo QRIS",
+  description: string = "Pembayaran via gateway KenPay berhasil"
 ): Promise<{ success: boolean; newBalance: number; plan: string }> {
   const wallet = await getOrCreateUserWallet(supabase, userId);
   const newBalance = wallet.balance + amount;
 
+  const isRefund = title.toLowerCase().includes("refund");
+  const updatePayload: any = { tokens_left: newBalance };
+  if (!isRefund) {
+    updatePayload.plan = "EduCraft Pro";
+  }
+
   const { error } = await supabase
     .from("profiles")
-    .update({
-      tokens_left: newBalance,
-      plan: "EduCraft Pro",
-    })
+    .update(updatePayload)
     .eq("id", userId);
 
   if (error) {
@@ -129,9 +199,36 @@ export async function creditUserBalance(
     throw error;
   }
 
+  // Catat log mutasi pemasukan (IN)
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const existingLogs: WalletLogItem[] = Array.isArray(user.user_metadata?.wallet_logs)
+        ? user.user_metadata.wallet_logs
+        : wallet.logs;
+
+      const newLog: WalletLogItem = {
+        id: "tx_" + Date.now() + "_" + Math.random().toString(36).substring(2, 6),
+        type: "IN",
+        amount,
+        title,
+        description,
+        balanceAfter: newBalance,
+        createdAt: new Date().toISOString(),
+      };
+
+      const updatedLogs = [newLog, ...existingLogs].slice(0, 100);
+      await supabase.auth.updateUser({
+        data: { wallet_logs: updatedLogs },
+      });
+    }
+  } catch (logErr) {
+    console.warn("Gagal menyimpan log credit:", logErr);
+  }
+
   return {
     success: true,
     newBalance,
-    plan: "EduCraft Pro",
+    plan: isRefund ? wallet.plan : "EduCraft Pro",
   };
 }

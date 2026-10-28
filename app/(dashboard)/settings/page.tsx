@@ -19,6 +19,11 @@ import {
   ShieldCheck,
   Wallet,
   Plus,
+  History,
+  ArrowDownLeft,
+  ArrowUpRight,
+  Clock,
+  RefreshCw,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -26,6 +31,7 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
 import { TopUpModal } from "@/app/components/TopUpModal";
+import { WalletLogItem } from "@/lib/wallet";
 
 type SettingsTab = "profile" | "ai" | "billing";
 
@@ -50,6 +56,23 @@ export default function SettingsPage() {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
   const [isTopUpOpen, setIsTopUpOpen] = useState(false);
+  const [walletLogs, setWalletLogs] = useState<WalletLogItem[]>([]);
+  const [isLoadingLogs, setIsLoadingLogs] = useState(false);
+
+  const fetchWalletLogs = async () => {
+    setIsLoadingLogs(true);
+    try {
+      const res = await fetch("/api/wallet");
+      if (res.ok) {
+        const json = await res.json();
+        setWalletLogs(json.data?.logs || []);
+      }
+    } catch (err) {
+      console.error("Gagal memuat log transaksi:", err);
+    } finally {
+      setIsLoadingLogs(false);
+    }
+  };
 
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
@@ -149,6 +172,16 @@ export default function SettingsPage() {
     }
 
     fetchUser();
+    fetchWalletLogs();
+
+    const handleWalletUpdated = () => {
+      fetchUser();
+      fetchWalletLogs();
+    };
+    window.addEventListener("educraft_wallet_updated", handleWalletUpdated);
+    return () => {
+      window.removeEventListener("educraft_wallet_updated", handleWalletUpdated);
+    };
   }, [supabase]);
 
   // Handler: Simpan Perubahan Profil (Nama)
@@ -560,6 +593,97 @@ export default function SettingsPage() {
                       <Check size={14} className="text-black dark:text-white shrink-0" /> Saldo tanpa masa kedaluwarsa &amp; langsung upgrade ke status PRO setelah top up pertama.
                     </li>
                   </ul>
+                </div>
+
+                {/* Riwayat Mutasi Saldo AI */}
+                <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-6 shadow-[4px_4px_0px_#000] space-y-3">
+                  <div className="flex items-center justify-between pb-3 border-b border-black/10 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white flex items-center justify-center">
+                        <History size={16} />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider font-editorial text-black dark:text-white">
+                          Riwayat Keluar Masuk Saldo
+                        </h3>
+                        <p className="text-xs text-gray-500 dark:text-gray-400">
+                          Catatan mutasi komputasi AI dan pengisian saldo akun Anda.
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => fetchWalletLogs()}
+                      className="px-2.5 py-1 text-xs font-bold border border-black dark:border-white/30 flex items-center gap-1 hover:bg-neutral-200 dark:hover:bg-neutral-800 cursor-pointer"
+                    >
+                      <RefreshCw size={12} className={isLoadingLogs ? "animate-spin" : ""} />
+                      <span>Segarkan</span>
+                    </button>
+                  </div>
+
+                  {isLoadingLogs ? (
+                    <div className="py-8 text-center text-xs text-gray-500 flex items-center justify-center gap-2">
+                      <Loader2 size={16} className="animate-spin" /> Memuat riwayat mutasi...
+                    </div>
+                  ) : walletLogs.length === 0 ? (
+                    <div className="py-6 text-center text-xs text-gray-500 border border-dashed border-black/20 p-4">
+                      Belum ada catatan mutasi saldo.
+                    </div>
+                  ) : (
+                    <div className="space-y-2 max-h-72 overflow-y-auto pr-1">
+                      {walletLogs.map((log) => {
+                        const isIncoming = log.type === "IN";
+                        return (
+                          <div
+                            key={log.id}
+                            className="p-2.5 bg-white dark:bg-[#1a1a1a] border border-black/20 dark:border-white/20 shadow-[1.5px_1.5px_0px_#000] flex items-center justify-between gap-3"
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <div
+                                className={`w-7 h-7 border-2 border-black flex items-center justify-center shrink-0 ${
+                                  isIncoming
+                                    ? "bg-black text-white dark:bg-white dark:text-black"
+                                    : "bg-white text-black dark:bg-[#1a1a1a] dark:text-white"
+                                }`}
+                              >
+                                {isIncoming ? <ArrowDownLeft size={13} /> : <ArrowUpRight size={13} />}
+                              </div>
+                              <div className="min-w-0">
+                                <p className="text-xs font-bold text-black dark:text-white truncate">
+                                  {log.title}
+                                </p>
+                                <div className="flex items-center gap-2 text-[10px] text-gray-500 dark:text-gray-400 mt-0.5">
+                                  <span className="flex items-center gap-0.5">
+                                    <Clock size={10} />
+                                    {new Date(log.createdAt).toLocaleString("id-ID", {
+                                      dateStyle: "short",
+                                      timeStyle: "short",
+                                    })}
+                                  </span>
+                                  {log.description && (
+                                    <span className="truncate hidden sm:inline">• {log.description}</span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="text-right shrink-0">
+                              <div
+                                className={`font-mono text-xs font-black ${
+                                  isIncoming ? "text-emerald-600 dark:text-emerald-400" : "text-black dark:text-white"
+                                }`}
+                              >
+                                {isIncoming ? "+" : "-"}Rp {log.amount.toLocaleString("id-ID")}
+                              </div>
+                              <div className="text-[9px] text-gray-400 font-mono mt-0.5">
+                                Sisa: Rp {log.balanceAfter?.toLocaleString("id-ID") || 0}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
 
                 {/* Tema Tampilan Box */}
