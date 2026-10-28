@@ -4,11 +4,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   User,
   Settings as SettingsIcon,
-  CreditCard,
   Sparkles,
   LogOut,
   Loader2,
-  CheckCircle,
   Cpu,
   Crown,
   Moon,
@@ -16,10 +14,9 @@ import {
   Monitor,
   Palette,
   Save,
-  ShieldCheck,
   Check,
-  ChevronRight,
-  Layers,
+  X,
+  ShieldCheck,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
@@ -42,7 +39,7 @@ export default function SettingsPage() {
   const [aiModel, setAiModel] = useState("auto");
   const [outputLanguage, setOutputLanguage] = useState("id");
   const [systemPrompt, setSystemPrompt] = useState(
-    "Selalu berikan penjelasan kunci jawaban secara komprehensif dan mudah dipahami siswa SMA."
+    "Selalu berikan penjelasan kunci jawaban secara komprehensif dan mudah dipahami siswa."
   );
 
   // Loading States
@@ -254,373 +251,415 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="p-3 sm:p-6 md:p-8 max-w-4xl mx-auto pb-24">
-      {/* Header */}
-      <div className="mb-4 sm:mb-6">
-        <div className="inline-flex items-center gap-1.5 px-2 py-0.5 bg-black text-white dark:bg-white dark:text-black text-[10px] sm:text-xs font-bold uppercase tracking-widest mb-1.5 shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]">
-          <SettingsIcon size={12} /> Pengaturan Sistem
+    <div className="min-h-screen bg-[#FFFDF8] dark:bg-[#121212] p-3 sm:p-6 md:p-10 pb-24 font-sans text-black dark:text-white">
+      <div className="max-w-5xl mx-auto space-y-6 sm:space-y-8">
+        {/* Page Title & Breadcrumb (1:1 Kiblat Buat Soal) */}
+        <div className="flex flex-col gap-1">
+          <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 border border-black dark:border-white/30 bg-black text-white dark:bg-white dark:text-black font-mono text-[10px] uppercase font-bold tracking-widest w-fit shadow-[2px_2px_0px_#000]">
+            <SettingsIcon size={12} /> Modul Konfigurasi Sistem
+          </div>
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-black font-editorial tracking-tight text-black dark:text-white mt-1">
+            Pengaturan
+          </h1>
+          <p className="text-xs sm:text-sm text-gray-600 dark:text-gray-400 font-sans max-w-xl">
+            Atur data diri pendidik, preferensi kecerdasan buatan, dan tampilan antarmuka sistem Anda.
+          </p>
         </div>
-        <h1 className="text-xl sm:text-3xl font-editorial font-bold text-black dark:text-white">
-          Pengaturan
-        </h1>
-        <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
-          Atur data diri pendidik, perilaku kecerdasan buatan, dan tampilan antarmuka.
-        </p>
-      </div>
 
-      {/* ── SEGMENTED TAB SWITCHER (MOBILE-FIRST) ── */}
-      <div className="flex items-center gap-1 p-1 bg-gray-100 dark:bg-[#202020] border-2 border-black/15 dark:border-white/15 mb-5 sm:mb-8 overflow-x-auto">
-        {tabsConfig.map((tab) => {
-          const Icon = tab.icon;
-          const isActive = activeTab === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex-1 py-2 sm:py-2.5 px-2.5 sm:px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 transition-all whitespace-nowrap cursor-pointer ${
-                isActive
-                  ? "bg-black text-white dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.15)]"
-                  : "text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white"
-              }`}
-            >
-              <Icon size={14} className={isActive ? "text-yellow-400 dark:text-black" : "opacity-70"} />
-              <span>{tab.label}</span>
-            </button>
-          );
-        })}
-      </div>
+        {/* ── Kontainer Neobrutalisme Utama (Unified Master Container) ── */}
+        <div className="relative border-2 border-black dark:border-white/30 bg-white dark:bg-[#1e1e1e] shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.12)] p-4 sm:p-6 md:p-8 space-y-6">
+          {/* 4 Corner Ornaments */}
+          <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-t-2 border-l-2 border-black dark:border-white pointer-events-none" />
+          <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-t-2 border-r-2 border-black dark:border-white pointer-events-none" />
+          <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-2 border-l-2 border-black dark:border-white pointer-events-none" />
+          <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-2 border-r-2 border-black dark:border-white pointer-events-none" />
 
-      {/* ── TAB CONTENT ── */}
-      <AnimatePresence mode="wait">
-        {/* TAB 1: PROFIL AKUN */}
-        {activeTab === "profile" && (
-          <motion.div
-            key="tab-profile"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4 sm:space-y-6"
-          >
-            <div className="bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/20 p-4 sm:p-7 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-              {/* Header inside card */}
-              <div className="flex items-center gap-3 pb-3 sm:pb-4 border-b border-black/10 dark:border-white/10 mb-4 sm:mb-6">
-                <div className="w-12 h-12 bg-yellow-400 text-black border-2 border-black font-editorial font-bold text-xl flex items-center justify-center shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] shrink-0">
-                  {userProfile.initial}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <h2 className="text-base sm:text-xl font-bold dark:text-white truncate">
-                    {userProfile.full_name}
-                  </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
-                    {userProfile.email || "Email akun pengajar"}
-                  </p>
-                </div>
-                <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-yellow-400 text-black border border-black rounded shadow-xs">
-                  {userProfile.plan}
-                </span>
-              </div>
-
-              <form onSubmit={handleSaveProfile} className="space-y-4">
-                <div>
-                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 block mb-1.5">
-                    Nama Lengkap Anda
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Contoh: Budi Santoso, S.Pd."
-                    className="w-full p-3 text-xs sm:text-sm bg-gray-50 dark:bg-[#2a2a2a] border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-bold transition-colors dark:text-white"
-                  />
-                  <p className="text-[11px] text-gray-400 mt-1">
-                    Nama ini ditampilkan pada kop soal ujian, lembar jawaban, dan rapor siswa.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 block mb-1.5">
-                    Alamat Email (Akun Utama)
-                  </label>
-                  <input
-                    type="email"
-                    value={email}
-                    disabled
-                    className="w-full p-3 text-xs sm:text-sm bg-gray-100 dark:bg-[#1a1a1a] text-gray-500 dark:text-gray-500 border-2 border-black/10 dark:border-white/5 outline-none font-medium cursor-not-allowed"
-                  />
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSavingProfile}
-                    className="w-full sm:w-auto px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-0.5 active:translate-x-0.5 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isSavingProfile ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Menyimpan...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} /> Simpan Perubahan Profil
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </motion.div>
-        )}
-
-        {/* TAB 2: PREFERENSI AI */}
-        {activeTab === "ai" && (
-          <motion.div
-            key="tab-ai"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4 sm:space-y-6"
-          >
-            <div className="bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/20 p-4 sm:p-7 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-              <div className="flex items-center gap-2.5 pb-3 sm:pb-4 border-b border-black/10 dark:border-white/10 mb-4 sm:mb-6">
-                <Cpu size={20} className="text-purple-600" />
-                <div>
-                  <h2 className="text-base sm:text-xl font-bold dark:text-white leading-tight">
-                    Preferensi Sistem AI
-                  </h2>
-                  <p className="text-xs text-gray-500 dark:text-gray-400">
-                    Kustomisasi model kecerdasan buatan dan gaya respons soal Anda.
-                  </p>
-                </div>
-              </div>
-
-              <form onSubmit={handleSavePreferences} className="space-y-4 sm:space-y-5">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-5">
-                  <div>
-                    <label className="text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
-                      Model AI Pembuat Soal
-                    </label>
-                    <select
-                      value={aiModel}
-                      onChange={(e) => setAiModel(e.target.value)}
-                      className="w-full p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-bold transition-colors bg-white dark:bg-[#2a2a2a] dark:text-white cursor-pointer"
-                    >
-                      <option value="auto">🤖 Gemini 3.8 Flash (Direkomendasikan)</option>
-                      <option value="gpt-4o">GPT-4o (Komprehensif)</option>
-                      <option value="claude">Claude 3.5 Sonnet (Analitis)</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
-                      Bahasa Output
-                    </label>
-                    <select
-                      value={outputLanguage}
-                      onChange={(e) => setOutputLanguage(e.target.value)}
-                      className="w-full p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-bold transition-colors bg-white dark:bg-[#2a2a2a] dark:text-white cursor-pointer"
-                    >
-                      <option value="id">Bahasa Indonesia (Standar)</option>
-                      <option value="en">English (Bilingual / Asing)</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">
-                      Instruksi Khusus Global (System Prompt)
-                    </label>
-                  </div>
-                  <textarea
-                    rows={4}
-                    value={systemPrompt}
-                    onChange={(e) => setSystemPrompt(e.target.value)}
-                    className="w-full p-3 text-xs sm:text-sm border-2 border-black/20 dark:border-white/20 focus:border-black dark:focus:border-white outline-none font-sans transition-colors resize-y bg-gray-50 dark:bg-[#2a2a2a] dark:text-white leading-relaxed"
-                    placeholder="Contoh: Selalu sertakan alasan kenapa opsi pengecoh salah pada bagian pembahasan..."
-                  />
-                  <p className="text-[11px] text-gray-400 dark:text-gray-500 mt-1">
-                    Instruksi ini akan otomatis disisipkan saat AI meracik soal, mengoreksi tugas, atau menyusun rencana pembelajaran.
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    disabled={isSavingPrefs}
-                    className="w-full sm:w-auto px-6 py-3 bg-black dark:bg-white text-white dark:text-black font-bold text-xs sm:text-sm uppercase tracking-wider hover:bg-gray-800 dark:hover:bg-gray-200 transition-colors shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] dark:shadow-[3px_3px_0px_0px_rgba(255,255,255,0.2)] active:translate-y-0.5 active:translate-x-0.5 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {isSavingPrefs ? (
-                      <>
-                        <Loader2 size={16} className="animate-spin" /> Menyimpan...
-                      </>
-                    ) : (
-                      <>
-                        <Save size={16} /> Simpan Preferensi AI
-                      </>
-                    )}
-                  </button>
-                </div>
-              </form>
-            </div>
-          </motion.div>
-        )}
-
-        {/* TAB 3: PAKET & TEMA */}
-        {activeTab === "billing" && (
-          <motion.div
-            key="tab-billing"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.2 }}
-            className="space-y-4 sm:space-y-6"
-          >
-            {/* Status Langganan Box */}
-            <div className="bg-black text-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-4 sm:p-7 shadow-[4px_4px_0px_0px_rgba(255,215,0,0.4)] relative overflow-hidden">
-              <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-white/15">
-                <div className="flex items-center gap-2">
-                  <Crown size={20} className="text-yellow-400" />
-                  <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider">
-                    Status Akun EduCraft
-                  </h3>
-                </div>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-black uppercase tracking-wider rounded">
-                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                  Aktif VIP
-                </span>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
-                <div className="bg-white/10 p-3.5 border border-white/10">
-                  <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
-                    Paket Keanggotaan
-                  </span>
-                  <div className="font-black text-yellow-400 text-base">
-                    EduCraft Pro Unlimited
-                  </div>
-                  <p className="text-[11px] text-gray-300 mt-1">
-                    Aktif hingga 21 September 2027
-                  </p>
-                </div>
-
-                <div className="bg-white/10 p-3.5 border border-white/10">
-                  <span className="text-[10px] uppercase font-bold text-gray-400 block mb-1">
-                    Kuota Komputasi AI
-                  </span>
-                  <div className="font-black text-emerald-400 text-base flex items-center gap-1.5">
-                    <Sparkles size={16} /> Tanpa Batas (Unlimited)
-                  </div>
-                  <p className="text-[11px] text-gray-300 mt-1">
-                    Bebas racik soal, koreksi, &amp; ekspor kapan saja
-                  </p>
-                </div>
-              </div>
-
-              <ul className="space-y-1.5 text-xs text-gray-300 mb-4 pt-2 border-t border-white/10">
-                <li className="flex items-center gap-2">
-                  <Check size={14} className="text-emerald-400 shrink-0" /> Akses model AI mutakhir tanpa antre
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check size={14} className="text-emerald-400 shrink-0" /> Bebas ekspor dokumen Word (.docx) &amp; PDF siap cetak
-                </li>
-                <li className="flex items-center gap-2">
-                  <Check size={14} className="text-emerald-400 shrink-0" /> Riwayat Bank Materi dan Bank Soal tersimpan aman
-                </li>
-              </ul>
-            </div>
-
-            {/* Tema Tampilan Box */}
-            <div className="bg-white dark:bg-[#1e1e1e] border-2 border-black/15 dark:border-white/20 p-4 sm:p-7 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-              <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-black/10 dark:border-white/10">
-                <Palette size={20} className="text-pink-500" />
-                <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider dark:text-white">
-                  Tema Tampilan
-                </h3>
-              </div>
-
-              <div className="grid grid-cols-3 gap-2 sm:gap-3">
-                {[
-                  { id: "light", label: "Terang", icon: Sun },
-                  { id: "dark", label: "Gelap", icon: Moon },
-                  { id: "system", label: "Sistem", icon: Monitor },
-                ].map((t) => {
-                  const Icon = t.icon;
-                  const isCurrent = theme === t.id;
-                  return (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => setTheme(t.id)}
-                      className={`p-3 border-2 flex flex-col items-center justify-center gap-1.5 font-bold uppercase tracking-wider text-xs transition-all cursor-pointer ${
-                        isCurrent
-                          ? "bg-black text-white border-black dark:bg-white dark:text-black shadow-[2px_2px_0px_0px_rgba(0,0,0,0.2)]"
-                          : "bg-gray-50 dark:bg-[#2a2a2a] text-gray-500 border-black/15 dark:border-white/15 hover:border-black dark:hover:border-white"
-                      }`}
-                    >
-                      <Icon size={18} />
-                      <span className="text-[11px]">{t.label}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* Logout Box */}
-            <div className="bg-white dark:bg-[#1e1e1e] border-2 border-red-200 dark:border-red-900/30 p-4 sm:p-5">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
-                <div>
-                  <h4 className="font-bold text-xs sm:text-sm text-red-600 dark:text-red-400 uppercase tracking-wider">
-                    Sesi Akun
-                  </h4>
-                  <p className="text-[11px] text-gray-500 dark:text-gray-400">
-                    Keluar dari sesi peramban ini jika menggunakan komputer bersama.
-                  </p>
-                </div>
+          {/* ── TAB SWITCHER NEOBRUTALISME ── */}
+          <div className="flex items-center gap-2 p-1.5 bg-neutral-100 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000] overflow-x-auto scrollbar-none">
+            {tabsConfig.map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
                 <button
-                  type="button"
-                  onClick={handleLogoutClick}
-                  className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider flex items-center justify-center gap-2 shadow-xs transition-colors cursor-pointer"
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex-1 py-2 sm:py-2.5 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all whitespace-nowrap cursor-pointer border-2 ${
+                    isActive
+                      ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_#000] -translate-y-0.5"
+                      : "bg-transparent text-gray-600 dark:text-gray-400 border-transparent hover:border-black/30 dark:hover:border-white/30 hover:text-black dark:hover:text-white"
+                  }`}
                 >
-                  <LogOut size={14} /> Keluar dari Akun
+                  <Icon size={14} className={isActive ? "text-white dark:text-black" : "opacity-70"} />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+
+          {/* ── TAB CONTENT ── */}
+          <AnimatePresence mode="wait">
+            {/* TAB 1: PROFIL AKUN */}
+            {activeTab === "profile" && (
+              <motion.div
+                key="tab-profile"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-6"
+              >
+                <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-6 shadow-[4px_4px_0px_#000]">
+                  {/* Header inside card */}
+                  <div className="flex items-center gap-3.5 pb-4 border-b border-black/10 dark:border-white/10 mb-6">
+                    <div className="w-12 h-12 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-editorial font-bold text-xl flex items-center justify-center shadow-[2px_2px_0px_#000] shrink-0">
+                      {userProfile.initial}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base sm:text-xl font-black font-editorial text-black dark:text-white truncate">
+                        {userProfile.full_name}
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {userProfile.email || "Email akun pengajar"}
+                      </p>
+                    </div>
+                    <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-1 bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white border border-black dark:border-white/30 shadow-xs">
+                      {userProfile.plan}
+                    </span>
+                  </div>
+
+                  <form onSubmit={handleSaveProfile} className="space-y-4">
+                    <div>
+                      <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 block mb-1.5">
+                        Nama Lengkap Anda *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={fullName}
+                        onChange={(e) => setFullName(e.target.value)}
+                        placeholder="Contoh: Budi Santoso, S.Pd."
+                        className="w-full p-3 text-xs sm:text-sm bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white/30 font-bold focus:outline-none dark:text-white shadow-inner"
+                      />
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
+                        Nama ini dicantumkan pada kop dinas soal ujian, lembar jawaban, perencana ajar, dan rapor siswa.
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] sm:text-xs font-bold uppercase tracking-wider text-gray-600 dark:text-gray-400 block mb-1.5">
+                        Alamat Email (Akun Terikat)
+                      </label>
+                      <input
+                        type="email"
+                        value={email}
+                        disabled
+                        className="w-full p-3 text-xs sm:text-sm bg-neutral-200 dark:bg-[#1f1f1f] text-gray-600 dark:text-gray-400 border-2 border-black/20 dark:border-white/10 outline-none font-bold cursor-not-allowed"
+                      />
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={isSavingProfile}
+                        className="px-6 py-2.5 bg-black text-white dark:bg-white dark:text-black font-bold text-xs uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {isSavingProfile ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" /> Menyimpan...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={14} /> Simpan Profil
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 2: PREFERENSI AI */}
+            {activeTab === "ai" && (
+              <motion.div
+                key="tab-ai"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-6"
+              >
+                <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-6 shadow-[4px_4px_0px_#000]">
+                  <div className="flex items-center gap-2.5 pb-4 border-b border-black/10 dark:border-white/10 mb-6">
+                    <div className="w-8 h-8 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white flex items-center justify-center">
+                      <Cpu size={16} />
+                    </div>
+                    <div>
+                      <h2 className="text-base sm:text-lg font-bold font-editorial text-black dark:text-white leading-tight">
+                        Preferensi Model & Gaya AI
+                      </h2>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Atur model penalaran AI dan instruksi sistem global saat meracik bahan ajar.
+                      </p>
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleSavePreferences} className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
+                          Model AI Pembuat Soal
+                        </label>
+                        <select
+                          value={aiModel}
+                          onChange={(e) => setAiModel(e.target.value)}
+                          className="w-full p-2.5 text-xs sm:text-sm border-2 border-black dark:border-white/30 bg-white dark:bg-[#1a1a1a] dark:text-white font-bold outline-none cursor-pointer shadow-[2px_2px_0px_#000]"
+                        >
+                          <option value="auto">Gemini 3.8 Flash (Cepat & Direkomendasikan)</option>
+                          <option value="gpt-4o">GPT-4o (Komprehensif)</option>
+                          <option value="claude">Claude 3.5 Sonnet (Analitis)</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
+                          Bahasa Output Standar
+                        </label>
+                        <select
+                          value={outputLanguage}
+                          onChange={(e) => setOutputLanguage(e.target.value)}
+                          className="w-full p-2.5 text-xs sm:text-sm border-2 border-black dark:border-white/30 bg-white dark:bg-[#1a1a1a] dark:text-white font-bold outline-none cursor-pointer shadow-[2px_2px_0px_#000]"
+                        >
+                          <option value="id">Bahasa Indonesia (Standar Kurikulum)</option>
+                          <option value="en">English (Bilingual / Asing)</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="text-[11px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider block mb-1.5">
+                        Instruksi Khusus Global (System Prompt)
+                      </label>
+                      <textarea
+                        rows={4}
+                        value={systemPrompt}
+                        onChange={(e) => setSystemPrompt(e.target.value)}
+                        className="w-full p-3 text-xs sm:text-sm border-2 border-black dark:border-white/30 bg-white dark:bg-[#1a1a1a] dark:text-white font-sans outline-none leading-relaxed shadow-inner"
+                        placeholder="Contoh: Selalu sertakan alasan kenapa opsi pengecoh salah pada bagian pembahasan..."
+                      />
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1.5">
+                        Instruksi ini akan otomatis diprioritaskan saat AI meracik butir soal, mengoreksi tugas, atau menyusun rencana pembelajaran.
+                      </p>
+                    </div>
+
+                    <div className="pt-2 flex justify-end">
+                      <button
+                        type="submit"
+                        disabled={isSavingPrefs}
+                        className="px-6 py-2.5 bg-black text-white dark:bg-white dark:text-black font-bold text-xs uppercase tracking-wider border-2 border-black dark:border-white shadow-[3px_3px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                      >
+                        {isSavingPrefs ? (
+                          <>
+                            <Loader2 size={14} className="animate-spin" /> Menyimpan...
+                          </>
+                        ) : (
+                          <>
+                            <Save size={14} /> Simpan Preferensi AI
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </motion.div>
+            )}
+
+            {/* TAB 3: PAKET & TEMA */}
+            {activeTab === "billing" && (
+              <motion.div
+                key="tab-billing"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="space-y-6"
+              >
+                {/* Status Langganan Box Neobrutalisme Monokrom */}
+                <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-6 shadow-[4px_4px_0px_#000]">
+                  <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-black/10 dark:border-white/10">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white flex items-center justify-center">
+                        <Crown size={16} />
+                      </div>
+                      <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider font-editorial text-black dark:text-white">
+                        Status Akun EduCraft
+                      </h3>
+                    </div>
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold uppercase tracking-wider border border-black dark:border-white shadow-xs">
+                      Aktif Pro
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
+                    <div className="bg-white dark:bg-[#1a1a1a] p-3.5 border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000]">
+                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block mb-1">
+                        Paket Keanggotaan
+                      </span>
+                      <div className="font-black text-black dark:text-white text-base">
+                        EduCraft Pro Unlimited
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Aktif permanen untuk seluruh fitur sekolah
+                      </p>
+                    </div>
+
+                    <div className="bg-white dark:bg-[#1a1a1a] p-3.5 border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000]">
+                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block mb-1">
+                        Kuota Komputasi AI
+                      </span>
+                      <div className="font-black text-black dark:text-white text-base flex items-center gap-1.5">
+                        <Sparkles size={16} /> Tanpa Batas (Unlimited)
+                      </div>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
+                        Bebas racik soal, koreksi, &amp; ekspor kapan saja
+                      </p>
+                    </div>
+                  </div>
+
+                  <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-300 pt-2 border-t border-black/10 dark:border-white/10 font-medium">
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-black dark:text-white shrink-0" /> Akses model AI mutakhir tanpa antre
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-black dark:text-white shrink-0" /> Bebas ekspor dokumen Word (.docx) &amp; PDF kedinasan siap cetak
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <Check size={14} className="text-black dark:text-white shrink-0" /> Riwayat Bank Materi dan Bank Soal tersimpan aman di cloud
+                    </li>
+                  </ul>
+                </div>
+
+                {/* Tema Tampilan Box */}
+                <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-6 shadow-[4px_4px_0px_#000]">
+                  <div className="flex items-center gap-2.5 mb-4 pb-3 border-b border-black/10 dark:border-white/10">
+                    <div className="w-8 h-8 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white flex items-center justify-center">
+                      <Palette size={16} />
+                    </div>
+                    <div>
+                      <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider font-editorial text-black dark:text-white">
+                        Tema Tampilan Antarmuka
+                      </h3>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        Pilih mode kontras tampilan layar yang nyaman untuk mata Anda.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3">
+                    {[
+                      { id: "light", label: "Terang", icon: Sun },
+                      { id: "dark", label: "Gelap", icon: Moon },
+                      { id: "system", label: "Sistem", icon: Monitor },
+                    ].map((t) => {
+                      const Icon = t.icon;
+                      const isCurrent = theme === t.id;
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          onClick={() => setTheme(t.id)}
+                          className={`p-3 border-2 flex flex-col items-center justify-center gap-1.5 font-bold uppercase tracking-wider text-xs transition-all cursor-pointer ${
+                            isCurrent
+                              ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_#000] -translate-y-0.5"
+                              : "bg-white dark:bg-[#1a1a1a] text-gray-600 dark:text-gray-400 border-black/20 dark:border-white/20 hover:border-black dark:hover:border-white"
+                          }`}
+                        >
+                          <Icon size={18} />
+                          <span className="text-[11px]">{t.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Sesi Akun / Logout Box */}
+                <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-5 shadow-[4px_4px_0px_#000]">
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+                    <div>
+                      <h4 className="font-bold text-xs sm:text-sm text-black dark:text-white uppercase tracking-wider">
+                        Sesi Akun Pendidik
+                      </h4>
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400">
+                        Keluar dari sesi peramban ini jika sedang menggunakan komputer bersama di sekolah.
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleLogoutClick}
+                      className="w-full sm:w-auto px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white font-bold text-xs uppercase tracking-wider border-2 border-black shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none flex items-center justify-center gap-2 transition-all cursor-pointer"
+                    >
+                      <LogOut size={14} /> Keluar dari Akun
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+
+      {/* ── LOGOUT CONFIRMATION MODAL (Monokrom Neobrutal 4 Siku) ── */}
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="relative bg-white dark:bg-[#1a1a1a] border-2 sm:border-4 border-black dark:border-white p-5 sm:p-6 max-w-sm w-full shadow-[8px_8px_0px_#000] space-y-4"
+            >
+              {/* 4 Corner Ornaments */}
+              <div className="absolute -top-1.5 -left-1.5 w-3 h-3 border-t-2 border-l-2 border-black dark:border-white pointer-events-none" />
+              <div className="absolute -top-1.5 -right-1.5 w-3 h-3 border-t-2 border-r-2 border-black dark:border-white pointer-events-none" />
+              <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-2 border-l-2 border-black dark:border-white pointer-events-none" />
+              <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-2 border-r-2 border-black dark:border-white pointer-events-none" />
+
+              <div className="flex items-center justify-between pb-3 border-b-2 border-black dark:border-white/20">
+                <h3 className="text-base font-black uppercase tracking-wider text-black dark:text-white font-editorial">
+                  Konfirmasi Keluar
+                </h3>
+                <button
+                  onClick={cancelLogout}
+                  className="p-1 border border-black dark:border-white/30 text-black dark:text-white hover:bg-black hover:text-white transition-colors cursor-pointer"
+                >
+                  <X size={15} />
                 </button>
               </div>
-            </div>
-          </motion.div>
+
+              <p className="font-medium text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                Apakah Anda yakin ingin keluar dari akun EduCraft AI? Anda harus login kembali untuk mengakses data.
+              </p>
+
+              <div className="flex gap-2.5 pt-2">
+                <button
+                  type="button"
+                  onClick={cancelLogout}
+                  className="flex-1 py-2 bg-white dark:bg-[#252525] text-black dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase tracking-wider text-xs shadow-[2px_2px_0px_#000] active:translate-y-0.5 cursor-pointer"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={confirmLogout}
+                  className="flex-1 py-2 bg-red-600 border-2 border-black text-white font-bold uppercase tracking-wider text-xs shadow-[2px_2px_0px_#000] active:translate-y-0.5 cursor-pointer hover:bg-red-700"
+                >
+                  Ya, Keluar
+                </button>
+              </div>
+            </motion.div>
+          </div>
         )}
       </AnimatePresence>
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 dark:bg-black/80 backdrop-blur-sm">
-          <div className="bg-white dark:bg-[#1e1e1e] border-2 sm:border-4 border-black dark:border-white/20 p-5 sm:p-8 max-w-sm w-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)]">
-            <h3 className="text-lg sm:text-xl font-black uppercase tracking-wider mb-1.5 sm:mb-2 dark:text-white">
-              Konfirmasi Keluar
-            </h3>
-            <p className="font-medium text-xs sm:text-sm text-gray-600 dark:text-gray-400 mb-4 sm:mb-6">
-              Apakah Anda yakin ingin keluar dari akun EduCraft AI?
-            </p>
-            <div className="flex gap-3 sm:gap-4">
-              <button
-                type="button"
-                onClick={cancelLogout}
-                className="flex-1 py-2.5 sm:py-3 bg-white dark:bg-[#2a2a2a] dark:text-white border-2 border-black dark:border-white/20 font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-gray-50 dark:hover:bg-[#333] transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 cursor-pointer"
-              >
-                Batal
-              </button>
-              <button
-                type="button"
-                onClick={confirmLogout}
-                className="flex-1 py-2.5 sm:py-3 bg-red-500 border-2 border-black dark:border-red-600 text-white font-bold uppercase tracking-wider text-xs sm:text-sm hover:bg-red-600 transition-colors shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] sm:shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:translate-x-0.5 cursor-pointer"
-              >
-                Ya, Keluar
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
