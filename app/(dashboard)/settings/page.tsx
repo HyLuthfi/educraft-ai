@@ -274,23 +274,24 @@ export default function SettingsPage() {
           <div className="absolute -bottom-1.5 -left-1.5 w-3 h-3 border-b-2 border-l-2 border-black dark:border-white pointer-events-none" />
           <div className="absolute -bottom-1.5 -right-1.5 w-3 h-3 border-b-2 border-r-2 border-black dark:border-white pointer-events-none" />
 
-          {/* ── TAB SWITCHER NEOBRUTALISME ── */}
-          <div className="flex items-center gap-2 p-1.5 bg-neutral-100 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000] overflow-x-auto scrollbar-none">
+          {/* ── TAB SWITCHER NEOBRUTALISME (GRID 3 KOLOM: FIT 100% DI HP & DESKTOP TANPA PERLU SCROLL) ── */}
+          <div className="grid grid-cols-3 gap-1 sm:gap-2 p-1 sm:p-1.5 bg-neutral-100 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000]">
             {tabsConfig.map((tab) => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
                 <button
                   key={tab.id}
+                  type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex-1 py-2 sm:py-2.5 px-3 sm:px-4 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 transition-all whitespace-nowrap cursor-pointer border-2 ${
+                  className={`py-2 sm:py-2.5 px-1 sm:px-3 text-[10px] sm:text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1 sm:gap-2 transition-all cursor-pointer border-2 ${
                     isActive
                       ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_#000] -translate-y-0.5"
                       : "bg-transparent text-gray-600 dark:text-gray-400 border-transparent hover:border-black/30 dark:hover:border-white/30 hover:text-black dark:hover:text-white"
                   }`}
                 >
-                  <Icon size={14} className={isActive ? "text-white dark:text-black" : "opacity-70"} />
-                  <span>{tab.label}</span>
+                  <Icon size={13} className="shrink-0" />
+                  <span className="truncate">{tab.label}</span>
                 </button>
               );
             })}
