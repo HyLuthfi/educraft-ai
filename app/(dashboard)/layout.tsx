@@ -81,6 +81,25 @@ export default function DashboardLayout({
     async function fetchUser() {
       const { data: { user } } = await supabase.auth.getUser();
       if (user) {
+        // Multi-tenant client-side isolation guard:
+        // Jika akun yang login sekarang berbeda dengan akun sebelumnya di browser ini,
+        // bersihkan seluruh draft/cache milik user lama agar data siswa/soal tidak tertukar.
+        try {
+          const lastUid = localStorage.getItem("educraft_last_uid");
+          if (lastUid && lastUid !== user.id) {
+            const keysToRemove: string[] = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k && k.startsWith("educraft_")) {
+                keysToRemove.push(k);
+              }
+            }
+            keysToRemove.forEach((k) => localStorage.removeItem(k));
+            sessionStorage.clear();
+          }
+          localStorage.setItem("educraft_last_uid", user.id);
+        } catch (e) {}
+
         const { data: profile } = await supabase
           .from('profiles')
           .select('full_name, plan')
@@ -125,12 +144,8 @@ export default function DashboardLayout({
       console.error("Sign out error:", e);
     }
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("sb-")) {
-          localStorage.removeItem(key);
-        }
-      }
+      localStorage.clear();
+      sessionStorage.clear();
     } catch (e) {}
     window.location.href = "/login";
   };

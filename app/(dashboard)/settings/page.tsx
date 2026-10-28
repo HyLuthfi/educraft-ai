@@ -228,12 +228,8 @@ export default function SettingsPage() {
       console.error("Sign out error:", e);
     }
     try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith("sb-")) {
-          localStorage.removeItem(key);
-        }
-      }
+      localStorage.clear();
+      sessionStorage.clear();
     } catch (e) {}
     window.location.href = "/login";
   };
