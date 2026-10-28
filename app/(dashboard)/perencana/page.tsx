@@ -40,6 +40,8 @@ import {
   FileSpreadsheet,
   ArrowRight,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { buatSupabaseClient } from "@/lib/supabase/client";
 import { SelectBankMateriModal } from "@/app/components/SelectBankMateriModal";
@@ -132,6 +134,15 @@ export default function PerencanaPembelajaranPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
+  const tabsScrollRef = useRef<HTMLDivElement>(null);
+
+  const handleSelectPertemuan = (idx: number) => {
+    setPertemuanAktif(idx);
+    const el = document.getElementById(`pertemuan-tab-${idx}`);
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+    }
+  };
 
   useEffect(() => {
     const selected = typeof window !== "undefined" ? sessionStorage.getItem("educraft_selected_materi") : null;
@@ -761,25 +772,48 @@ export default function PerencanaPembelajaranPage() {
                 </div>
               )}
 
-              {/* Selector Pertemuan Monokrom */}
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
-                {result.daftar_pertemuan.map((p, idx) => {
-                  const active = idx === pertemuanAktif;
-                  return (
-                    <button
-                      key={idx}
-                      onClick={() => setPertemuanAktif(idx)}
-                      className={`px-3 py-1.5 border-2 border-black dark:border-white/30 text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
-                        active
-                          ? "bg-black text-white dark:bg-white dark:text-black shadow-[2px_2px_0px_#000] -translate-y-0.5"
-                          : "bg-white text-gray-700 dark:bg-[#252525] dark:text-gray-300 hover:bg-neutral-100 dark:hover:bg-[#303030]"
-                      }`}
-                    >
-                      <span className="font-black">P{p.pertemuan_ke}</span>
-                      <span className="max-w-[130px] truncate">{p.judul_pertemuan}</span>
-                    </button>
-                  );
-                })}
+              {/* Selector Pertemuan Stepper Bar (Opsi 1: Panah Navigasi + Tab Bebas Terpotong) */}
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleSelectPertemuan(Math.max(0, pertemuanAktif - 1))}
+                  disabled={pertemuanAktif === 0}
+                  className="h-9 w-9 shrink-0 flex items-center justify-center border-2 border-black dark:border-white/30 bg-white dark:bg-[#252525] text-black dark:text-white shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  title="Pertemuan sebelumnya"
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                <div ref={tabsScrollRef} className="flex-1 flex gap-1.5 overflow-x-auto pb-1 pt-0.5 scrollbar-none scroll-smooth">
+                  {result.daftar_pertemuan.map((p, idx) => {
+                    const active = idx === pertemuanAktif;
+                    return (
+                      <button
+                        key={idx}
+                        id={`pertemuan-tab-${idx}`}
+                        type="button"
+                        onClick={() => handleSelectPertemuan(idx)}
+                        className={`px-3 py-1.5 border-2 text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 shrink-0 cursor-pointer ${
+                          active
+                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-[2px_2px_0px_#000] -translate-y-0.5"
+                            : "bg-white text-gray-700 dark:bg-[#252525] dark:text-gray-300 border-black/30 dark:border-white/20 hover:border-black dark:hover:border-white"
+                        }`}
+                      >
+                        <span className="font-black">Pertemuan {p.pertemuan_ke}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => handleSelectPertemuan(Math.min(result.daftar_pertemuan.length - 1, pertemuanAktif + 1))}
+                  disabled={pertemuanAktif === result.daftar_pertemuan.length - 1}
+                  className="h-9 w-9 shrink-0 flex items-center justify-center border-2 border-black dark:border-white/30 bg-white dark:bg-[#252525] text-black dark:text-white shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all disabled:opacity-30 disabled:cursor-not-allowed cursor-pointer"
+                  title="Pertemuan berikutnya"
+                >
+                  <ChevronRight size={16} />
+                </button>
               </div>
 
               {/* Detail Pertemuan Aktif (Monokrom Neobrutal Bersih) */}
