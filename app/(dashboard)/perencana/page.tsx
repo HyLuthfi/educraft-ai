@@ -938,6 +938,39 @@ export default function PerencanaPembelajaranPage() {
                   </p>
                 </div>
               )}
+
+              {/* Bottom Action Bar: Unduh & Simpan di Bagian Bawah */}
+              <div className="pt-3 border-t border-black/10 dark:border-white/10 flex flex-wrap items-center justify-between gap-3">
+                <button
+                  type="button"
+                  onClick={handleBack}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white dark:bg-[#252525] dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                >
+                  <ArrowLeft size={13} />
+                  <span>Kembali ke Input</span>
+                </button>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleSaveToBankMateri}
+                    disabled={isSaving || isSaved}
+                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-white dark:bg-[#252525] text-black dark:text-white border-2 border-black dark:border-white/30 font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                  >
+                    {isSaving ? <Loader2 size={13} className="animate-spin" /> : isSaved ? <Check size={13} /> : <BookmarkPlus size={13} />}
+                    <span>{isSaved ? "Tersimpan" : "Simpan ke Materi"}</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setIsDownloadModalOpen(true)}
+                    className="inline-flex items-center gap-1.5 px-4 py-1.5 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-bold uppercase text-xs tracking-wider shadow-[2px_2px_0px_#000] active:translate-y-0.5 active:shadow-none transition-all cursor-pointer"
+                  >
+                    <Download size={13} />
+                    <span>Unduh Modul</span>
+                  </button>
+                </div>
+              </div>
             </div>
           )}
         </div>
