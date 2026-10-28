@@ -25,8 +25,11 @@ import {
   X,
   ChevronRight,
   AlertTriangle,
+  Wallet,
+  Plus,
 } from "lucide-react";
 import { InstallAppButton } from "@/app/components/InstallAppButton";
+import { TopUpModal } from "@/app/components/TopUpModal";
 
 export default function DashboardLayout({
   children,
@@ -66,11 +69,16 @@ export default function DashboardLayout({
     full_name: string;
     plan: string;
     initial: string;
+    balance: number;
+    isPro: boolean;
   }>({
     full_name: "Memuat...",
-    plan: "Pro Plan",
-    initial: "-"
+    plan: "Starter",
+    initial: "-",
+    balance: 50000,
+    isPro: false,
   });
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL || "",
@@ -102,13 +110,11 @@ export default function DashboardLayout({
 
         const { data: profile } = await supabase
           .from('profiles')
-          .select('full_name, plan')
+          .select('full_name, plan, tokens_left')
           .eq('id', user.id)
           .single();
           
         let name = "Pengguna";
-        let plan = "Pro Plan";
-        
         if (profile?.full_name) {
           name = profile.full_name;
         } else if (user.user_metadata?.full_name) {
@@ -117,20 +123,45 @@ export default function DashboardLayout({
           name = user.email.split('@')[0];
         }
 
-        if (profile?.plan && profile.plan !== "Free Plan") {
-          plan = profile.plan;
-        } else {
-          plan = "Pro Plan";
+        const isPro =
+          profile?.plan === "EduCraft Pro" ||
+          profile?.plan === "Pro" ||
+          profile?.plan === "PRO" ||
+          profile?.plan === "Pro Plan";
+        const plan = isPro ? "EduCraft Pro" : "Starter";
+
+        let balance = profile?.tokens_left;
+        if (balance === null || balance === undefined) {
+          balance = 50000;
+          try {
+            await supabase.from('profiles').update({ tokens_left: 50000, plan }).eq('id', user.id);
+          } catch (e) {}
         }
 
         setUserProfile({
           full_name: name,
           plan: plan,
-          initial: name.charAt(0).toUpperCase()
+          initial: name.charAt(0).toUpperCase(),
+          balance: Number(balance) || 0,
+          isPro,
         });
       }
     }
     fetchUser();
+
+    const handleWalletUpdated = () => {
+      fetchUser();
+    };
+    const handleOpenTopup = () => {
+      setIsTopUpOpen(true);
+    };
+
+    window.addEventListener("educraft_wallet_updated", handleWalletUpdated);
+    window.addEventListener("educraft_open_topup", handleOpenTopup);
+    return () => {
+      window.removeEventListener("educraft_wallet_updated", handleWalletUpdated);
+      window.removeEventListener("educraft_open_topup", handleOpenTopup);
+    };
   }, [supabase]);
 
   const handleLogoutClick = () => {
@@ -262,34 +293,68 @@ export default function DashboardLayout({
           </Link>
         </div>
 
-        <div className="p-4 border-t border-black/10 dark:border-white/10">
-          <div className="flex items-center gap-3 p-2">
+        <div className="p-3 border-t-2 border-black dark:border-white/20 bg-neutral-50 dark:bg-[#252525]">
+          {/* Saldo AI Pill & Topup Button */}
+          <div className="mb-2.5 p-2 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex items-center justify-between">
+            <div
+              onClick={() => setIsTopUpOpen(true)}
+              className="flex items-center gap-1.5 cursor-pointer hover:opacity-80 transition-opacity"
+              title="Klik untuk isi ulang saldo"
+            >
+              <div className="w-6 h-6 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white flex items-center justify-center shrink-0">
+                <Wallet size={12} />
+              </div>
+              <div>
+                <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block leading-none">
+                  Saldo AI
+                </span>
+                <span className="text-xs font-black font-mono text-black dark:text-white leading-tight">
+                  Rp {userProfile.balance.toLocaleString("id-ID")}
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setIsTopUpOpen(true)}
+              className="px-2 py-1 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-[9px] border border-black dark:border-white shadow-[1px_1px_0px_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-0.5"
+            >
+              <Plus size={10} /> Top Up
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 p-1">
             <Link
               href="/profil"
               onClick={(e) => handleNavClick(e, "/profil")}
-              className="flex items-center gap-3 flex-1 min-w-0 group hover:opacity-90 transition-opacity"
+              className="flex items-center gap-2.5 flex-1 min-w-0 group hover:opacity-90 transition-opacity"
               title="Lihat Profil Saya"
             >
-              <div className="w-10 h-10 rounded bg-gray-200 dark:bg-[#2a2a2a] group-hover:bg-yellow-400 group-hover:text-black transition-colors flex items-center justify-center font-bold text-gray-600 dark:text-gray-300 shrink-0">
+              <div className="w-8 h-8 border-2 border-black dark:border-white bg-black text-white dark:bg-white dark:text-black flex items-center justify-center font-bold text-xs shadow-[1.5px_1.5px_0px_#000] shrink-0">
                 {userProfile.initial}
               </div>
               <div className="flex-1 overflow-hidden">
-                <p className="text-sm font-bold truncate dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
+                <p className="text-xs font-bold truncate dark:text-white leading-snug">
                   {userProfile.full_name}
                 </p>
-                <div className="flex items-center gap-1.5 mt-0.5">
-                  <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 bg-yellow-400 text-black border border-black/10 rounded shadow-sm">
-                    ★ {userProfile.plan}
+                <div className="flex items-center gap-1 mt-0.5">
+                  <span
+                    className={`inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 border ${
+                      userProfile.isPro
+                        ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs"
+                        : "bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white border-black/30 dark:border-white/30"
+                    }`}
+                  >
+                    {userProfile.isPro ? "★ PRO" : "STARTER"}
                   </span>
                 </div>
               </div>
             </Link>
             <button
               onClick={handleLogoutClick}
-              className="text-gray-400 dark:text-gray-500 hover:text-red-500 dark:hover:text-red-400 transition-colors p-1"
+              className="text-gray-500 hover:text-red-600 transition-colors p-1 border border-black/20 dark:border-white/20 hover:border-black cursor-pointer"
               title="Keluar Akun"
             >
-              <LogOut size={18} />
+              <LogOut size={15} />
             </button>
           </div>
         </div>
@@ -489,26 +554,58 @@ export default function DashboardLayout({
               </div>
 
               {/* User Profile Mini Banner */}
-              <Link
-                href="/profil"
-                onClick={() => setIsMobileDrawerOpen(false)}
-                className="p-4 bg-gray-50 dark:bg-[#262626] border-b border-black/10 dark:border-white/10 flex items-center gap-3 hover:bg-gray-100 dark:hover:bg-[#333] transition-colors"
-                title="Buka Profil Saya"
-              >
-                <div className="w-10 h-10 rounded-lg bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-sm shadow-sm shrink-0">
-                  {userProfile.initial}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold truncate dark:text-white">
-                    {userProfile.full_name}
-                  </p>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <span className="inline-flex items-center gap-1 text-[10px] font-black uppercase tracking-wider px-2 py-0.5 bg-yellow-400 text-black border border-black/10 rounded shadow-sm">
-                      ★ {userProfile.plan}
-                    </span>
+              <div className="p-3 bg-neutral-50 dark:bg-[#252525] border-b-2 border-black dark:border-white/20 space-y-2">
+                <Link
+                  href="/profil"
+                  onClick={() => setIsMobileDrawerOpen(false)}
+                  className="flex items-center gap-3 hover:opacity-85 transition-opacity"
+                  title="Buka Profil Saya"
+                >
+                  <div className="w-9 h-9 border-2 border-black dark:border-white bg-black dark:bg-white text-white dark:text-black flex items-center justify-center font-bold text-xs shadow-xs shrink-0">
+                    {userProfile.initial}
                   </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-bold truncate dark:text-white">
+                      {userProfile.full_name}
+                    </p>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span
+                        className={`inline-flex items-center text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 border ${
+                          userProfile.isPro
+                            ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
+                            : "bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white border-black/30 dark:border-white/30"
+                        }`}
+                      >
+                        {userProfile.isPro ? "★ PRO" : "STARTER"}
+                      </span>
+                    </div>
+                  </div>
+                </Link>
+
+                {/* Saldo Pill di Mobile Drawer */}
+                <div className="p-2 bg-white dark:bg-[#1a1a1a] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Wallet size={13} className="text-black dark:text-white" />
+                    <div>
+                      <span className="text-[9px] font-bold uppercase tracking-wider text-gray-500 dark:text-gray-400 block leading-none">
+                        Saldo AI
+                      </span>
+                      <span className="text-xs font-black font-mono text-black dark:text-white leading-tight">
+                        Rp {userProfile.balance.toLocaleString("id-ID")}
+                      </span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setIsMobileDrawerOpen(false);
+                      setIsTopUpOpen(true);
+                    }}
+                    className="px-2 py-1 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-[9px] border border-black dark:border-white shadow-[1px_1px_0px_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-0.5"
+                  >
+                    <Plus size={10} /> Top Up
+                  </button>
                 </div>
-              </Link>
+              </div>
 
               {/* Drawer Navigation Links */}
               <nav className="flex-1 px-4 py-5 space-y-5 overflow-y-auto">
@@ -656,6 +753,21 @@ export default function DashboardLayout({
           </div>
         </div>
       )}
+
+      {/* ── MODAL TOP UP SALDO EDUGRAFT (QRIS & TRANSFER BANK) ── */}
+      <TopUpModal
+        isOpen={isTopUpOpen}
+        onClose={() => setIsTopUpOpen(false)}
+        currentBalance={userProfile.balance}
+        onSuccess={(newBal) => {
+          setUserProfile((p) => ({
+            ...p,
+            balance: newBal,
+            isPro: true,
+            plan: "EduCraft Pro",
+          }));
+        }}
+      />
     </div>
   );
 }

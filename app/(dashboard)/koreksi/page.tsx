@@ -744,13 +744,22 @@ export default function AutoKoreksiPage() {
       setActiveStudentDetail(0);
       setIsSaved(false);
       setStep(3);
+      window.dispatchEvent(new CustomEvent("educraft_wallet_updated"));
       toast.success("Koreksi AI selesai!", { id: toastId });
     } catch (err: any) {
       console.error(err);
+      let errMsg = err.message || "Error tidak diketahui";
+      try {
+        const parsed = JSON.parse(errMsg);
+        if (parsed.message) errMsg = parsed.message;
+      } catch (e) {}
       toast.error(
-        "Gagal melakukan koreksi AI: " + (err.message || "Error tidak diketahui"),
+        "Gagal melakukan koreksi AI: " + errMsg,
         { id: toastId }
       );
+      if (errMsg.toLowerCase().includes("saldo") || errMsg.includes("INSUFFICIENT_BALANCE")) {
+        window.dispatchEvent(new CustomEvent("educraft_open_topup"));
+      }
       setStudents((prev) => prev.map((s) => ({ ...s, phase: "idle" })));
     } finally {
       setIsKoreksiLoading(false);

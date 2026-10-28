@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { buatSupabaseServer } from "@/lib/supabase/server";
+import { deductUserBalance, creditUserBalance, DEFAULT_AI_COST } from "@/lib/wallet";
 
 export async function POST(req: Request) {
   try {
@@ -8,12 +9,29 @@ export async function POST(req: Request) {
     if (!body.konten_materi || typeof body.konten_materi !== "string" || !body.konten_materi.trim()) {
       body.konten_materi = "Materi Pembelajaran Umum";
     }
+
+    const supabase = await buatSupabaseServer();
+    const { data: authData } = await supabase.auth.getUser();
+    const user = authData?.user;
+
+    // ── Cek dan Potong Saldo Akun (Rp 1.000 / request) ──
+    if (user) {
+      const deductCheck = await deductUserBalance(supabase, user.id, DEFAULT_AI_COST);
+      if (!deductCheck.success) {
+        return NextResponse.json(
+          {
+            error: deductCheck.error,
+            message: deductCheck.message,
+            code: "INSUFFICIENT_BALANCE",
+            currentBalance: deductCheck.currentBalance,
+            required: deductCheck.required,
+          },
+          { status: 402 }
+        );
+      }
+    }
     
     try {
-      const supabase = await buatSupabaseServer();
-      const { data } = await supabase.auth.getUser();
-      const user = data?.user;
-      
       if (user && body.konten_materi) {
         const { data: existing } = await supabase
           .from("bank_materi")
@@ -37,7 +55,6 @@ export async function POST(req: Request) {
     } catch (e: any) {
       console.warn("Peringatan Supabase bank_materi diabaikan:", e?.message || e);
     }
-
     
     const backendUrl = process.env.NEXT_PUBLIC_AI_ENGINE_URL || "http://127.0.0.1:8000";
     
@@ -51,6 +68,10 @@ export async function POST(req: Request) {
     });
 
     if (!res.ok) {
+      // Refund saldo jika AI backend gagal memproses
+      if (user) {
+        await creditUserBalance(supabase, user.id, DEFAULT_AI_COST).catch(() => {});
+      }
       const errorText = await res.text();
       console.error("Backend Error:", errorText);
       let pesanError = "Gagal menghasilkan soal dari AI";

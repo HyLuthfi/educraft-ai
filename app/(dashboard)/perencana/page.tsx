@@ -230,11 +230,16 @@ export default function PerencanaPembelajaranPage() {
         setView("result");
         setPertemuanAktif(0);
         if (typeof window !== "undefined") window.scrollTo({ top: 0, behavior: "smooth" });
+        window.dispatchEvent(new CustomEvent("educraft_wallet_updated"));
         toast.success(`Rencana ${data.total_pertemuan} pertemuan berhasil disusun!`);
       }
     } catch (err: any) {
       console.error(err);
-      toast.error("Gagal menyusun rencana: " + (err.message || "Error tidak diketahui"));
+      const errMsg = err.message || "Error tidak diketahui";
+      toast.error("Gagal menyusun rencana: " + errMsg);
+      if (errMsg.toLowerCase().includes("saldo") || errMsg.includes("INSUFFICIENT_BALANCE")) {
+        window.dispatchEvent(new CustomEvent("educraft_open_topup"));
+      }
     } finally {
       setIsLoading(false);
     }

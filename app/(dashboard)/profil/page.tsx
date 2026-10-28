@@ -22,22 +22,30 @@ import {
   TrendingUp,
   Loader2,
   CheckCircle2,
+  Wallet,
+  Plus,
 } from "lucide-react";
+import { TopUpModal } from "@/app/components/TopUpModal";
 
 export default function ProfilPage() {
   const [isLoading, setIsLoading] = useState(true);
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
   const [profileData, setProfileData] = useState<{
     fullName: string;
     email: string;
     plan: string;
     initial: string;
     joinedDate: string;
+    balance: number;
+    isPro: boolean;
   }>({
     fullName: "Pendidik",
     email: "",
-    plan: "EduCraft Pro",
+    plan: "Starter",
     initial: "P",
     joinedDate: "September 2026",
+    balance: 50000,
+    isPro: false,
   });
 
   const [stats, setStats] = useState({
@@ -73,10 +81,16 @@ export default function ProfilPage() {
             name = user.email.split("@")[0];
           }
 
-          let plan = "EduCraft Pro";
-          if (profile?.plan && profile.plan !== "Free Plan") {
-            plan = profile.plan;
-          }
+          const isPro =
+            profile?.plan === "EduCraft Pro" ||
+            profile?.plan === "Pro" ||
+            profile?.plan === "PRO" ||
+            profile?.plan === "Pro Plan";
+          const plan = isPro ? "EduCraft Pro" : "Starter";
+          const balance =
+            profile?.tokens_left !== null && profile?.tokens_left !== undefined
+              ? profile.tokens_left
+              : 50000;
 
           let joined = "September 2026";
           if (user.created_at) {
@@ -92,6 +106,8 @@ export default function ProfilPage() {
             plan,
             initial: name.charAt(0).toUpperCase(),
             joinedDate: joined,
+            balance,
+            isPro,
           });
 
           // Fetch aggregate statistics
@@ -160,40 +176,61 @@ export default function ProfilPage() {
           <motion.div
             initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white dark:bg-[#1e1e1e] border-2 sm:border-3 border-black dark:border-white/20 p-5 sm:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.1)] relative overflow-hidden"
+            className="bg-white dark:bg-[#1e1e1e] border-2 border-black dark:border-white/20 p-5 sm:p-7 shadow-[4px_4px_0px_#000] relative"
           >
-            <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-400/10 dark:bg-yellow-400/5 rounded-bl-full pointer-events-none" />
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 relative z-10">
+              <div className="flex items-center gap-4 min-w-0">
+                {/* Avatar Initial Box Monokrom */}
+                <div className="w-14 h-14 sm:w-16 sm:h-16 bg-black text-white dark:bg-white dark:text-black border-2 border-black dark:border-white font-editorial font-bold text-xl sm:text-2xl flex items-center justify-center shadow-[2px_2px_0px_#000] shrink-0">
+                  {profileData.initial}
+                </div>
 
-            <div className="flex flex-col sm:flex-row items-start sm:items-center gap-5 sm:gap-6 relative z-10">
-              {/* Avatar Initial Box */}
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-yellow-400 text-black border-2 sm:border-3 border-black font-editorial font-bold text-2xl sm:text-3xl flex items-center justify-center shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] shrink-0">
-                {profileData.initial}
+                {/* Main Info */}
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <h2 className="text-lg sm:text-2xl font-editorial font-bold text-black dark:text-white truncate">
+                      {profileData.fullName}
+                    </h2>
+                    <span
+                      className={`inline-flex items-center text-[10px] font-black uppercase tracking-wider px-2 py-0.5 border ${
+                        profileData.isPro
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white shadow-xs"
+                          : "bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white border-black/30 dark:border-white/30"
+                      }`}
+                    >
+                      {profileData.isPro ? "★ EDUGRAFT PRO" : "PAKET STARTER"}
+                    </span>
+                  </div>
+
+                  <div className="flex flex-wrap items-center gap-3 sm:gap-5 text-xs text-gray-500 dark:text-gray-400">
+                    <div className="flex items-center gap-1.5">
+                      <Mail size={13} className="text-gray-400" />
+                      <span>{profileData.email || "Email tidak terdaftar"}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <Calendar size={13} className="text-gray-400" />
+                      <span>Bergabung {profileData.joinedDate}</span>
+                    </div>
+                  </div>
+                </div>
               </div>
 
-              {/* Main Info */}
-              <div className="flex-1 min-w-0">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-1.5">
-                  <h2 className="text-xl sm:text-3xl font-editorial font-bold text-black dark:text-white truncate">
-                    {profileData.fullName}
-                  </h2>
-                  <span className="inline-flex items-center gap-1 text-[10px] sm:text-xs font-black uppercase tracking-wider px-2 py-0.5 bg-yellow-400 text-black border border-black rounded shadow-xs">
-                    <Crown size={12} /> {profileData.plan}
+              {/* Saldo AI Pill Card */}
+              <div className="w-full sm:w-auto p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex sm:flex-col items-center sm:items-start justify-between gap-3">
+                <div>
+                  <span className="text-[9px] uppercase font-bold text-gray-500 dark:text-gray-400 block leading-tight">
+                    Saldo Aktif AI
                   </span>
-                  <span className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 rounded">
-                    <ShieldCheck size={12} /> Pendidik Terverifikasi
-                  </span>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 sm:gap-6 text-xs text-gray-500 dark:text-gray-400 mt-2">
-                  <div className="flex items-center gap-1.5">
-                    <Mail size={14} className="text-gray-400" />
-                    <span>{profileData.email || "Email tidak terdaftar"}</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <Calendar size={14} className="text-gray-400" />
-                    <span>Bergabung {profileData.joinedDate}</span>
+                  <div className="text-base sm:text-lg font-black font-mono text-black dark:text-white">
+                    Rp {profileData.balance.toLocaleString("id-ID")}
                   </div>
                 </div>
+                <button
+                  onClick={() => setIsTopUpOpen(true)}
+                  className="px-3 py-1.5 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-[10px] border border-black dark:border-white shadow-[1.5px_1.5px_0px_#000] active:translate-y-0.5 cursor-pointer flex items-center gap-1"
+                >
+                  <Plus size={12} /> Isi Saldo
+                </button>
               </div>
             </div>
           </motion.div>
@@ -326,6 +363,21 @@ export default function ProfilPage() {
           </div>
         </div>
       )}
+
+      {/* ── MODAL TOP UP SALDO ── */}
+      <TopUpModal
+        isOpen={isTopUpOpen}
+        onClose={() => setIsTopUpOpen(false)}
+        currentBalance={profileData.balance}
+        onSuccess={(newBal) => {
+          setProfileData((p) => ({
+            ...p,
+            balance: newBal,
+            isPro: true,
+            plan: "EduCraft Pro",
+          }));
+        }}
+      />
     </div>
   );
 }

@@ -588,12 +588,17 @@ export default function CreateQuestionWizard() {
       const sortedSoal = [...rawSoal].sort((a, b) => typeRank(a) - typeRank(b));
       setGeneratedQuestions(sortedSoal);
       setStep(3);
+      window.dispatchEvent(new CustomEvent("educraft_wallet_updated"));
     } catch(err: any) {
       if (err.name === "AbortError") {
         toast.error("Generate timeout (lebih dari 4 menit). Coba kurangi jumlah soal atau materi.");
       } else {
         console.error(err);
-        toast.error(err.message || "Gagal generate soal.");
+        const errMsg = err.message || "Gagal generate soal.";
+        toast.error(errMsg);
+        if (errMsg.toLowerCase().includes("saldo") || errMsg.includes("INSUFFICIENT_BALANCE")) {
+          window.dispatchEvent(new CustomEvent("educraft_open_topup"));
+        }
       }
     } finally {
       clearTimeout(timeoutId);

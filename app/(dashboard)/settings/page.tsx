@@ -17,12 +17,15 @@ import {
   Check,
   X,
   ShieldCheck,
+  Wallet,
+  Plus,
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createBrowserClient } from "@supabase/ssr";
 import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { toast } from "sonner";
+import { TopUpModal } from "@/app/components/TopUpModal";
 
 type SettingsTab = "profile" | "ai" | "billing";
 
@@ -46,6 +49,7 @@ export default function SettingsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingPrefs, setIsSavingPrefs] = useState(false);
+  const [isTopUpOpen, setIsTopUpOpen] = useState(false);
 
   const [userProfile, setUserProfile] = useState<{
     full_name: string;
@@ -53,12 +57,14 @@ export default function SettingsPage() {
     plan: string;
     tokens_left: number;
     initial: string;
+    isPro: boolean;
   }>({
     full_name: "Memuat...",
     email: "Memuat...",
-    plan: "EduCraft Pro",
+    plan: "Starter",
     tokens_left: 50000,
     initial: "-",
+    isPro: false,
   });
 
   const supabase = createBrowserClient(
@@ -102,10 +108,16 @@ export default function SettingsPage() {
             name = user.email.split("@")[0];
           }
 
-          let plan = "EduCraft Pro";
-          if (profile?.plan && profile.plan !== "Free Plan") {
-            plan = profile.plan;
-          }
+          const isPro =
+            profile?.plan === "EduCraft Pro" ||
+            profile?.plan === "Pro" ||
+            profile?.plan === "PRO" ||
+            profile?.plan === "Pro Plan";
+          const plan = isPro ? "EduCraft Pro" : "Starter";
+          const balance =
+            profile?.tokens_left !== null && profile?.tokens_left !== undefined
+              ? profile.tokens_left
+              : 50000;
 
           setFullName(name);
           setEmail(user.email || "");
@@ -124,8 +136,9 @@ export default function SettingsPage() {
             full_name: name,
             email: user.email || "",
             plan: plan,
-            tokens_left: profile?.tokens_left ? Math.max(profile.tokens_left, 50000) : 50000,
+            tokens_left: balance,
             initial: name.charAt(0).toUpperCase(),
+            isPro,
           });
         }
       } catch (err) {
@@ -243,7 +256,7 @@ export default function SettingsPage() {
   const tabsConfig: { id: SettingsTab; label: string; icon: any }[] = [
     { id: "profile", label: "Profil Akun", icon: User },
     { id: "ai", label: "Preferensi AI", icon: Cpu },
-    { id: "billing", label: "Paket & Tema", icon: Crown },
+    { id: "billing", label: "Saldo & Tema", icon: Wallet },
   ];
 
   return (
@@ -468,7 +481,7 @@ export default function SettingsPage() {
               </motion.div>
             )}
 
-            {/* TAB 3: PAKET & TEMA */}
+            {/* TAB 3: SALDO & TEMA */}
             {activeTab === "billing" && (
               <motion.div
                 key="tab-billing"
@@ -478,57 +491,73 @@ export default function SettingsPage() {
                 transition={{ duration: 0.15 }}
                 className="space-y-6"
               >
-                {/* Status Langganan Box Neobrutalisme Monokrom */}
+                {/* Status Saldo & Akun Box Neobrutalisme Monokrom */}
                 <div className="bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 p-4 sm:p-6 shadow-[4px_4px_0px_#000]">
                   <div className="flex items-center justify-between gap-2 mb-4 pb-3 border-b border-black/10 dark:border-white/10">
                     <div className="flex items-center gap-2">
                       <div className="w-8 h-8 bg-black text-white dark:bg-white dark:text-black border border-black dark:border-white flex items-center justify-center">
-                        <Crown size={16} />
+                        <Wallet size={16} />
                       </div>
                       <h3 className="font-bold text-sm sm:text-base uppercase tracking-wider font-editorial text-black dark:text-white">
-                        Status Akun EduCraft
+                        Dompet AI &amp; Status Akun
                       </h3>
                     </div>
-                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 bg-black text-white dark:bg-white dark:text-black text-[10px] font-bold uppercase tracking-wider border border-black dark:border-white shadow-xs">
-                      Aktif Pro
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider border shadow-xs ${
+                        userProfile.isPro
+                          ? "bg-black text-white dark:bg-white dark:text-black border-black dark:border-white"
+                          : "bg-neutral-200 dark:bg-neutral-700 text-black dark:text-white border-black/30 dark:border-white/30"
+                      }`}
+                    >
+                      {userProfile.isPro ? "★ EDUGRAFT PRO" : "PAKET STARTER"}
                     </span>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-4">
-                    <div className="bg-white dark:bg-[#1a1a1a] p-3.5 border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000]">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block mb-1">
-                        Paket Keanggotaan
-                      </span>
-                      <div className="font-black text-black dark:text-white text-base">
-                        EduCraft Pro Unlimited
+                    <div className="bg-white dark:bg-[#1a1a1a] p-3.5 border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block mb-1">
+                          Sisa Saldo AI
+                        </span>
+                        <div className="font-black text-black dark:text-white text-xl sm:text-2xl font-mono">
+                          Rp {userProfile.tokens_left.toLocaleString("id-ID")}
+                        </div>
                       </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Aktif permanen untuk seluruh fitur sekolah
+                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1 font-medium">
+                        Cukup untuk ~{Math.floor(userProfile.tokens_left / 1000)}x Sesi Generate AI
                       </p>
                     </div>
 
-                    <div className="bg-white dark:bg-[#1a1a1a] p-3.5 border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000]">
-                      <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block mb-1">
-                        Kuota Komputasi AI
-                      </span>
-                      <div className="font-black text-black dark:text-white text-base flex items-center gap-1.5">
-                        <Sparkles size={16} /> Tanpa Batas (Unlimited)
+                    <div className="bg-white dark:bg-[#1a1a1a] p-3.5 border-2 border-black dark:border-white/30 shadow-[2px_2px_0px_#000] flex flex-col justify-between">
+                      <div>
+                        <span className="text-[10px] uppercase font-bold text-gray-500 dark:text-gray-400 block mb-1">
+                          Isi Ulang Saldo (Pay-As-You-Go)
+                        </span>
+                        <div className="font-bold text-black dark:text-white text-xs sm:text-sm">
+                          Tarif Flat Rp 1.000 / Request
+                        </div>
                       </div>
-                      <p className="text-[11px] text-gray-500 dark:text-gray-400 mt-1">
-                        Bebas racik soal, koreksi, &amp; ekspor kapan saja
-                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setIsTopUpOpen(true)}
+                        className="mt-2 w-full py-2 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-xs border border-black dark:border-white shadow-[2px_2px_0px_#000] active:translate-y-0.5 flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus size={13} /> Isi Saldo via QRIS
+                      </button>
                     </div>
                   </div>
 
                   <ul className="space-y-1.5 text-xs text-gray-600 dark:text-gray-300 pt-2 border-t border-black/10 dark:border-white/10 font-medium">
                     <li className="flex items-center gap-2">
-                      <Check size={14} className="text-black dark:text-white shrink-0" /> Akses model AI mutakhir tanpa antre
+                      <Check size={14} className="text-black dark:text-white shrink-0" />{" "}
+                      <strong>Rp 1.000 / request:</strong> Buat Soal, Koreksi Jawaban, &amp; Perencana Pembelajaran.
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check size={14} className="text-black dark:text-white shrink-0" /> Bebas ekspor dokumen Word (.docx) &amp; PDF kedinasan siap cetak
+                      <Check size={14} className="text-black dark:text-white shrink-0" />{" "}
+                      <strong>Rp 0 (100% Gratis):</strong> Regenerate Soal, Ekspor Word/PDF/Excel, &amp; Roda Undian.
                     </li>
                     <li className="flex items-center gap-2">
-                      <Check size={14} className="text-black dark:text-white shrink-0" /> Riwayat Bank Materi dan Bank Soal tersimpan aman di cloud
+                      <Check size={14} className="text-black dark:text-white shrink-0" /> Saldo tanpa masa kedaluwarsa &amp; langsung upgrade ke status PRO setelah top up pertama.
                     </li>
                   </ul>
                 </div>
@@ -654,6 +683,21 @@ export default function SettingsPage() {
           </div>
         )}
       </AnimatePresence>
+
+      {/* ── MODAL TOP UP SALDO ── */}
+      <TopUpModal
+        isOpen={isTopUpOpen}
+        onClose={() => setIsTopUpOpen(false)}
+        currentBalance={userProfile.tokens_left}
+        onSuccess={(newBal) => {
+          setUserProfile((p) => ({
+            ...p,
+            tokens_left: newBal,
+            isPro: true,
+            plan: "EduCraft Pro",
+          }));
+        }}
+      />
     </div>
   );
 }
