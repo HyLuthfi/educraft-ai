@@ -264,64 +264,46 @@ export function TopUpModal({
                 </button>
               </div>
             ) : activeOrder ? (
-              /* INVOICE & PAYMENT STATE */
-              <div className="space-y-4">
-                <div className="p-3 bg-neutral-50 dark:bg-[#252525] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000] space-y-2.5">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[10px]">
-                      Nomor Tagihan
-                    </span>
-                    <span className="font-mono font-bold">{activeOrder.orderId}</span>
+              /* INVOICE & PAYMENT STATE: EMBEDDED KASIR KENPAY (QRIS & TRANSFER BANK) */
+              <div className="space-y-3">
+                <div className="flex items-center justify-between text-xs pb-1">
+                  <div className="flex items-center gap-1.5 font-mono text-[11px] font-bold text-gray-600 dark:text-gray-300">
+                    <span className="text-[10px] text-gray-400 uppercase">Tagihan:</span>
+                    <span>{activeOrder.orderId}</span>
                   </div>
-
-                  <div className="flex items-center justify-between text-xs pt-2 border-t border-black/10 dark:border-white/10">
-                    <span className="text-gray-500 dark:text-gray-400 font-bold uppercase tracking-wider text-[10px]">
-                      Total Pembayaran (Termasuk Kode Unik)
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-lg font-black font-mono text-black dark:text-white">
-                        Rp {activeOrder.totalAmount?.toLocaleString("id-ID")}
-                      </span>
-                      <button
-                        onClick={() => copyToClipboard(String(activeOrder.totalAmount))}
-                        className="p-1 border border-black dark:border-white/30 hover:bg-neutral-200 dark:hover:bg-neutral-800 cursor-pointer"
-                        title="Salin Total Nominal"
-                      >
-                        {copied ? <Check size={12} /> : <Copy size={12} />}
-                      </button>
-                    </div>
-                  </div>
-
-                  <p className="text-[10px] text-gray-500 dark:text-gray-400 leading-relaxed italic bg-white dark:bg-[#1a1a1a] p-2 border border-black/10 dark:border-white/10">
-                    *Penting: Transfer tepat hingga 3 digit terakhir (<strong>{activeOrder.uniqueCode}</strong>) agar sistem verifikasi otomatis dapat mencocokkan pembayaran Anda secara instan.
-                  </p>
-                </div>
-
-                {/* Action Buttons */}
-                <div className="space-y-2 pt-1">
                   <a
                     href={activeOrder.paymentUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="w-full py-3 bg-black text-white dark:bg-white dark:text-black font-bold uppercase tracking-wider text-xs border-2 border-black dark:border-white shadow-[3px_3px_0px_#000] active:translate-y-0.5 flex items-center justify-center gap-2 cursor-pointer"
+                    className="inline-flex items-center gap-1 text-[11px] font-bold underline hover:opacity-80 text-black dark:text-white"
                   >
-                    <QrCode size={15} />
-                    <span>Buka QRIS &amp; Selesaikan Pembayaran</span>
-                    <ExternalLink size={13} />
+                    <span>Buka Tab Baru</span>
+                    <ExternalLink size={11} />
                   </a>
+                </div>
 
-                  <div className="flex items-center justify-center gap-2 py-2 text-[11px] text-gray-500 dark:text-gray-400">
-                    <Loader2 size={13} className="animate-spin" />
-                    <span>Menunggu transfer masuk (otomatis terdeteksi)...</span>
-                  </div>
+                {/* Kasir KenPay Iframe Responsif */}
+                <div className="relative w-full h-[520px] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000] overflow-hidden bg-[#07090e]">
+                  <iframe
+                    src={activeOrder.paymentUrl}
+                    className="w-full h-full border-none"
+                    title="Kasir KenPay QRIS & Transfer Bank"
+                  />
+                </div>
 
+                <div className="flex items-center justify-between pt-1">
                   <button
                     type="button"
                     onClick={() => setActiveOrder(null)}
-                    className="w-full py-2 bg-transparent text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white font-bold text-xs uppercase cursor-pointer"
+                    className="text-xs font-bold uppercase text-gray-600 dark:text-gray-400 hover:text-black dark:hover:text-white cursor-pointer hover:underline"
                   >
                     ← Ganti Nominal Top Up
                   </button>
+
+                  <div className="flex items-center gap-1.5 text-[10px] text-gray-500 dark:text-gray-400 font-medium">
+                    <Loader2 size={11} className="animate-spin text-black dark:text-white" />
+                    <span>Verifikasi otomatis aktif</span>
+                  </div>
                 </div>
               </div>
             ) : (

@@ -75,17 +75,29 @@ export async function POST(req: Request) {
     }
 
     const orderData = result.data;
+    const finalOrderId = orderData.orderId || orderData.id;
+
+    // Simpan orderId ke metadata user agar sinkronisasi otomatis selalu aktif
+    try {
+      const currentPending = (user.user_metadata?.pending_topup_orders as string[]) || [];
+      const newPending = [finalOrderId, ...currentPending.filter((id) => id !== finalOrderId)].slice(0, 10);
+      await supabase.auth.updateUser({
+        data: { pending_topup_orders: newPending },
+      });
+    } catch (e) {
+      console.warn("Gagal update pending_topup_orders:", e);
+    }
 
     return NextResponse.json({
       success: true,
       data: {
-        orderId: orderData.orderId || orderData.id,
+        orderId: finalOrderId,
         description: orderData.description,
         baseAmount: orderData.baseAmount || orderData.base_amount,
         uniqueCode: orderData.uniqueCode || orderData.unique_code,
         totalAmount: orderData.totalAmount || orderData.total_amount,
         expiresAt: orderData.expiresAt || orderData.expires_at,
-        paymentUrl: `${KENPAY_PUBLIC_URL}/pay/${orderData.orderId || orderData.id}`,
+        paymentUrl: `${KENPAY_PUBLIC_URL}/pay/${finalOrderId}`,
       },
     });
   } catch (error: any) {

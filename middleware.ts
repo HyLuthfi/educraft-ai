@@ -62,8 +62,10 @@ export async function middleware(request: NextRequest) {
   }
 
   // Lindungi endpoint internal /api/* dari pemanggilan anonim liar di luar aplikasi
+  // (Kecuali webhook callback dari payment gateway eksternal/KenPay)
   const isApiRoute = request.nextUrl.pathname.startsWith('/api/')
-  if (!user && isApiRoute) {
+  const isWebhookRoute = request.nextUrl.pathname.startsWith('/api/webhook/')
+  if (!user && isApiRoute && !isWebhookRoute) {
     const apiKey = request.headers.get('x-api-key') || ''
     const validKey = process.env.AI_ENGINE_API_KEY || 'dev-key-educraft'
     const referer = request.headers.get('referer') || ''
