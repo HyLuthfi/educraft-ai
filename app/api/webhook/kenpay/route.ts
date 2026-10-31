@@ -1,13 +1,33 @@
 import { NextResponse } from "next/server";
+import crypto from "node:crypto";
 import { buatSupabaseServer } from "@/lib/supabase/server";
 import { creditUserBalance } from "@/lib/wallet";
 
 const KENPAY_INTERNAL_URL = process.env.KENPAY_INTERNAL_URL || "http://127.0.0.1:20190";
 const KENPAY_PUBLIC_URL = process.env.KENPAY_PUBLIC_URL || "https://pay.saitech.uno";
+const KENPAY_SECRET = process.env.KENPAY_SECRET || "sec_edu_9f81a7b32c45e6d1";
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
+    const rawBody = await req.text();
+    const signatureHeader = req.headers.get("x-kenpay-signature");
+
+    // Validasi HMAC Signature jika disertakan oleh gateway
+    if (signatureHeader && KENPAY_SECRET) {
+      try {
+        const expected = "sha256=" + crypto.createHmac("sha256", KENPAY_SECRET).update(rawBody).digest("hex");
+        const a = Buffer.from(signatureHeader);
+        const b = Buffer.from(expected);
+        if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) {
+          console.warn("[KENPAY WEBHOOK] Signature HMAC mismatch:", signatureHeader);
+          return NextResponse.json({ error: "Invalid webhook signature" }, { status: 401 });
+        }
+      } catch (sigErr) {
+        console.warn("[KENPAY WEBHOOK] Gagal verifikasi signature:", sigErr);
+      }
+    }
+
+    const body = JSON.parse(rawBody);
     console.log("[KENPAY WEBHOOK RECEIVED]", body);
 
     const orderId = body.orderId || body.id;

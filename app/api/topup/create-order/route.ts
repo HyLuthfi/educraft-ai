@@ -3,6 +3,8 @@ import { buatSupabaseServer } from "@/lib/supabase/server";
 
 const KENPAY_INTERNAL_URL = process.env.KENPAY_INTERNAL_URL || "http://127.0.0.1:20190";
 const KENPAY_PUBLIC_URL = process.env.KENPAY_PUBLIC_URL || "https://pay.saitech.uno";
+const KENPAY_APP_ID = process.env.KENPAY_APP_ID || "app_educraft";
+const KENPAY_SECRET = process.env.KENPAY_SECRET || "sec_edu_9f81a7b32c45e6d1";
 
 export async function POST(req: Request) {
   try {
@@ -34,7 +36,7 @@ export async function POST(req: Request) {
       description: `Top Up Saldo EduCraft AI (Rp ${amount.toLocaleString("id-ID")})`,
       callback_url: "https://educraft.saitech.co.id/api/webhook/kenpay",
       return_url: "https://educraft.saitech.co.id/settings",
-      app_id: "educraft",
+      app_id: KENPAY_APP_ID,
       metadata: {
         user_id: user.id,
         email: user.email || "",
@@ -42,9 +44,15 @@ export async function POST(req: Request) {
       },
     };
 
+    const headers = {
+      "Content-Type": "application/json",
+      "X-KenPay-Secret": KENPAY_SECRET,
+      "X-KenPay-App": KENPAY_APP_ID,
+    };
+
     let res = await fetch(`${KENPAY_INTERNAL_URL}/api/orders/create`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers,
       body: JSON.stringify(payload),
     }).catch(() => null);
 
@@ -52,7 +60,7 @@ export async function POST(req: Request) {
     if (!res || !res.ok) {
       res = await fetch(`${KENPAY_PUBLIC_URL}/api/orders/create`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers,
         body: JSON.stringify(payload),
       });
     }

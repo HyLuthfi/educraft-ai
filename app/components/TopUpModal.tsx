@@ -282,11 +282,12 @@ export function TopUpModal({
                   </a>
                 </div>
 
-                {/* Kasir KenPay Iframe Responsif */}
-                <div className="relative w-full h-[520px] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000] overflow-hidden bg-[#07090e]">
+                {/* Kasir KenPay Iframe Responsif (Clean Light Theme & Non-Scrollable) */}
+                <div className="relative w-full h-[510px] border-2 border-black dark:border-white/30 shadow-[3px_3px_0px_#000] overflow-hidden bg-white">
                   <iframe
                     src={activeOrder.paymentUrl}
                     className="w-full h-full border-none"
+                    scrolling="no"
                     title="Kasir KenPay QRIS & Transfer Bank"
                   />
                 </div>
