@@ -1079,7 +1079,7 @@ function InputView({
           <textarea
             value={rawMurid}
             onChange={(e) => setRawMurid(e.target.value)}
-            placeholder={"Tempel daftar nama murid di sini. Contoh:\n1. Ahmad Dhani\n2. Budi Gunawan\n3. Citra Kirana\n..."}
+            placeholder={"Tempel daftar nama murid di sini. Contoh:\n1. Aditia Pratama\n2. Budi Santoso\n3. Citra Lestari\n..."}
             className="w-full h-36 sm:h-56 p-3 sm:p-4 border-2 border-black dark:border-white/30 bg-neutral-50 dark:bg-[#252525] dark:text-white font-mono text-xs sm:text-sm resize-none focus:outline-none focus:border-black dark:focus:border-white shadow-inner"
           />
         )}

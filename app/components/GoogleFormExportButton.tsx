@@ -106,7 +106,7 @@ const ExportButtonInner = ({ soalData, disabled }: Props) => {
 };
 
 export default function GoogleFormExportButton(props: Props) {
-  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "dummy-client-id.apps.googleusercontent.com";
+  const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
   
   return (
     <GoogleOAuthProvider clientId={clientId}>
